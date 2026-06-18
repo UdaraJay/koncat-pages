@@ -13,6 +13,7 @@ use App\Http\Controllers\Projects\ProjectController;
 use App\Http\Controllers\Teams\TeamInvitationController;
 use App\Http\Controllers\Workspaces\WorkspaceController;
 use App\Http\Controllers\Workspaces\WorkspaceMemberController;
+use App\Http\Middleware\AllowHostedProjectFrames;
 use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Route;
 
@@ -22,7 +23,7 @@ Route::redirect('tos', '/terms')->name('legal.tos');
 Route::get('privacy', [LegalPageController::class, 'privacy'])->name('legal.privacy');
 
 Route::domain('{team}.'.config('matterpipe.hosting_domain'))
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', AllowHostedProjectFrames::class])
     ->group(function () {
         Route::get('/{project}/__matterpipe/sdk.js', MatterpipeSdkController::class)->name('matterpipe.sdk');
         Route::get('/{project}/__matterpipe/render/{path?}', [HostedProjectController::class, 'render'])->where('path', '.*')->name('hosted.project.render');

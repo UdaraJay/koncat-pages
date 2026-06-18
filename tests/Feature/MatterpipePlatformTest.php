@@ -364,6 +364,51 @@ class MatterpipePlatformTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_hosted_project_responses_allow_frames_from_hosting_domain_and_subdomains(): void
+    {
+        $this->skipWithoutZip();
+        Storage::fake('local');
+        config([
+            'matterpipe.hosting_scheme' => 'http',
+            'matterpipe.storage_disk' => 'local',
+        ]);
+
+        $owner = User::factory()->create();
+        $owner->personalTeam()->update(['subdomain' => 'frame-team']);
+        $hostingDomain = config('matterpipe.hosting_domain');
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'created_by' => $owner->id,
+            'slug' => 'frame-app',
+        ]);
+
+        $this
+            ->actingAs($owner)
+            ->post(route('projects.deployments.store', $project), [
+                'archive' => $this->zipUpload(['index.html' => 'frameable']),
+            ])
+            ->assertRedirect();
+
+        $policy = "frame-ancestors 'self' http://{$hostingDomain} http://*.{$hostingDomain}";
+
+        $this
+            ->actingAs($owner)
+            ->get("http://frame-team.{$hostingDomain}/frame-app/")
+            ->assertOk()
+            ->assertHeader('Content-Security-Policy', $policy)
+            ->assertHeaderMissing('X-Frame-Options');
+
+        $rawResponse = $this
+            ->actingAs($owner)
+            ->get("http://frame-team.{$hostingDomain}/frame-app/__matterpipe/render")
+            ->assertOk()
+            ->assertHeader('Content-Security-Policy', $policy)
+            ->assertHeaderMissing('X-Frame-Options');
+
+        $this->assertSame('frameable', $rawResponse->streamedContent());
+    }
+
     public function test_personal_project_is_deployed_and_served_to_its_owner(): void
     {
         $this->skipWithoutZip();
