@@ -250,7 +250,20 @@ class MatterpipePlatformTest extends TestCase
             ->get('http://design-team.localhost/team-app/index.html')
             ->assertOk();
 
-        $this->assertStringContainsString('Hello', $response->streamedContent());
+        $response
+            ->assertSee('Koncat')
+            ->assertSee('Team App')
+            ->assertSee('href="https://localhost/"', false)
+            ->assertSee('href="https://localhost/home"', false)
+            ->assertSee($user->name)
+            ->assertSee('/team-app/__matterpipe/render/index.html', false);
+
+        $rawResponse = $this
+            ->actingAs($user)
+            ->get('http://design-team.localhost/team-app/__matterpipe/render/index.html')
+            ->assertOk();
+
+        $this->assertStringContainsString('Hello', $rawResponse->streamedContent());
     }
 
     public function test_hosted_apps_require_workspace_membership(): void
@@ -313,11 +326,28 @@ class MatterpipePlatformTest extends TestCase
             ->get('http://personal-team.localhost/personal-canvas/')
             ->assertOk();
 
-        $this->assertSame('personal', $response->streamedContent());
+        $response
+            ->assertSee('Koncat')
+            ->assertSee('href="https://localhost/"', false)
+            ->assertSee('href="https://localhost/home"', false)
+            ->assertSee($owner->name)
+            ->assertSee('personal-canvas/__matterpipe/render', false);
+
+        $rawResponse = $this
+            ->actingAs($owner)
+            ->get('http://personal-team.localhost/personal-canvas/__matterpipe/render')
+            ->assertOk();
+
+        $this->assertSame('personal', $rawResponse->streamedContent());
 
         $this
             ->actingAs($outsider)
             ->get('http://personal-team.localhost/personal-canvas/')
+            ->assertForbidden();
+
+        $this
+            ->actingAs($outsider)
+            ->get('http://personal-team.localhost/personal-canvas/__matterpipe/render')
             ->assertForbidden();
     }
 

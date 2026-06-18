@@ -78,6 +78,7 @@ class HandleInertiaRequests extends Middleware
                         'slug' => $project->slug,
                         'description' => $project->description,
                         'url' => $project->url(),
+                        'previewUrl' => $project->previewUrl(),
                         'ownerType' => 'team',
                         'ownerName' => $team->name,
                         'team' => [

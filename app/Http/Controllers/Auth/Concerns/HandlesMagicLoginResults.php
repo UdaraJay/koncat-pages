@@ -79,7 +79,7 @@ trait HandlesMagicLoginResults
             'email_verified_at' => now(),
         ]);
 
-        $createTeam->handle($user, $user->name."'s Team", isPersonal: true);
+        $createTeam->handlePersonal($user);
 
         $request->session()->forget([
             'magic_login.verified_email',

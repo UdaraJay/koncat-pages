@@ -182,6 +182,11 @@ class Project extends Model
         );
     }
 
+    public function previewUrl(): string
+    {
+        return $this->url().'/__matterpipe/render';
+    }
+
     protected function resolveHostingTeamId(): ?string
     {
         if ($this->workspace_id) {

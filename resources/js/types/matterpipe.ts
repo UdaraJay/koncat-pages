@@ -42,6 +42,7 @@ export type Project = {
     slug: string;
     description?: string | null;
     url: string;
+    previewUrl: string;
     ownerType?: 'user' | 'team';
     ownerName?: string | null;
     team?: {

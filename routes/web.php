@@ -21,6 +21,7 @@ Route::domain('{team}.'.config('matterpipe.hosting_domain'))
     ->middleware(['auth', 'verified'])
     ->group(function () {
         Route::get('/{project}/__matterpipe/sdk.js', MatterpipeSdkController::class)->name('matterpipe.sdk');
+        Route::get('/{project}/__matterpipe/render/{path?}', [HostedProjectController::class, 'render'])->where('path', '.*')->name('hosted.project.render');
         Route::get('/{project}/__matterpipe/identity', MatterpipeIdentityController::class)->name('matterpipe.identity');
         Route::get('/{project}/__matterpipe/db/{collection}', [MatterpipeDocumentController::class, 'index'])->name('matterpipe.db.index');
         Route::post('/{project}/__matterpipe/db/{collection}', [MatterpipeDocumentController::class, 'store'])->name('matterpipe.db.store');

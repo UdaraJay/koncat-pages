@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Actions\Fortify\CreateNewUser;
 use App\Enums\TeamRole;
 use App\Models\MagicLoginChallenge;
 use App\Models\Team;
@@ -139,6 +140,67 @@ class AuthenticationTest extends TestCase
         $this->assertSame('New User', $user->name);
         $this->assertNotNull($user->email_verified_at);
         $this->assertNotNull($user->current_team_id);
+
+        $this->assertDatabaseHas('teams', [
+            'id' => $user->current_team_id,
+            'name' => "New's team",
+            'subdomain' => 'new',
+            'is_personal' => true,
+        ]);
+    }
+
+    public function test_completed_account_personal_team_subdomain_uses_random_suffix_when_first_name_is_taken(): void
+    {
+        Notification::fake();
+
+        Team::factory()->create([
+            'name' => 'Existing Udara',
+            'slug' => 'existing-udara',
+            'subdomain' => 'udara',
+        ]);
+
+        $this->post(route('login.magic.request'), ['email' => 'udara@example.com']);
+
+        Notification::assertSentOnDemand(MagicLoginNotification::class, function (MagicLoginNotification $notification) {
+            $this->post(route('login.code.verify'), [
+                'challenge_id' => $notification->challenge->id,
+                'code' => $notification->code,
+            ])->assertRedirect(route('login.complete'));
+
+            return true;
+        });
+
+        $this->post(route('login.complete.store'), [
+            'name' => 'Udara Perera',
+        ])->assertRedirect(route('dashboard'));
+
+        $user = User::query()->where('email', 'udara@example.com')->firstOrFail();
+        $team = $user->currentTeam()->firstOrFail();
+
+        $this->assertDatabaseHas('teams', [
+            'id' => $user->current_team_id,
+            'name' => "Udara's team",
+            'is_personal' => true,
+        ]);
+
+        $this->assertMatchesRegularExpression('/^udara-[a-z0-9]{6}$/', $team->subdomain);
+    }
+
+    public function test_fortify_signup_personal_team_uses_first_name_for_team_name_and_subdomain(): void
+    {
+        $user = app(CreateNewUser::class)->create([
+            'name' => 'Udara Perera',
+            'email' => 'udara@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ]);
+
+        $this->assertDatabaseHas('teams', [
+            'id' => $user->current_team_id,
+            'name' => "Udara's team",
+            'subdomain' => 'udara',
+            'is_personal' => true,
+        ]);
     }
 
     public function test_magic_code_rejects_invalid_and_over_attempted_codes(): void

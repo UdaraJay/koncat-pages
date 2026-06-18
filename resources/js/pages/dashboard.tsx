@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import {
+    ArrowUpRight,
     CalendarClock,
     ExternalLink,
     Folder,
@@ -187,9 +188,36 @@ function ProjectCard({ project }: { project: Project }) {
         .join(' / ');
 
     return (
-        <article className="group flex overflow-hidden rounded-lg border bg-background shadow-sm transition hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md">
+        <article className="group flex overflow-hidden border bg-background transition">
             <div className="flex min-w-0 flex-1 flex-col">
-                <ProjectPreview project={project} />
+                <div className="relative">
+                    <ProjectPreview project={project} />
+                    <div className="absolute top-4 right-4 flex shrink-0 items-center gap-1">
+                        {scope ? (
+                            <Badge
+                                variant={
+                                    project.currentDeployment
+                                        ? 'secondary'
+                                        : 'outline'
+                                }
+                                className="shrink-0 bg-background/60 text-foreground"
+                            >
+                                {scope}
+                            </Badge>
+                        ) : null}
+
+                        <Badge
+                            variant={
+                                project.currentDeployment
+                                    ? 'secondary'
+                                    : 'outline'
+                            }
+                            className="shrink-0"
+                        >
+                            {project.currentDeployment ? 'Live' : 'Draft'}
+                        </Badge>
+                    </div>
+                </div>
 
                 <div className="flex flex-1 flex-col gap-4 p-4">
                     <div className="space-y-2">
@@ -202,23 +230,7 @@ function ProjectCard({ project }: { project: Project }) {
                                     {project.slug}
                                 </p>
                             </div>
-                            <Badge
-                                variant={
-                                    project.currentDeployment
-                                        ? 'secondary'
-                                        : 'outline'
-                                }
-                                className="shrink-0"
-                            >
-                                {project.currentDeployment ? 'Live' : 'Draft'}
-                            </Badge>
                         </div>
-
-                        {scope ? (
-                            <div className="truncate text-sm text-muted-foreground">
-                                {scope}
-                            </div>
-                        ) : null}
 
                         {project.description ? (
                             <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
@@ -243,8 +255,8 @@ function ProjectCard({ project }: { project: Project }) {
                                 target="_blank"
                                 rel="noreferrer"
                             >
-                                <ExternalLink className="h-4 w-4" />
                                 Open
+                                <ArrowUpRight className="h-4 w-4" />
                             </a>
                         </Button>
                     </div>
@@ -260,7 +272,7 @@ function ProjectPreview({ project }: { project: Project }) {
             <div className="relative aspect-video overflow-hidden border-b bg-muted">
                 <iframe
                     title={`${project.name} preview`}
-                    src={project.url}
+                    src={project.previewUrl}
                     loading="lazy"
                     tabIndex={-1}
                     className="pointer-events-none h-[200%] w-[200%] origin-top-left scale-50 border-0 bg-background"

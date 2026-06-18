@@ -2,9 +2,12 @@
 
 namespace App\Mcp\Tools;
 
+use App\Mcp\Support\HostedProjectUrl;
+use App\Models\Project;
 use App\Models\User;
 use App\Services\DeploymentPublisher;
 use App\Services\MatterpipeQuota;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +24,7 @@ use Laravel\Mcp\Server\Tool;
 
 #[Name('deploy-project')]
 #[Title('Deploy Project')]
-#[Description('Create a personal static project from inline files, publish it, and return the hosted URL.')]
+#[Description('Create a new hosted static project or update an existing hosted project by URL, publish the provided files, and return the hosted URL.')]
 class DeployProjectTool extends Tool
 {
     public function __construct(
@@ -35,6 +38,7 @@ class DeployProjectTool extends Tool
      * Handle the tool request.
      *
      * @throws AuthenticationException
+     * @throws AuthorizationException
      * @throws ValidationException
      */
     public function handle(Request $request): Response|ResponseFactory
@@ -49,33 +53,11 @@ class DeployProjectTool extends Tool
         $files = $this->normalizeFiles($validated['files']);
 
         $result = DB::transaction(function () use ($user, $validated, $files): array {
-            $this->quota->ensureUserCanCreateProject($user);
-            $hostingTeamId = $user->personalTeam()?->id;
-            abort_unless($hostingTeamId !== null, 422);
+            if (! empty($validated['url'])) {
+                return $this->updateProject($user, $validated, $files);
+            }
 
-            $project = $user->projects()->create([
-                'hosting_team_id' => $hostingTeamId,
-                'created_by' => $user->id,
-                'name' => $validated['name'],
-                'description' => $validated['description'] ?? null,
-                'slug' => $validated['slug'] ?? null,
-            ]);
-
-            $deployment = $this->publisher->publishFiles($project, $files, $user);
-
-            return [
-                'project' => [
-                    'id' => $project->id,
-                    'slug' => $project->slug,
-                    'url' => $project->url(),
-                ],
-                'deployment' => [
-                    'id' => $deployment->id,
-                    'fileCount' => $deployment->file_count,
-                    'totalBytes' => $deployment->total_bytes,
-                    'deployedAt' => $deployment->deployed_at->toISOString(),
-                ],
-            ];
+            return $this->createProject($user, $validated, $files);
         });
 
         return Response::structured($result);
@@ -89,18 +71,20 @@ class DeployProjectTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
+            'url' => $schema->string()
+                ->description('Existing hosted project URL to update. Missing schemes, ports, query strings, fragments, and hosted render paths are accepted. Omit this to create a new personal project.')
+                ->max(2048),
             'name' => $schema->string()
-                ->description('The project name.')
-                ->max(255)
-                ->required(),
+                ->description('The project name. Required when creating a new project. Optional when updating; when provided, the project name is updated.')
+                ->max(255),
             'slug' => $schema->string()
-                ->description('Optional project path scoped to the user personal team subdomain. Must contain only ASCII letters, numbers, dashes, and underscores.')
+                ->description('Optional project path when creating a new project. Must contain only ASCII letters, numbers, dashes, and underscores. Cannot be used when updating by URL.')
                 ->max(80),
             'description' => $schema->string()
-                ->description('Optional project description.')
+                ->description('Optional project description. When updating, providing this value updates the description; null clears it.')
                 ->max(2000),
             'files' => $schema->array()
-                ->description('Files to publish. Each file must have a relative path and exactly one of content or base64.')
+                ->description('Full replacement set of files to publish. Each file must have a relative path and exactly one of content or base64.')
                 ->min(1)
                 ->items($schema->object([
                     'path' => $schema->string()
@@ -123,6 +107,7 @@ class DeployProjectTool extends Tool
     public function outputSchema(JsonSchema $schema): array
     {
         return [
+            'action' => $schema->string()->required(),
             'project' => $schema->object([
                 'id' => $schema->string()->required(),
                 'slug' => $schema->string()->required(),
@@ -139,7 +124,7 @@ class DeployProjectTool extends Tool
 
     /**
      * @param  array<string, mixed>  $arguments
-     * @return array{name: string, slug?: string|null, description?: string|null, files: array<int, array{path: string, content?: string|null, base64?: string|null}>}
+     * @return array{url?: string|null, name?: string|null, slug?: string|null, description?: string|null, files: array<int, array{path: string, content?: string|null, base64?: string|null}>}
      *
      * @throws ValidationException
      */
@@ -148,7 +133,8 @@ class DeployProjectTool extends Tool
         $hostingTeamId = $user->personalTeam()?->id;
 
         $validator = Validator::make($arguments, [
-            'name' => ['required', 'string', 'max:255'],
+            'url' => ['nullable', 'string', 'max:2048'],
+            'name' => ['nullable', 'string', 'max:255'],
             'slug' => [
                 'nullable',
                 'string',
@@ -168,6 +154,17 @@ class DeployProjectTool extends Tool
         ]);
 
         $validator->after(function ($validator): void {
+            $data = $validator->getData();
+            $isUpdate = ! empty($data['url']);
+
+            if (! $isUpdate && empty($data['name'])) {
+                $validator->errors()->add('name', 'The project name is required when creating a project.');
+            }
+
+            if ($isUpdate && ! empty($data['slug'])) {
+                $validator->errors()->add('slug', 'The slug can only be provided when creating a project.');
+            }
+
             foreach ($validator->getData()['files'] ?? [] as $index => $file) {
                 if (! is_array($file)) {
                     continue;
@@ -192,10 +189,109 @@ class DeployProjectTool extends Tool
             }
         });
 
-        /** @var array{name: string, slug?: string|null, description?: string|null, files: array<int, array{path: string, content?: string|null, base64?: string|null}>} $validated */
+        /** @var array{url?: string|null, name?: string|null, slug?: string|null, description?: string|null, files: array<int, array{path: string, content?: string|null, base64?: string|null}>} $validated */
         $validated = $validator->validate();
 
         return $validated;
+    }
+
+    /**
+     * @param  array{url?: string|null, name?: string|null, slug?: string|null, description?: string|null, files: array<int, array{path: string, content?: string|null, base64?: string|null}>}  $validated
+     * @param  array<int, array{path: string, contents: string}>  $files
+     * @return array<string, mixed>
+     *
+     * @throws ValidationException
+     */
+    protected function createProject(User $user, array $validated, array $files): array
+    {
+        $this->quota->ensureUserCanCreateProject($user);
+        $hostingTeamId = $user->personalTeam()?->id;
+        abort_unless($hostingTeamId !== null, 422);
+
+        $project = $user->projects()->create([
+            'hosting_team_id' => $hostingTeamId,
+            'created_by' => $user->id,
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+            'slug' => $validated['slug'] ?? null,
+        ]);
+
+        $deployment = $this->publisher->publishFiles($project, $files, $user);
+
+        return [
+            'action' => 'created',
+            'project' => [
+                'id' => $project->id,
+                'slug' => $project->slug,
+                'url' => $project->url(),
+            ],
+            'deployment' => [
+                'id' => $deployment->id,
+                'fileCount' => $deployment->file_count,
+                'totalBytes' => $deployment->total_bytes,
+                'deployedAt' => $deployment->deployed_at->toISOString(),
+            ],
+        ];
+    }
+
+    /**
+     * @param  array{url?: string|null, name?: string|null, slug?: string|null, description?: string|null, files: array<int, array{path: string, content?: string|null, base64?: string|null}>}  $validated
+     * @param  array<int, array{path: string, contents: string}>  $files
+     * @return array<string, mixed>
+     *
+     * @throws AuthorizationException
+     * @throws ValidationException
+     */
+    protected function updateProject(User $user, array $validated, array $files): array
+    {
+        [$team, $slug] = HostedProjectUrl::parse((string) $validated['url']);
+
+        $project = Project::query()
+            ->with(['owner', 'workspace.team', 'hostingTeam'])
+            ->whereHas('hostingTeam', fn ($query) => $query->where('subdomain', $team))
+            ->where('slug', $slug)
+            ->first();
+
+        if (! $project instanceof Project) {
+            throw ValidationException::withMessages([
+                'url' => 'No hosted project could be found for the provided URL.',
+            ]);
+        }
+
+        if (! $user->canDeployProject($project)) {
+            throw new AuthorizationException('You do not have permission to deploy this project.');
+        }
+
+        $updates = [];
+
+        if (array_key_exists('name', $validated) && $validated['name'] !== null) {
+            $updates['name'] = $validated['name'];
+        }
+
+        if (array_key_exists('description', $validated)) {
+            $updates['description'] = $validated['description'];
+        }
+
+        if ($updates !== []) {
+            $project->update($updates);
+        }
+
+        $deployment = $this->publisher->publishFiles($project, $files, $user);
+
+        return [
+            'action' => 'updated',
+            'project' => [
+                'id' => $project->id,
+                'slug' => $project->slug,
+                'url' => $project->url(),
+            ],
+            'deployment' => [
+                'id' => $deployment->id,
+                'fileCount' => $deployment->file_count,
+                'totalBytes' => $deployment->total_bytes,
+                'deployedAt' => $deployment->deployed_at->toISOString(),
+            ],
+        ];
     }
 
     /**

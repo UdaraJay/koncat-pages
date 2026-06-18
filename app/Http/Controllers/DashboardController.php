@@ -99,6 +99,7 @@ class DashboardController extends Controller
             'slug' => $project->slug,
             'description' => $project->description,
             'url' => $project->url(),
+            'previewUrl' => $project->previewUrl(),
             'ownerType' => $project->owner_type === User::class ? 'user' : 'team',
             'ownerName' => $project->owner_type === User::class ? __('Personal') : $team?->name,
             'team' => $team ? [

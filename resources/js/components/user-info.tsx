@@ -30,12 +30,7 @@ export function UserInfo({
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
-                {team ? (
-                    <span className="truncate text-xs text-muted-foreground">
-                        {team.name}
-                    </span>
-                ) : null}
-                {!team && showEmail ? (
+                {showEmail ? (
                     <span className="truncate text-xs text-muted-foreground">
                         {user.email}
                     </span>

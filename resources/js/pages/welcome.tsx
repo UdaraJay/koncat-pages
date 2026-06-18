@@ -1,7 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { dashboard, login } from '@/routes';
 import AppLogoIcon from '@/components/app-logo-icon';
-import { ArrowRightIcon, ChevronRight } from 'lucide-react';
+import { ArrowRightIcon, ChevronRight, Play } from 'lucide-react';
 
 export default function Welcome() {
     const { auth } = usePage().props;
@@ -19,16 +19,16 @@ export default function Welcome() {
                                 className="flex items-center gap-2 font-[Koulen] text-3xl leading-0 font-medium tracking-tight"
                             >
                                 <AppLogoIcon className="-mt-[2px] h-7 w-auto fill-current text-foreground" />
-                                <div>Koncat</div>
+                                <div className="text-foreground">Koncat</div>
                             </Link>
                         </div>
                         <div>
                             {auth.user ? (
                                 <Link
                                     href={dashboardUrl}
-                                    className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#454544] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                                    className="inline-flex items-center gap-1 rounded-full bg-muted px-5 py-1.5 pr-3 text-sm leading-normal font-medium text-foreground"
                                 >
-                                    Home
+                                    Projects <ChevronRight className="size-4" />
                                 </Link>
                             ) : (
                                 <Link
@@ -43,11 +43,11 @@ export default function Welcome() {
                 </header>
                 <div className="flex w-full items-center justify-center opacity-100 transition-opacity duration-750 lg:grow starting:opacity-0">
                     <main className="w-full max-w-[335px] lg:max-w-5xl">
-                        <div>
-                            <div className="inline-flex rounded-full bg-muted px-3 py-1 font-medium tracking-tight">
-                                Living pages
+                        <div className="mt-12">
+                            <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 font-medium tracking-tight text-muted-foreground">
+                                Introducing Koncat <Play className="size-4" />
                             </div>
-                            <div className="mt-4 text-5xl leading-14 font-medium tracking-tighter">
+                            <div className="mt-4 text-5xl leading-14 font-medium tracking-tighter text-foreground">
                                 Your agent made it.
                                 <br /> Now everyone can see it.
                             </div>
@@ -57,10 +57,10 @@ export default function Welcome() {
                                 web–a real link, the access you choose, and
                                 update anytime.
                             </div>
-                            <div className="mt-6 flex items-center gap-4">
-                                <div className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2 pr-4 font-medium tracking-tight text-background">
-                                    Push your first page{' '}
-                                    <ChevronRight className="size-5" />
+                            <div className="mt-8 flex items-center gap-4">
+                                <div className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2 pr-4 text-lg font-medium tracking-tight text-background">
+                                    Make your first page{' '}
+                                    <ChevronRight className="size-6" />
                                 </div>
 
                                 <div className="font-medium tracking-tight text-muted-foreground">
@@ -68,15 +68,15 @@ export default function Welcome() {
                                 </div>
                             </div>
                         </div>
-                        <div className="mt-15 flex gap-3">
+                        <div className="mt-20 flex gap-3">
                             <div className="h-120 w-90 bg-secondary p-4">
                                 <div className="font-medium tracking-tight text-emerald-600">
                                     Dashboards & Reports
                                 </div>
-                                <div className="mt-1 text-2xl leading-tight font-medium tracking-tight">
+                                <div className="mt-1 text-2xl leading-tight font-medium tracking-tight text-foreground">
                                     Dashboards that live
                                 </div>
-                                <div className="text-muted-foreground">
+                                <div className="leading-tight text-muted-foreground">
                                     Your finance tracker or weekly report gets a
                                     real link instead of a folder. Push an
                                     update and it refreshes in place —
@@ -88,7 +88,7 @@ export default function Welcome() {
                                 <div className="font-medium tracking-tight text-pink-600">
                                     Shared pages
                                 </div>
-                                <div className="mt-1 text-2xl leading-tight font-medium tracking-tight">
+                                <div className="mt-1 text-2xl leading-tight font-medium tracking-tight text-foreground">
                                     Pages built for sending
                                 </div>
                                 <div className="text-muted-foreground">
@@ -101,14 +101,26 @@ export default function Welcome() {
                                 <div className="font-medium tracking-tight text-amber-600">
                                     Forms & Surveys
                                 </div>
-                                <div className="mt-1 text-2xl leading-tight font-medium tracking-tight">
+                                <div className="mt-1 text-2xl leading-tight font-medium tracking-tight text-foreground">
                                     Collect, don't just show
                                 </div>
-                                <div className="text-muted-foreground">
+                                <div className="leading-tight text-muted-foreground">
                                     Pages that take input, not only display it —
                                     RSVPs, sign-ups, quick polls. Answers come
                                     back to you, no spreadsheet wrangling.
                                 </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-20">
+                            <div className="mt-15 text-5xl leading-14 font-medium tracking-tighter">
+                                You're making more than ever.
+                                <br /> It's all stuck in a folder.
+                            </div>
+                            <div className="mt-4 max-w-lg text-xl leading-tight font-medium tracking-tight text-muted-foreground">
+                                Agents turn out real, useful things in seconds.
+                                Then those things land somewhere nobody else can
+                                reach them.
                             </div>
                         </div>
                     </main>

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\TeamRole;
+use App\Models\Project;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\User;
@@ -33,6 +34,38 @@ class DashboardTest extends TestCase
             ->get(route('dashboard'));
 
         $response->assertOk();
+    }
+
+    public function test_dashboard_project_cards_include_a_raw_preview_url()
+    {
+        config([
+            'matterpipe.hosting_domain' => 'localhost',
+            'matterpipe.hosting_scheme' => 'http',
+        ]);
+
+        $user = User::factory()->create();
+        $user->personalTeam()->update(['subdomain' => 'preview-team']);
+
+        Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'created_by' => $user->id,
+            'name' => 'Preview App',
+            'slug' => 'preview-app',
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('dashboard'));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->has('projects', 1)
+            ->where('projects.0.name', 'Preview App')
+            ->where('projects.0.url', 'http://preview-team.localhost/preview-app')
+            ->where('projects.0.previewUrl', 'http://preview-team.localhost/preview-app/__matterpipe/render'),
+        );
     }
 
     public function test_dashboard_includes_pending_invitations_for_the_authenticated_user()

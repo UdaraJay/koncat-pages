@@ -98,6 +98,7 @@ class WorkspaceController extends Controller
                     'slug' => $project->slug,
                     'description' => $project->description,
                     'url' => $project->url(),
+                    'previewUrl' => $project->previewUrl(),
                     'deploymentsCount' => $project->deployments_count,
                     'currentDeployment' => $project->currentDeployment ? [
                         'id' => $project->currentDeployment->id,
