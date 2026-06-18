@@ -32,9 +32,7 @@ class AllowHostedProjectFrames
         }
 
         return sprintf(
-            "frame-ancestors 'self' %s://%s %s://*.%s",
-            $scheme,
-            $domain,
+            "frame-ancestors 'self' %s://%s",
             $scheme,
             $domain,
         );

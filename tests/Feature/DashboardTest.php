@@ -64,7 +64,7 @@ class DashboardTest extends TestCase
             ->has('projects', 1)
             ->where('projects.0.name', 'Preview App')
             ->where('projects.0.url', 'http://preview-team.localhost/preview-app')
-            ->where('projects.0.previewUrl', 'http://preview-team.localhost/preview-app/__matterpipe/render'),
+            ->where('projects.0.previewUrl', 'http://preview-team.localhost/preview-app/__matterpipe/render/index.html'),
         );
     }
 

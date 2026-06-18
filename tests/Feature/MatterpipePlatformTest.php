@@ -364,7 +364,7 @@ class MatterpipePlatformTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_hosted_project_responses_allow_frames_from_hosting_domain_and_subdomains(): void
+    public function test_hosted_project_responses_allow_frames_from_hosting_domain_and_self(): void
     {
         $this->skipWithoutZip();
         Storage::fake('local');
@@ -390,7 +390,7 @@ class MatterpipePlatformTest extends TestCase
             ])
             ->assertRedirect();
 
-        $policy = "frame-ancestors 'self' http://{$hostingDomain} http://*.{$hostingDomain}";
+        $policy = "frame-ancestors 'self' http://{$hostingDomain}";
 
         $this
             ->actingAs($owner)
@@ -401,12 +401,51 @@ class MatterpipePlatformTest extends TestCase
 
         $rawResponse = $this
             ->actingAs($owner)
-            ->get("http://frame-team.{$hostingDomain}/frame-app/__matterpipe/render")
+            ->get("http://frame-team.{$hostingDomain}/frame-app/__matterpipe/render/index.html")
             ->assertOk()
             ->assertHeader('Content-Security-Policy', $policy)
             ->assertHeaderMissing('X-Frame-Options');
 
         $this->assertSame('frameable', $rawResponse->streamedContent());
+    }
+
+    public function test_hosted_render_url_uses_index_path_for_relative_assets(): void
+    {
+        $this->skipWithoutZip();
+        Storage::fake('local');
+        config(['matterpipe.storage_disk' => 'local']);
+
+        $owner = User::factory()->create();
+        $owner->personalTeam()->update(['subdomain' => 'asset-team']);
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'created_by' => $owner->id,
+            'slug' => 'asset-app',
+        ]);
+
+        $this
+            ->actingAs($owner)
+            ->post(route('projects.deployments.store', $project), [
+                'archive' => $this->zipUpload([
+                    'index.html' => '<link rel="stylesheet" href="style.css">',
+                    'style.css' => 'body { color: red; }',
+                ]),
+            ])
+            ->assertRedirect();
+
+        $this
+            ->actingAs($owner)
+            ->get('http://asset-team.localhost/asset-app/')
+            ->assertOk()
+            ->assertSee('/asset-app/__matterpipe/render/index.html"', false);
+
+        $assetResponse = $this
+            ->actingAs($owner)
+            ->get('http://asset-team.localhost/asset-app/__matterpipe/render/style.css')
+            ->assertOk();
+
+        $this->assertSame('body { color: red; }', $assetResponse->streamedContent());
     }
 
     public function test_personal_project_is_deployed_and_served_to_its_owner(): void
@@ -446,7 +485,7 @@ class MatterpipePlatformTest extends TestCase
 
         $rawResponse = $this
             ->actingAs($owner)
-            ->get('http://personal-team.localhost/personal-canvas/__matterpipe/render')
+            ->get('http://personal-team.localhost/personal-canvas/__matterpipe/render/index.html')
             ->assertOk();
 
         $this->assertSame('personal', $rawResponse->streamedContent());
@@ -458,7 +497,7 @@ class MatterpipePlatformTest extends TestCase
 
         $this
             ->actingAs($outsider)
-            ->get('http://personal-team.localhost/personal-canvas/__matterpipe/render')
+            ->get('http://personal-team.localhost/personal-canvas/__matterpipe/render/index.html')
             ->assertForbidden();
     }
 

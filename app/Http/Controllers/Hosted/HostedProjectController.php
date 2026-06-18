@@ -24,6 +24,8 @@ class HostedProjectController extends Controller
             $renderUrl .= '/'.collect(explode('/', $path))
                 ->map(fn (string $segment) => rawurlencode($segment))
                 ->implode('/');
+        } else {
+            $renderUrl .= '/index.html';
         }
 
         if ($request->getQueryString()) {
