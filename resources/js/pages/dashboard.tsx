@@ -1,28 +1,54 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
+    Archive,
     ArrowUpRight,
     CalendarClock,
-    ExternalLink,
     Folder,
     HardDrive,
     KeyRound,
+    MoreHorizontal,
+    RotateCcw,
     Rocket,
+    SlidersHorizontal,
+    Unplug,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import PendingInvitationsModal from '@/components/pending-invitations-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { dashboard } from '@/routes';
 import type { DashboardInvitation, Project } from '@/types';
+
+type ProjectFilterStatus = 'active' | 'archived' | 'all';
+type ProjectSort = 'updated_desc' | 'created_desc' | 'name_asc';
 
 type Props = {
     pendingInvitations?: DashboardInvitation[];
     projects?: Project[];
+    projectFilters?: {
+        status: ProjectFilterStatus;
+        sort: ProjectSort;
+    };
 };
 
 export default function Dashboard({
     pendingInvitations = [],
     projects = [],
+    projectFilters = { status: 'active', sort: 'updated_desc' },
 }: Props) {
     const [showInvitations, setShowInvitations] = useState(
         pendingInvitations.length > 0,
@@ -37,6 +63,20 @@ export default function Dashboard({
 
         return `${window.location.origin}/mcp`;
     }, []);
+    const updateProjectFilters = (
+        updates: Partial<{ status: ProjectFilterStatus; sort: ProjectSort }>,
+    ) => {
+        const nextFilters = { ...projectFilters, ...updates };
+
+        router.get(
+            dashboard.url({ query: nextFilters }),
+            {},
+            {
+                preserveScroll: true,
+                preserveState: true,
+            },
+        );
+    };
 
     return (
         <>
@@ -51,15 +91,74 @@ export default function Dashboard({
                 {!hasPushedProject ? <MCPSetupPanel mcpUrl={mcpUrl} /> : null}
 
                 <section className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-2">
                             <Folder className="h-4 w-4 text-muted-foreground" />
                             <h2 className="font-medium">Your projects</h2>
                         </div>
-                        <Badge variant="secondary">
-                            {projects.length}{' '}
-                            {projects.length === 1 ? 'project' : 'projects'}
-                        </Badge>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="secondary">
+                                {projects.length}{' '}
+                                {projects.length === 1 ? 'project' : 'projects'}
+                            </Badge>
+
+                            <div className="flex items-center gap-2">
+                                <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+                                <Select
+                                    value={projectFilters.status}
+                                    onValueChange={(status) =>
+                                        updateProjectFilters({
+                                            status: status as ProjectFilterStatus,
+                                        })
+                                    }
+                                >
+                                    <SelectTrigger
+                                        size="sm"
+                                        className="w-[126px]"
+                                        aria-label="Filter projects"
+                                    >
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent align="end">
+                                        <SelectItem value="active">
+                                            Active
+                                        </SelectItem>
+                                        <SelectItem value="archived">
+                                            Archived
+                                        </SelectItem>
+                                        <SelectItem value="all">All</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                <Select
+                                    value={projectFilters.sort}
+                                    onValueChange={(sort) =>
+                                        updateProjectFilters({
+                                            sort: sort as ProjectSort,
+                                        })
+                                    }
+                                >
+                                    <SelectTrigger
+                                        size="sm"
+                                        className="w-[142px]"
+                                        aria-label="Sort projects"
+                                    >
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent align="end">
+                                        <SelectItem value="updated_desc">
+                                            Recently updated
+                                        </SelectItem>
+                                        <SelectItem value="created_desc">
+                                            Newest
+                                        </SelectItem>
+                                        <SelectItem value="name_asc">
+                                            Name
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
                     </div>
 
                     {projects.length > 0 ? (
@@ -74,10 +173,11 @@ export default function Dashboard({
                     ) : (
                         <div className="grid min-h-[180px] place-items-center rounded-lg border border-dashed p-8 text-center">
                             <div className="max-w-sm space-y-2">
-                                <h3 className="font-medium">No projects yet</h3>
+                                <h3 className="font-medium">
+                                    {emptyProjectsTitle(projectFilters.status)}
+                                </h3>
                                 <p className="text-sm text-muted-foreground">
-                                    Set up the MCP server above, then ask your
-                                    agent to deploy a project.
+                                    {emptyProjectsText(projectFilters.status)}
                                 </p>
                             </div>
                         </div>
@@ -186,13 +286,14 @@ function ProjectCard({ project }: { project: Project }) {
     const scope = [project.ownerName, project.workspace?.name]
         .filter(Boolean)
         .join(' / ');
+    const isArchived = Boolean(project.deletedAt);
 
     return (
         <article className="group flex overflow-hidden border bg-background transition">
             <div className="flex min-w-0 flex-1 flex-col">
                 <div className="relative">
                     <ProjectPreview project={project} />
-                    <div className="absolute top-4 right-4 flex shrink-0 items-center gap-1">
+                    <div className="absolute top-4 left-4 flex shrink-0 items-center gap-1">
                         {scope ? (
                             <Badge
                                 variant={
@@ -208,14 +309,21 @@ function ProjectCard({ project }: { project: Project }) {
 
                         <Badge
                             variant={
-                                project.currentDeployment
+                                project.currentDeployment && !isArchived
                                     ? 'secondary'
                                     : 'outline'
                             }
                             className="shrink-0"
                         >
-                            {project.currentDeployment ? 'Live' : 'Draft'}
+                            {isArchived
+                                ? 'Archived'
+                                : project.currentDeployment
+                                  ? 'Live'
+                                  : 'Draft'}
                         </Badge>
+                    </div>
+                    <div className="absolute top-3 right-3">
+                        <ProjectCardMenu project={project} />
                     </div>
                 </div>
 
@@ -249,16 +357,20 @@ function ProjectCard({ project }: { project: Project }) {
                             deployedAt={deployedAt}
                         />
 
-                        <Button asChild variant="outline" size="sm">
-                            <a
-                                href={project.url}
-                                target="_blank"
-                                rel="noreferrer"
-                            >
-                                Open
-                                <ArrowUpRight className="h-4 w-4" />
-                            </a>
-                        </Button>
+                        {isArchived ? (
+                            <Badge variant="outline">Hidden</Badge>
+                        ) : (
+                            <Button asChild variant="outline" size="sm">
+                                <a
+                                    href={project.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    Open
+                                    <ArrowUpRight className="h-4 w-4" />
+                                </a>
+                            </Button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -266,8 +378,76 @@ function ProjectCard({ project }: { project: Project }) {
     );
 }
 
+function ProjectCardMenu({ project }: { project: Project }) {
+    const archiveProject = () => {
+        router.delete(projectActionUrl(project, ''), {
+            preserveScroll: true,
+        });
+    };
+    const restoreProject = () => {
+        router.post(
+            projectActionUrl(project, 'restore'),
+            {},
+            {
+                preserveScroll: true,
+            },
+        );
+    };
+    const unpublishProject = () => {
+        router.post(
+            projectActionUrl(project, 'unpublish'),
+            {},
+            {
+                preserveScroll: true,
+            },
+        );
+    };
+
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    variant="secondary"
+                    size="icon-sm"
+                    className="bg-background/85 shadow-sm backdrop-blur"
+                    aria-label={`${project.name} actions`}
+                >
+                    <MoreHorizontal className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+                {project.canRestore ? (
+                    <DropdownMenuItem onSelect={restoreProject}>
+                        <RotateCcw className="h-4 w-4" />
+                        Restore
+                    </DropdownMenuItem>
+                ) : (
+                    <>
+                        <DropdownMenuItem
+                            disabled={!project.canUnpublish}
+                            onSelect={unpublishProject}
+                        >
+                            <Unplug className="h-4 w-4" />
+                            Unpublish
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                            disabled={!project.canArchive}
+                            variant="destructive"
+                            onSelect={archiveProject}
+                        >
+                            <Archive className="h-4 w-4" />
+                            Archive
+                        </DropdownMenuItem>
+                    </>
+                )}
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+}
+
 function ProjectPreview({ project }: { project: Project }) {
-    if (project.currentDeployment) {
+    if (project.currentDeployment && !project.deletedAt) {
         return (
             <div className="relative aspect-video overflow-hidden border-b bg-muted">
                 <iframe
@@ -292,6 +472,39 @@ function ProjectPreview({ project }: { project: Project }) {
             </div>
         </div>
     );
+}
+
+function projectActionUrl(
+    project: Project,
+    action: 'unpublish' | 'restore' | '',
+) {
+    const url = `/projects/${project.id}`;
+
+    return action ? `${url}/${action}` : url;
+}
+
+function emptyProjectsTitle(status: ProjectFilterStatus): string {
+    if (status === 'archived') {
+        return 'No archived projects';
+    }
+
+    if (status === 'all') {
+        return 'No projects found';
+    }
+
+    return 'No projects yet';
+}
+
+function emptyProjectsText(status: ProjectFilterStatus): string {
+    if (status === 'archived') {
+        return 'Archived projects will appear here after you archive them from a project card.';
+    }
+
+    if (status === 'all') {
+        return 'Try a different filter, or deploy a project from your agent.';
+    }
+
+    return 'Set up the MCP server above, then ask your agent to deploy a project.';
 }
 
 function ProjectMeta({

@@ -127,6 +127,40 @@ class ProjectController extends Controller
         return back();
     }
 
+    public function unpublish(Request $request, Project $project): RedirectResponse
+    {
+        abort_unless($request->user()->canDeployProject($project), 403);
+
+        $project->update(['current_deployment_id' => null]);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Project unpublished.')]);
+
+        return back();
+    }
+
+    public function archive(Request $request, Project $project): RedirectResponse
+    {
+        abort_unless($request->user()->canDeleteProject($project), 403);
+
+        $project->delete();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Project archived.')]);
+
+        return back();
+    }
+
+    public function restore(Request $request, Project $project): RedirectResponse
+    {
+        abort_unless($project->trashed(), 404);
+        abort_unless($request->user()->canDeleteProject($project), 403);
+
+        $project->restore();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Project restored.')]);
+
+        return back();
+    }
+
     public function destroy(Request $request, Team $current_team, Workspace $workspace, Project $project): RedirectResponse
     {
         $this->authorizeProject($request->user(), $current_team, $workspace, $project, WorkspacePermission::DeleteProject);

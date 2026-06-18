@@ -44,7 +44,7 @@ export default function Welcome() {
                 <div className="flex w-full items-center justify-center opacity-100 transition-opacity duration-750 lg:grow starting:opacity-0">
                     <main className="w-full max-w-[335px] lg:max-w-5xl">
                         <div className="mt-12">
-                            <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 font-medium tracking-tight text-muted-foreground">
+                            <div className="inline-flex items-center gap-2 rounded-full bg-red-100 px-3 py-1 font-medium tracking-tight text-red-600">
                                 Introducing Koncat <Play className="size-4" />
                             </div>
                             <div className="mt-4 text-5xl leading-14 font-medium tracking-tighter text-foreground">

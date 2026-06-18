@@ -68,6 +68,76 @@ class DashboardTest extends TestCase
         );
     }
 
+    public function test_dashboard_hides_archived_projects_by_default()
+    {
+        $user = User::factory()->create();
+
+        Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'hosting_team_id' => $user->personalTeam()->id,
+            'name' => 'Active App',
+            'slug' => 'active-app',
+        ]);
+
+        $archivedProject = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'hosting_team_id' => $user->personalTeam()->id,
+            'name' => 'Archived App',
+            'slug' => 'archived-app',
+        ]);
+        $archivedProject->delete();
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('dashboard'));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->has('projects', 1)
+            ->where('projects.0.name', 'Active App')
+            ->where('projectFilters.status', 'active')
+        );
+    }
+
+    public function test_dashboard_can_show_archived_projects()
+    {
+        $user = User::factory()->create();
+
+        Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'hosting_team_id' => $user->personalTeam()->id,
+            'name' => 'Active App',
+            'slug' => 'active-app',
+        ]);
+
+        $archivedProject = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'hosting_team_id' => $user->personalTeam()->id,
+            'name' => 'Archived App',
+            'slug' => 'archived-app',
+        ]);
+        $archivedProject->delete();
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('dashboard', ['status' => 'archived']));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->has('projects', 1)
+            ->where('projects.0.name', 'Archived App')
+            ->where('projects.0.canRestore', true)
+            ->where('projectFilters.status', 'archived')
+            ->where('projects.0.deletedAt', fn ($value) => $value !== null)
+        );
+    }
+
     public function test_dashboard_includes_pending_invitations_for_the_authenticated_user()
     {
         $owner = User::factory()->create(['name' => 'Taylor Otwell']);

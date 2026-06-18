@@ -18,6 +18,12 @@ class DashboardController extends Controller
     {
         $user = $request->user();
         $email = strtolower($user->email);
+        $validated = $request->validate([
+            'status' => ['nullable', 'string', 'in:active,archived,all'],
+            'sort' => ['nullable', 'string', 'in:updated_desc,created_desc,name_asc'],
+        ]);
+        $status = $validated['status'] ?? 'active';
+        $sort = $validated['sort'] ?? 'updated_desc';
 
         $pendingInvitations = TeamInvitation::query()
             ->with(['inviter', 'team'])
@@ -54,6 +60,8 @@ class DashboardController extends Controller
         $projects = Project::query()
             ->with(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment'])
             ->withCount('deployments')
+            ->when($status === 'archived', fn ($query) => $query->onlyTrashed())
+            ->when($status === 'all', fn ($query) => $query->withTrashed())
             ->where(function ($query) use ($teams, $user, $workspaceIds) {
                 $query
                     ->where(function ($personal) use ($user) {
@@ -69,13 +77,19 @@ class DashboardController extends Controller
                     })
                     ->orWhereIn('workspace_id', $workspaceIds);
             })
-            ->latest('updated_at')
+            ->when($sort === 'updated_desc', fn ($query) => $query->latest('updated_at'))
+            ->when($sort === 'created_desc', fn ($query) => $query->latest('created_at'))
+            ->when($sort === 'name_asc', fn ($query) => $query->orderByRaw('LOWER(name)'))
             ->get()
             ->map(fn (Project $project) => $this->projectPayload($project, $user));
 
         return Inertia::render('dashboard', [
             'pendingInvitations' => $pendingInvitations,
             'projects' => $projects,
+            'projectFilters' => [
+                'status' => $status,
+                'sort' => $sort,
+            ],
             'createOptions' => [
                 'owners' => $this->ownerOptions($teams, $user),
             ],
@@ -114,8 +128,12 @@ class DashboardController extends Controller
             ] : null,
             'deploymentsCount' => $project->deployments_count,
             'canDeploy' => $user->canDeployProject($project),
+            'canUnpublish' => $project->current_deployment_id !== null && $user->canDeployProject($project) && ! $project->trashed(),
+            'canArchive' => $user->canDeleteProject($project) && ! $project->trashed(),
+            'canRestore' => $user->canDeleteProject($project) && $project->trashed(),
             'createdAt' => $project->created_at?->toISOString(),
             'updatedAt' => $project->updated_at?->toISOString(),
+            'deletedAt' => $project->deleted_at?->toISOString(),
             'currentDeployment' => $project->currentDeployment ? [
                 'id' => $project->currentDeployment->id,
                 'fileCount' => $project->currentDeployment->file_count,

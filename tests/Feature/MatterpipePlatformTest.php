@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\TeamRole;
 use App\Enums\WorkspaceRole;
+use App\Models\Deployment;
 use App\Models\Project;
 use App\Models\Team;
 use App\Models\User;
@@ -212,6 +213,71 @@ class MatterpipePlatformTest extends TestCase
             'created_by' => $user->id,
             'name' => 'Shared Canvas',
             'slug' => 'shared-canvas',
+        ]);
+    }
+
+    public function test_project_owner_can_archive_and_restore_a_personal_project(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'hosting_team_id' => $user->personalTeam()->id,
+            'created_by' => $user->id,
+            'slug' => 'archive-me',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->delete(route('projects.archive', $project))
+            ->assertRedirect();
+
+        $this->assertSoftDeleted('projects', [
+            'id' => $project->id,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('projects.restore', $project))
+            ->assertRedirect();
+
+        $this->assertNotSoftDeleted('projects', [
+            'id' => $project->id,
+        ]);
+    }
+
+    public function test_project_owner_can_unpublish_a_project_without_deleting_deployments(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'hosting_team_id' => $user->personalTeam()->id,
+            'created_by' => $user->id,
+            'slug' => 'unpublish-me',
+        ]);
+        $deployment = Deployment::create([
+            'project_id' => $project->id,
+            'user_id' => $user->id,
+            'disk' => 'local',
+            'path' => 'deployments/unpublish-me',
+            'file_count' => 1,
+            'total_bytes' => 128,
+            'deployed_at' => now(),
+        ]);
+        $project->update(['current_deployment_id' => $deployment->id]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('projects.unpublish', $project))
+            ->assertRedirect();
+
+        $project->refresh();
+
+        $this->assertNull($project->current_deployment_id);
+        $this->assertDatabaseHas('deployments', [
+            'id' => $deployment->id,
+            'project_id' => $project->id,
         ]);
     }
 

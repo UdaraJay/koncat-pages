@@ -38,6 +38,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('home', DashboardController::class)->name('dashboard');
     Route::post('projects', [ProjectController::class, 'store'])->name('projects.store');
     Route::post('projects/{project}/deployments', [DeploymentController::class, 'storeGlobal'])->name('projects.deployments.store');
+    Route::post('projects/{project}/unpublish', [ProjectController::class, 'unpublish'])->name('projects.unpublish');
+    Route::delete('projects/{project}', [ProjectController::class, 'archive'])->name('projects.archive');
+    Route::post('projects/{project}/restore', [ProjectController::class, 'restore'])->withTrashed()->name('projects.restore');
 });
 
 Route::prefix('{current_team}')

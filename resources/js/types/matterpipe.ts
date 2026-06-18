@@ -57,8 +57,12 @@ export type Project = {
     } | null;
     deploymentsCount: number;
     canDeploy?: boolean;
+    canUnpublish?: boolean;
+    canArchive?: boolean;
+    canRestore?: boolean;
     createdAt?: string | null;
     updatedAt?: string | null;
+    deletedAt?: string | null;
     currentDeployment?: {
         id: string;
         fileCount: number;
