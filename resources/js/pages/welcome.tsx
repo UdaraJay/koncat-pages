@@ -69,7 +69,7 @@ export default function Welcome() {
     return (
         <>
             <Head title="Welcome" />
-            <div className="flex min-h-screen flex-col items-center bg-[#FDFDFC] p-6 text-[#1b1b18] lg:justify-center lg:p-8 lg:pt-3 dark:bg-[#0a0a0a]">
+            <div className="bg-backgroundp-6 flex min-h-screen flex-col items-center text-[#1b1b18] lg:justify-center lg:p-8 lg:pt-3">
                 <header className="mb-6 w-full max-w-[335px] text-sm not-has-[nav]:hidden lg:max-w-5xl">
                     <nav className="flex items-center justify-between gap-4">
                         <div>
@@ -92,7 +92,7 @@ export default function Welcome() {
                             ) : (
                                 <Link
                                     href={login()}
-                                    className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                                    className="inline-block rounded-sm border border-border px-5 py-1.5 text-sm leading-normal text-foreground"
                                 >
                                     Log in
                                 </Link>
