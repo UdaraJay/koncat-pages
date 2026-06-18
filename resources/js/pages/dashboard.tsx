@@ -276,23 +276,7 @@ function MCPSetupPanel({ mcpUrl }: { mcpUrl: string }) {
     return (
         <section className="rounded-lg border bg-muted p-4 text-card-foreground">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,540px)] lg:divide-x">
-                <div className="space-y-4 lg:pr-4">
-                    <div className="flex items-start gap-3 px-1">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-background/80">
-                            <Rocket className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <div className="space-y-1">
-                            <h2 className="font-semibold">Deploy with MCP</h2>
-                            <p className="max-w-2xl text-sm text-muted-foreground">
-                                Add this MCP server to your agent, approve the
-                                OAuth prompt, then call deploy-project with an
-                                index.html file and any assets.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="min-w-0 space-y-3 lg:pl-4">
+                <div className="min-w-0 space-y-3 lg:pr-4">
                     <div className="px-1 text-sm font-medium">
                         Give your agent this MCP URL and let it publish.
                     </div>
@@ -341,6 +325,35 @@ function MCPSetupPanel({ mcpUrl }: { mcpUrl: string }) {
                         Add the MCP to your agent with the URL and authenticate
                         with your email to publish.
                     </p>
+                </div>
+
+                <div className="space-y-4 lg:pl-4">
+                    <div className="flex items-start gap-3 px-1">
+                        <div className="flex size-7 shrink-0 items-center justify-center rounded-sm bg-background text-sm font-medium text-foreground">
+                            1
+                        </div>
+                        <div className="space-y-1">
+                            <h2 className="font-semibold">Install the MCP</h2>
+                            <p className="max-w-2xl text-sm text-muted-foreground">
+                                Add this MCP server to your agent, approve the
+                                OAuth prompt to login.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-start gap-3 px-1">
+                        <div className="flex size-7 shrink-0 items-center justify-center rounded-sm bg-background text-sm font-medium text-foreground">
+                            2
+                        </div>
+                        <div className="space-y-1">
+                            <h2 className="font-semibold">
+                                Tell your agent to publish
+                            </h2>
+                            <p className="max-w-2xl text-sm text-muted-foreground">
+                                Ask your agent to publish it's work using the
+                                Koncat and it will appear here as a project.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
