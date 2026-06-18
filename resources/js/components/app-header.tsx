@@ -34,8 +34,8 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                         prefetch
                         aria-label="Matterpipe home"
                     >
-                        <AppLogoIcon className="-mt-[1px] size-11 fill-current text-foreground" />
-                        <div className="font-[Koulen] text-xl">Koncat</div>
+                        <AppLogoIcon className="-mt-[2px] size-6 fill-current text-foreground" />
+                        <div className="font-[Koulen] text-2xl">Koncat</div>
                     </Link>
                 </Button>
 

@@ -364,6 +364,16 @@ class MatterpipePlatformTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_hosted_project_guests_are_redirected_to_primary_domain_login(): void
+    {
+        $hostingDomain = config('matterpipe.hosting_domain');
+        $hostingScheme = config('matterpipe.hosting_scheme') === 'http' ? 'http' : 'https';
+
+        $this
+            ->get("http://udara.{$hostingDomain}/essay-example")
+            ->assertRedirect("{$hostingScheme}://{$hostingDomain}/login");
+    }
+
     public function test_hosted_project_responses_allow_frames_from_hosting_domain_and_self(): void
     {
         $this->skipWithoutZip();

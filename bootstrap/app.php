@@ -18,6 +18,20 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
         $middleware->validateCsrfTokens(except: ['api/*', '__matterpipe/*']);
+        $middleware->redirectGuestsTo(function (Request $request): string {
+            $hostingDomain = rtrim(strtolower((string) config('matterpipe.hosting_domain')), '.');
+            $host = rtrim(strtolower($request->getHost()), '.');
+
+            if ($hostingDomain !== '' && str_ends_with($host, ".{$hostingDomain}")) {
+                return sprintf(
+                    '%s://%s/login',
+                    config('matterpipe.hosting_scheme') === 'http' ? 'http' : 'https',
+                    $hostingDomain,
+                );
+            }
+
+            return route('login');
+        });
 
         $middleware->web(append: [
             HandleAppearance::class,

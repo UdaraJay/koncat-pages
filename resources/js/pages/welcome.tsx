@@ -1,5 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
+    Check,
     ChevronRight,
     Copy,
     Globe2,
@@ -8,11 +9,15 @@ import {
     Play,
     UserRound,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import AppLogoIcon from '@/components/app-logo-icon';
 import BrochurePreviews from '@/components/brochure-previews';
 import { Button } from '@/components/ui/button';
-import { dashboard, login } from '@/routes';
+import { useClipboard } from '@/hooks/use-clipboard';
 import { ClaudeIcon, CursorIcon, VSCodeIcon } from '@/icons';
+import { dashboard, login } from '@/routes';
+
+const MCP_URL = 'https://koncat.co/mcp';
 
 const accessOptions = [
     {
@@ -48,6 +53,18 @@ const accessOptions = [
 export default function Welcome() {
     const { auth } = usePage().props;
     const dashboardUrl = dashboard();
+    const [copiedText, copy] = useClipboard();
+    const mcpUrlCopied = copiedText === MCP_URL;
+
+    const copyMcpUrl = async () => {
+        const copied = await copy(MCP_URL);
+
+        if (copied) {
+            toast.success('MCP URL copied');
+        } else {
+            toast.error('Could not copy MCP URL');
+        }
+    };
 
     return (
         <>
@@ -112,7 +129,7 @@ export default function Welcome() {
                                     <div className="flex gap-1">
                                         <input
                                             className="flex-1 rounded-full border bg-background px-4 py-2 font-medium"
-                                            value="https://koncat.co/mcp"
+                                            value={MCP_URL}
                                             readOnly
                                         />
                                     </div>
@@ -137,9 +154,19 @@ export default function Welcome() {
                                             </Button>
                                         </a>
 
-                                        <Button variant="outline" size="sm">
-                                            <Copy className="size-4" />
-                                            Copy MCP URL
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={copyMcpUrl}
+                                        >
+                                            {mcpUrlCopied ? (
+                                                <Check className="size-4" />
+                                            ) : (
+                                                <Copy className="size-4" />
+                                            )}
+                                            {mcpUrlCopied
+                                                ? 'Copied'
+                                                : 'Copy MCP URL'}
                                         </Button>
                                     </div>
 
@@ -149,19 +176,21 @@ export default function Welcome() {
                                         publish.
                                     </div>
                                 </div>
-                                <div className="p-4">
-                                    <div className="mb-2 px-2 text-sm font-medium">
-                                        Manage your pages, teams and access.
-                                    </div>
+                                <div className="flex flex-col justify-between p-4">
+                                    <div>
+                                        <div className="mb-2 px-2 text-sm font-medium">
+                                            Manage your pages, teams and access.
+                                        </div>
 
-                                    <div className="flex gap-1">
-                                        <Link
-                                            href="/login"
-                                            className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2 pr-4 text-lg font-medium tracking-tight text-background"
-                                        >
-                                            Create an account{' '}
-                                            <ChevronRight className="size-6" />
-                                        </Link>
+                                        <div className="flex gap-1">
+                                            <Link
+                                                href="/login"
+                                                className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2 pr-4 text-lg font-medium tracking-tight text-background"
+                                            >
+                                                Create an account{' '}
+                                                <ChevronRight className="size-6" />
+                                            </Link>
+                                        </div>
                                     </div>
 
                                     <div className="mt-2 max-w-md px-2 text-sm text-muted-foreground">
@@ -273,7 +302,7 @@ export default function Welcome() {
                                             title,
                                         }) => (
                                             <div
-                                                className="rounded-2xl bg-muted p-5"
+                                                className="bg-muted p-5"
                                                 key={title}
                                             >
                                                 <div className="flex items-start justify-between gap-4 text-muted-foreground">
@@ -282,7 +311,7 @@ export default function Welcome() {
                                                     </div>
                                                     <Icon className="size-5" />
                                                 </div>
-                                                <h3 className="mt-32 text-xl font-medium tracking-tight text-foreground">
+                                                <h3 className="mt-32 text-2xl font-medium tracking-tighter text-foreground">
                                                     {title}
                                                 </h3>
                                                 <div className="mt-1 max-w-sm text-sm leading-tight text-muted-foreground">
