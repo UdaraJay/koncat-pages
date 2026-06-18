@@ -7,6 +7,7 @@ use App\Http\Controllers\Hosted\MatterpipeDocumentController;
 use App\Http\Controllers\Hosted\MatterpipeFileController;
 use App\Http\Controllers\Hosted\MatterpipeIdentityController;
 use App\Http\Controllers\Hosted\MatterpipeSdkController;
+use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\Projects\DeploymentController;
 use App\Http\Controllers\Projects\ProjectController;
 use App\Http\Controllers\Teams\TeamInvitationController;
@@ -16,6 +17,9 @@ use App\Http\Middleware\EnsureTeamMembership;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
+Route::get('terms', [LegalPageController::class, 'terms'])->name('legal.terms');
+Route::redirect('tos', '/terms')->name('legal.tos');
+Route::get('privacy', [LegalPageController::class, 'privacy'])->name('legal.privacy');
 
 Route::domain('{team}.'.config('matterpipe.hosting_domain'))
     ->middleware(['auth', 'verified'])

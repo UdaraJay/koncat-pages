@@ -201,7 +201,7 @@ function HeaderTeamSwitcher({ currentTeam, teams }: Props) {
             <CreateTeamModal>
                 <Button
                     variant="ghost"
-                    className="h-9 max-w-[180px] min-w-0 justify-start gap-2 px-2 text-muted-foreground"
+                    className="h-9 max-w-[180px] min-w-0 justify-start gap-2 px-1 text-muted-foreground"
                 >
                     {renderTeamMark({
                         label: 'Team',

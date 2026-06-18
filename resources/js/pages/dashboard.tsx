@@ -1,11 +1,10 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     Archive,
     ArrowUpRight,
     CalendarClock,
     Folder,
     HardDrive,
-    KeyRound,
     MoreHorizontal,
     RotateCcw,
     Rocket,
@@ -191,11 +190,8 @@ export default function Dashboard({
 function MCPSetupPanel({ mcpUrl }: { mcpUrl: string }) {
     const config = `{
   "mcpServers": {
-    "mcp-server": {
-      "url": "${mcpUrl}",
-      "headers": {
-        "Authorization": "Bearer mp_your_token"
-      }
+    "matterpipe": {
+      "url": "${mcpUrl}"
     }
   }
 }`;
@@ -211,8 +207,8 @@ function MCPSetupPanel({ mcpUrl }: { mcpUrl: string }) {
                         <div className="space-y-1">
                             <h2 className="font-semibold">Deploy with MCP</h2>
                             <p className="max-w-2xl text-sm text-muted-foreground">
-                                Create an API token, add this MCP server to your
-                                agent, then call deploy-project with an
+                                Add this MCP server to your agent, approve the
+                                OAuth prompt, then call deploy-project with an
                                 index.html file and any assets.
                             </p>
                         </div>
@@ -221,13 +217,13 @@ function MCPSetupPanel({ mcpUrl }: { mcpUrl: string }) {
                     <div className="grid gap-3 text-sm md:grid-cols-3">
                         <SetupStep
                             number="1"
-                            title="Create a token"
-                            text="Generate a user API token for your agent."
+                            title="Add the server"
+                            text="Use the endpoint in your MCP client."
                         />
                         <SetupStep
                             number="2"
-                            title="Add the server"
-                            text="Use the endpoint and bearer token in your MCP client."
+                            title="Approve access"
+                            text="Sign in and grant the mcp:use scope."
                         />
                         <SetupStep
                             number="3"
@@ -235,13 +231,6 @@ function MCPSetupPanel({ mcpUrl }: { mcpUrl: string }) {
                             text="Ask the agent to call deploy-project with inline files."
                         />
                     </div>
-
-                    <Button asChild size="sm" className="w-fit">
-                        <Link href="/settings/api-tokens">
-                            <KeyRound className="h-4 w-4" />
-                            Create API token
-                        </Link>
-                    </Button>
                 </div>
 
                 <div className="min-w-0 rounded-md border bg-muted/40 p-3">

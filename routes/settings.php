@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\ConnectedApplicationController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use App\Http\Controllers\Settings\UserApiTokenController;
@@ -33,6 +34,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('settings/api-tokens', [UserApiTokenController::class, 'index'])->name('api-tokens.index');
     Route::post('settings/api-tokens', [UserApiTokenController::class, 'store'])->name('api-tokens.store');
     Route::delete('settings/api-tokens/{token}', [UserApiTokenController::class, 'destroy'])->name('api-tokens.destroy');
+
+    Route::get('settings/connected-applications', [ConnectedApplicationController::class, 'index'])->name('connected-applications.index');
+    Route::delete('settings/connected-applications/{application}', [ConnectedApplicationController::class, 'destroy'])->name('connected-applications.destroy');
 
     Route::get('settings/teams', [TeamController::class, 'index'])->name('teams.index');
     Route::post('settings/teams', [TeamController::class, 'store'])->name('teams.store');

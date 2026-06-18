@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Passport\Contracts\AuthorizationViewResponse;
+use Laravel\Passport\Http\Responses\SimpleViewResponse;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,7 +17,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(
+            AuthorizationViewResponse::class,
+            fn (): SimpleViewResponse => new SimpleViewResponse('mcp.authorize'),
+        );
     }
 
     /**

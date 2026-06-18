@@ -7,9 +7,10 @@ use App\Mcp\Tools\DeployProjectTool;
 use App\Mcp\Tools\FetchProjectTool;
 use App\Models\Project;
 use App\Models\User;
-use App\Models\UserApiToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Passport\ClientRepository;
+use Laravel\Passport\Passport;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -70,29 +71,117 @@ class MCPServerTest extends TestCase
         $this->assertNotNull($project->current_deployment_id);
     }
 
-    public function test_mcp_route_rejects_missing_invalid_and_expired_tokens(): void
+    public function test_mcp_route_rejects_unauthenticated_requests_with_oauth_challenge(): void
     {
+        $resourceMetadataUrl = route('mcp.oauth.protected-resource.nested', ['path' => 'mcp']);
+
         $this->postJson('/mcp', $this->toolCallPayload())
-            ->assertUnauthorized();
-
-        $this->withToken('mp_invalid')
-            ->postJson('/mcp', $this->toolCallPayload())
-            ->assertUnauthorized();
-
-        $user = User::factory()->create();
-        $plainTextToken = UserApiToken::makePlainTextToken();
-        $user->apiTokens()->create([
-            'name' => 'Expired',
-            'token_hash' => UserApiToken::hashToken($plainTextToken),
-            'expires_at' => now()->subMinute(),
-        ]);
-
-        $this->withToken($plainTextToken)
-            ->postJson('/mcp', $this->toolCallPayload())
-            ->assertUnauthorized();
+            ->assertUnauthorized()
+            ->assertHeader(
+                'WWW-Authenticate',
+                'Bearer realm="mcp", resource_metadata="'.$resourceMetadataUrl.'"'
+            );
     }
 
-    public function test_mcp_route_accepts_valid_bearer_token_and_deploys_project(): void
+    public function test_mcp_oauth_metadata_and_dynamic_client_registration_are_available(): void
+    {
+        $this->getJson('/.well-known/oauth-protected-resource/mcp')
+            ->assertOk()
+            ->assertJsonPath('resource', url('/mcp'))
+            ->assertJsonPath('authorization_servers.0', url('/'))
+            ->assertJsonPath('scopes_supported.0', 'mcp:use');
+
+        $this->getJson('/.well-known/oauth-authorization-server')
+            ->assertOk()
+            ->assertJsonPath('issuer', url('/'))
+            ->assertJsonPath('authorization_endpoint', route('passport.authorizations.authorize'))
+            ->assertJsonPath('token_endpoint', route('passport.token'))
+            ->assertJsonPath('registration_endpoint', url('/oauth/register'))
+            ->assertJsonPath('response_types_supported.0', 'code')
+            ->assertJsonPath('code_challenge_methods_supported.0', 'S256')
+            ->assertJsonPath('grant_types_supported.0', 'authorization_code')
+            ->assertJsonPath('scopes_supported.0', 'mcp:use');
+
+        $this->postJson('/oauth/register', [
+            'client_name' => 'Claude Desktop',
+            'redirect_uris' => ['http://localhost:6274/oauth/callback'],
+        ])
+            ->assertCreated()
+            ->assertJsonPath('grant_types.0', 'authorization_code')
+            ->assertJsonPath('grant_types.1', 'refresh_token')
+            ->assertJsonPath('response_types.0', 'code')
+            ->assertJsonPath('redirect_uris.0', 'http://localhost:6274/oauth/callback')
+            ->assertJsonPath('scope', 'mcp:use')
+            ->assertJsonPath('token_endpoint_auth_method', 'none')
+            ->assertJsonStructure(['client_id']);
+
+        $this->assertDatabaseHas('oauth_clients', [
+            'name' => 'Claude Desktop',
+            'secret' => null,
+            'revoked' => false,
+        ]);
+    }
+
+    public function test_passport_authorization_page_approves_mcp_oauth_clients(): void
+    {
+        $user = User::factory()->create();
+        $client = app(ClientRepository::class)->createAuthorizationCodeGrantClient(
+            name: 'Claude Desktop',
+            redirectUris: ['http://localhost:6274/oauth/callback'],
+            confidential: false,
+        );
+
+        $this->actingAs($user);
+
+        $this
+            ->get('/oauth/authorize?'.http_build_query([
+                'client_id' => $client->id,
+                'redirect_uri' => 'http://localhost:6274/oauth/callback',
+                'response_type' => 'code',
+                'scope' => 'mcp:use',
+                'state' => 'test-state',
+                'code_challenge' => str_repeat('a', 43),
+                'code_challenge_method' => 'S256',
+            ]))
+            ->assertOk()
+            ->assertSee('Authorize Claude Desktop')
+            ->assertSee('Use MCP server');
+
+        $authToken = session('authToken');
+
+        $this->assertIsString($authToken);
+
+        $response = $this->post('/oauth/authorize', [
+            'client_id' => $client->id,
+            'auth_token' => $authToken,
+        ]);
+
+        $response->assertRedirect();
+
+        $redirectUrl = $response->headers->get('Location');
+
+        $this->assertIsString($redirectUrl);
+        $this->assertStringStartsWith('http://localhost:6274/oauth/callback?', $redirectUrl);
+        $this->assertStringContainsString('code=', $redirectUrl);
+        $this->assertStringContainsString('state=test-state', $redirectUrl);
+        $this->assertDatabaseHas('oauth_auth_codes', [
+            'user_id' => $user->id,
+            'client_id' => $client->id,
+            'revoked' => false,
+        ]);
+    }
+
+    public function test_mcp_route_rejects_passport_tokens_without_mcp_scope(): void
+    {
+        $user = User::factory()->create();
+
+        Passport::actingAs($user);
+
+        $this->postJson('/mcp', $this->toolCallPayload())
+            ->assertForbidden();
+    }
+
+    public function test_mcp_route_accepts_passport_token_with_mcp_scope_and_deploys_project(): void
     {
         $this->skipWithoutZip();
         Storage::fake('local');
@@ -104,26 +193,21 @@ class MCPServerTest extends TestCase
 
         $user = User::factory()->create();
         $user->personalTeam()->update(['subdomain' => 'route-team']);
-        $plainTextToken = UserApiToken::makePlainTextToken();
-        $token = $user->apiTokens()->create([
-            'name' => 'Agent',
-            'token_hash' => UserApiToken::hashToken($plainTextToken),
-        ]);
 
-        $this->withToken($plainTextToken)
-            ->postJson('/mcp', $this->toolCallPayload([
-                'name' => 'Route App',
-                'slug' => 'route-app',
-                'files' => [
-                    ['path' => 'index.html', 'content' => 'hello'],
-                ],
-            ]))
+        Passport::actingAs($user, ['mcp:use']);
+
+        $this->postJson('/mcp', $this->toolCallPayload([
+            'name' => 'Route App',
+            'slug' => 'route-app',
+            'files' => [
+                ['path' => 'index.html', 'content' => 'hello'],
+            ],
+        ]))
             ->assertOk()
             ->assertJsonPath('result.structuredContent.action', 'created')
             ->assertJsonPath('result.structuredContent.project.slug', 'route-app')
             ->assertJsonPath('result.structuredContent.project.url', 'http://route-team.localhost/route-app');
 
-        $this->assertNotNull($token->fresh()->last_used_at);
         $this->assertDatabaseHas('projects', [
             'owner_type' => User::class,
             'owner_id' => $user->id,

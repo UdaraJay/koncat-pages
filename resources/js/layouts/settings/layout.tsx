@@ -33,6 +33,11 @@ const sidebarNavItems: NavItem[] = [
         icon: null,
     },
     {
+        title: 'Connected apps',
+        href: '/settings/connected-applications',
+        icon: null,
+    },
+    {
         title: 'Appearance',
         href: editAppearance(),
         icon: null,

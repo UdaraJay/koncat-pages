@@ -17,6 +17,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Laravel\Passport\Contracts\OAuthenticatable;
+use Laravel\Passport\HasApiTokens;
 
 /**
  * @property string $id
@@ -41,10 +43,10 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  */
 #[Fillable(['name', 'email', 'email_verified_at', 'current_team_id'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements OAuthenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasTeams, HasUlids, Notifiable, TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, HasTeams, HasUlids, Notifiable, TwoFactorAuthenticatable;
 
     /**
      * Get the attributes that should be cast.

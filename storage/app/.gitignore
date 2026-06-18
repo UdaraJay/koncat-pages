@@ -1,4 +1,6 @@
 *
+!legal/
+!legal/*.md
 !private/
 !public/
 !.gitignore

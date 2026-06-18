@@ -13,6 +13,7 @@ import { UserMenuContent } from '@/components/user-menu-content';
 import { useInitials } from '@/hooks/use-initials';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
+import { Slash } from 'lucide-react';
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
@@ -27,18 +28,14 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     return (
         <header className="sticky top-0 z-40 flex h-14 w-full items-center bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
             <div className="flex min-w-0 flex-1 items-center gap-2">
-                <Button
-                    asChild
-                    variant="ghost"
-                    size="icon"
-                    className="size-9 rounded-md"
-                >
+                <Button asChild variant="ghost" className="rounded-md pl-2!">
                     <Link
                         href={dashboardUrl}
                         prefetch
                         aria-label="Matterpipe home"
                     >
-                        <AppLogoIcon className="size-11 fill-current text-foreground" />
+                        <AppLogoIcon className="-mt-[1px] size-11 fill-current text-foreground" />
+                        <div className="font-[Koulen] text-xl">Koncat</div>
                     </Link>
                 </Button>
 
@@ -50,7 +47,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
 
                 {breadcrumbs.length > 0 ? (
                     <div className="hidden min-w-0 items-center gap-2 text-sm text-muted-foreground sm:flex">
-                        <span className="text-border">/</span>
+                        <span className="mr-3 text-border">/</span>
                         <Breadcrumbs breadcrumbs={breadcrumbs} />
                     </div>
                 ) : null}

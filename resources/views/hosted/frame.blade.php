@@ -58,24 +58,22 @@
         }
 
         .koncat-frame-brand {
-            gap: 10px;
-            color: var(--frame-foreground);
-            font-weight: 650;
+            gap: 8px;
+            color: var(--frame-muted);
+            font-weight: 450;
             text-decoration: none;
         }
 
         .koncat-frame-mark {
             display: grid;
-            width: 24px;
-            height: 24px;
+            height: 28px;
             flex: 0 0 auto;
             place-items: center;
-            color: black;
+            color: var(--frame-muted);
         }
 
         .koncat-frame-mark svg {
-            width: 24px;
-            height: auto;
+            height: 17px;
         }
 
         .koncat-frame-wordmark {
@@ -148,8 +146,12 @@
         }
 
         .koncat-frame-footer {
-            padding: 8px 10px;
+            padding: 5px 12px;
             font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--frame-muted);
         }
 
         @media (max-width: 640px) {
@@ -185,16 +187,7 @@
 
 <body>
     <header class="koncat-frame-bar">
-        <a class="koncat-frame-brand" href="{{ $homeUrl }}" aria-label="Koncat home" target="_top">
-            <span class="koncat-frame-mark" aria-hidden="true">
-                <svg viewBox="0 0 335 170" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" clip-rule="evenodd"
-                        d="M250.238 0C259.103 0 263.536 0 267.27 0.373C302.89 3.931 331.064 32.065 334.627 67.636C335 71.364 335 75.791 335 84.644C335 93.498 335 97.924 334.627 101.652C331.064 137.223 302.89 165.358 267.27 168.915C263.536 169.288 259.103 169.288 250.238 169.288H84.763C75.897 169.288 71.464 169.288 67.731 168.915C32.11 165.358 3.936 137.223 0.373 101.652C0 97.924 0 93.498 0 84.644C0 75.791 0 71.364 0.373 67.636C3.936 32.065 32.11 3.931 67.731 0.373C71.464 0 75.897 0 84.763 0H250.238ZM84.763 56.622C69.265 56.622 56.701 69.168 56.701 84.644C56.701 100.12 69.265 112.666 84.763 112.666H250.238C265.735 112.666 278.299 100.12 278.299 84.644C278.299 69.168 265.735 56.622 250.238 56.622H84.763Z"
-                        fill="currentColor" />
-                </svg>
-            </span>
-            <span class="koncat-frame-wordmark">Koncat</span>
-        </a>
+
         <div class="koncat-frame-project" title="{{ $project->name }}">
             {{ $project->name }}
         </div>
@@ -212,7 +205,25 @@
     <iframe class="koncat-frame-app" src="{{ $renderUrl }}" title="{{ $project->name }}"
         referrerpolicy="same-origin"></iframe>
     <footer class="koncat-frame-footer">
-        Last updated {{ $project->updated_at->diffForHumans() }}.
+        <div>
+            <a class="koncat-frame-brand" href="{{ $homeUrl }}" aria-label="Koncat home" target="_top">
+                <span class="koncat-frame-mark" aria-hidden="true">
+                    <svg viewBox="0 0 335 170" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" clip-rule="evenodd"
+                            d="M250.238 0C259.103 0 263.536 0 267.27 0.373C302.89 3.931 331.064 32.065 334.627 67.636C335 71.364 335 75.791 335 84.644C335 93.498 335 97.924 334.627 101.652C331.064 137.223 302.89 165.358 267.27 168.915C263.536 169.288 259.103 169.288 250.238 169.288H84.763C75.897 169.288 71.464 169.288 67.731 168.915C32.11 165.358 3.936 137.223 0.373 101.652C0 97.924 0 93.498 0 84.644C0 75.791 0 71.364 0.373 67.636C3.936 32.065 32.11 3.931 67.731 0.373C71.464 0 75.897 0 84.763 0H250.238ZM84.763 56.622C69.265 56.622 56.701 69.168 56.701 84.644C56.701 100.12 69.265 112.666 84.763 112.666H250.238C265.735 112.666 278.299 100.12 278.299 84.644C278.299 69.168 265.735 56.622 250.238 56.622H84.763Z"
+                            fill="currentColor" />
+                    </svg>
+                </span>
+                <span class="koncat-frame-wordmark">Published with Koncat</span>
+            </a>
+        </div>
+
+        <div>
+            Created on {{ $project->created_at->toFormattedDateString() }}.
+            Last updated {{ $project->updated_at->diffForHumans() }}.
+        </div>
+
+
     </footer>
 </body>
 

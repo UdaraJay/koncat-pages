@@ -1,8 +1,10 @@
 <?php
 
-use App\Http\Middleware\AuthenticateMCPRequest;
 use App\Mcp\Servers\MCPServer;
 use Laravel\Mcp\Facades\Mcp;
+use Laravel\Passport\Http\Middleware\CheckToken;
+
+Mcp::oauthRoutes();
 
 Mcp::web('/mcp', MCPServer::class)
-    ->middleware(AuthenticateMCPRequest::class);
+    ->middleware(['auth:api', CheckToken::using('mcp:use')]);
