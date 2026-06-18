@@ -1,8 +1,8 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-react';
+import { Boxes, KeyRound, LayoutGrid, Settings } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
-import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
+import { NavProjects } from '@/components/nav-projects';
 import { NavUser } from '@/components/nav-user';
 import { TeamSwitcher } from '@/components/team-switcher';
 import {
@@ -15,13 +15,14 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import type { NavItem } from '@/types';
+import type { NavItem, Project } from '@/types';
 
 export function AppSidebar() {
     const page = usePage();
-    const dashboardUrl = page.props.currentTeam
-        ? dashboard(page.props.currentTeam.slug)
-        : '/';
+    const { currentTeam, currentTeamProjects, teams } = page.props;
+    const projects = currentTeamProjects ?? [];
+    const dashboardUrl = dashboard();
+    const workspacesUrl = currentTeam ? `/${currentTeam.slug}/workspaces` : '#';
 
     const mainNavItems: NavItem[] = [
         {
@@ -29,20 +30,27 @@ export function AppSidebar() {
             href: dashboardUrl,
             icon: LayoutGrid,
         },
+        {
+            title: 'Workspaces',
+            href: workspacesUrl,
+            icon: Boxes,
+        },
+        {
+            title: 'API tokens',
+            href: '/settings/api-tokens',
+            icon: KeyRound,
+        },
+        {
+            title: 'Settings',
+            href: '/settings/profile',
+            icon: Settings,
+        },
     ];
 
-    const footerNavItems: NavItem[] = [
-        {
-            title: 'Repository',
-            href: 'https://github.com/laravel/react-starter-kit',
-            icon: FolderGit2,
-        },
-        {
-            title: 'Documentation',
-            href: 'https://laravel.com/docs/starter-kits#react',
-            icon: BookOpen,
-        },
-    ];
+    const projectItems = projects.slice(0, 5).map((project: Project) => ({
+        name: project.name,
+        url: project.url,
+    }));
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -56,19 +64,15 @@ export function AppSidebar() {
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <TeamSwitcher />
-                    </SidebarMenuItem>
-                </SidebarMenu>
+                <TeamSwitcher currentTeam={currentTeam} teams={teams ?? []} />
             </SidebarHeader>
 
             <SidebarContent>
                 <NavMain items={mainNavItems} />
+                <NavProjects projects={projectItems} />
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

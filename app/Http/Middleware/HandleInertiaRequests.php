@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Project;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -46,6 +47,71 @@ class HandleInertiaRequests extends Middleware
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'currentTeam' => fn () => $user?->currentTeam ? $user->toUserTeam($user->currentTeam) : null,
             'teams' => fn () => $user?->toUserTeams(includeCurrent: true) ?? [],
+            'currentTeamProjects' => function () use ($user) {
+                if (! $user || ! $user->currentTeam) {
+                    return [];
+                }
+
+                $team = $user->currentTeam;
+
+                return $team
+                    ->projects()
+                    ->with('workspace')
+                    ->with('hostingTeam')
+                    ->withCount('deployments')
+                    ->where(function ($query) use ($team, $user) {
+                        $query
+                            ->whereNull('workspace_id')
+                            ->orWhereHas('workspace', function ($workspaces) use ($team, $user) {
+                                $workspaces->where('team_id', $team->id);
+
+                                if (! $user->canManageTeamWorkspaces($team)) {
+                                    $workspaces->whereHas('members', fn ($members) => $members->whereKey($user->id));
+                                }
+                            });
+                    })
+                    ->latest('updated_at')
+                    ->get()
+                    ->map(fn (Project $project) => [
+                        'id' => $project->id,
+                        'name' => $project->name,
+                        'slug' => $project->slug,
+                        'description' => $project->description,
+                        'url' => $project->url(),
+                        'ownerType' => 'team',
+                        'ownerName' => $team->name,
+                        'team' => [
+                            'id' => $team->id,
+                            'name' => $team->name,
+                            'slug' => $team->slug,
+                        ],
+                        'workspace' => $project->workspace ? [
+                            'id' => $project->workspace->id,
+                            'name' => $project->workspace->name,
+                            'slug' => $project->workspace->slug,
+                        ] : null,
+                        'deploymentsCount' => $project->deployments_count,
+                    ]);
+            },
+            'currentTeamWorkspaces' => fn () => $user?->currentTeam
+                ? $user->currentTeam
+                    ->workspaces()
+                    ->withCount('projects')
+                    ->when(! $user->canManageTeamWorkspaces($user->currentTeam), function ($query) use ($user) {
+                        $query->whereHas('members', fn ($members) => $members->whereKey($user->id));
+                    })
+                    ->orderBy('name')
+                    ->get()
+                    ->map(fn ($workspace) => [
+                        'id' => $workspace->id,
+                        'teamId' => $workspace->team_id,
+                        'name' => $workspace->name,
+                        'slug' => $workspace->slug,
+                        'role' => $user->workspaceRole($workspace)?->value,
+                        'roleLabel' => $user->workspaceRole($workspace)?->label(),
+                        'projectsCount' => $workspace->projects_count,
+                    ])
+                : [],
         ];
     }
 }

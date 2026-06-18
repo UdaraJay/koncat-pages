@@ -1,30 +1,20 @@
 import { Form, Head } from '@inertiajs/react';
 import InputError from '@/components/input-error';
-import PasskeyVerify from '@/components/passkey-verify';
-import PasswordInput from '@/components/password-input';
 import TeamInvitationAlert from '@/components/team-invitation-alert';
-import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { register } from '@/routes';
-import { store } from '@/routes/login';
-import { request } from '@/routes/password';
+import { request as requestMagicLink } from '@/routes/login/magic';
 import type { TeamInvitationContext } from '@/types';
 
 type Props = {
     status?: string;
-    canResetPassword: boolean;
     teamInvitation?: TeamInvitationContext | null;
 };
 
-export default function Login({
-    status,
-    canResetPassword,
-    teamInvitation,
-}: Props) {
+export default function Login({ status, teamInvitation }: Props) {
     return (
         <>
             <Head title="Log in" />
@@ -36,11 +26,9 @@ export default function Login({
                 />
             )}
 
-            <PasskeyVerify />
-
             <Form
-                {...store.form()}
-                resetOnSuccess={['password']}
+                action={requestMagicLink.url()}
+                method="post"
                 className="flex flex-col gap-6"
             >
                 {({ processing, errors }) => (
@@ -61,64 +49,36 @@ export default function Login({
                                 <InputError message={errors.email} />
                             </div>
 
-                            <div className="grid gap-2">
-                                <div className="flex items-center">
-                                    <Label htmlFor="password">Password</Label>
-                                    {canResetPassword && (
-                                        <TextLink
-                                            href={request()}
-                                            className="ml-auto text-sm"
-                                            tabIndex={5}
-                                        >
-                                            Forgot password?
-                                        </TextLink>
-                                    )}
-                                </div>
-                                <PasswordInput
-                                    id="password"
-                                    name="password"
-                                    required
-                                    tabIndex={2}
-                                    autoComplete="current-password"
-                                    placeholder="Password"
+                            {teamInvitation && (
+                                <input
+                                    type="hidden"
+                                    name="invitation"
+                                    value={teamInvitation.code}
                                 />
-                                <InputError message={errors.password} />
-                            </div>
+                            )}
 
                             <div className="flex items-center space-x-3">
                                 <Checkbox
                                     id="remember"
                                     name="remember"
-                                    tabIndex={3}
+                                    value="1"
+                                    tabIndex={2}
                                 />
-                                <Label htmlFor="remember">Remember me</Label>
+                                <Label htmlFor="remember">
+                                    Keep me signed in
+                                </Label>
                             </div>
 
                             <Button
                                 type="submit"
-                                className="mt-4 w-full"
-                                tabIndex={4}
+                                className="w-full"
+                                tabIndex={3}
                                 disabled={processing}
                                 data-test="login-button"
                             >
                                 {processing && <Spinner />}
-                                Log in
+                                Send sign-in link
                             </Button>
-                        </div>
-
-                        <div className="text-center text-sm text-muted-foreground">
-                            Don't have an account?{' '}
-                            <TextLink
-                                href={register({
-                                    query: {
-                                        invitation: teamInvitation?.code,
-                                    },
-                                })}
-                                data-test="register-link"
-                                tabIndex={5}
-                            >
-                                Sign up
-                            </TextLink>
                         </div>
                     </>
                 )}
@@ -135,5 +95,5 @@ export default function Login({
 
 Login.layout = {
     title: 'Log in to your account',
-    description: 'Enter your email and password below to log in',
+    description: "Enter your email and we'll send a secure sign-in link.",
 };

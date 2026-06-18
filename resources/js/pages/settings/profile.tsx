@@ -1,5 +1,4 @@
 import { Form, Head, usePage } from '@inertiajs/react';
-import { Link } from '@inertiajs/react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/delete-user';
 import Heading from '@/components/heading';
@@ -8,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { edit } from '@/routes/profile';
-import { send } from '@/routes/verification';
+import { verify as verifyEmailChange } from '@/routes/profile/email';
 import type { Auth } from '@/types';
 
 type PageProps = {
@@ -16,10 +15,13 @@ type PageProps = {
 };
 
 export default function Profile({
-    mustVerifyEmail,
+    emailChangeChallengeId,
+    pendingEmail,
     status,
 }: {
     mustVerifyEmail: boolean;
+    emailChangeChallengeId?: string | null;
+    pendingEmail?: string | null;
     status?: string;
 }) {
     const { auth } = usePage<PageProps>().props;
@@ -85,31 +87,6 @@ export default function Profile({
                                 />
                             </div>
 
-                            {mustVerifyEmail &&
-                                auth.user.email_verified_at === null && (
-                                    <div>
-                                        <p className="-mt-4 text-sm text-muted-foreground">
-                                            Your email address is unverified.{' '}
-                                            <Link
-                                                href={send()}
-                                                as="button"
-                                                className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
-                                            >
-                                                Click here to re-send the
-                                                verification email.
-                                            </Link>
-                                        </p>
-
-                                        {status ===
-                                            'verification-link-sent' && (
-                                            <div className="mt-2 text-sm font-medium text-green-600">
-                                                A new verification link has been
-                                                sent to your email address.
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
                             <div className="flex items-center gap-4">
                                 <Button
                                     disabled={processing}
@@ -122,6 +99,62 @@ export default function Profile({
                     )}
                 </Form>
             </div>
+
+            {emailChangeChallengeId && (
+                <div className="space-y-6">
+                    <Heading
+                        variant="small"
+                        title="Confirm new email"
+                        description={`Enter the code sent to ${pendingEmail}`}
+                    />
+
+                    <Form
+                        action={verifyEmailChange.url()}
+                        method="post"
+                        options={{
+                            preserveScroll: true,
+                        }}
+                        className="space-y-6"
+                    >
+                        {({ processing, errors }) => (
+                            <>
+                                <input
+                                    type="hidden"
+                                    name="challenge_id"
+                                    value={emailChangeChallengeId}
+                                />
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="email_change_code">
+                                        Confirmation code
+                                    </Label>
+                                    <Input
+                                        id="email_change_code"
+                                        name="code"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        maxLength={6}
+                                        placeholder="123456"
+                                        autoComplete="one-time-code"
+                                    />
+                                    <InputError message={errors.code} />
+                                </div>
+
+                                <Button disabled={processing}>
+                                    Confirm email
+                                </Button>
+                            </>
+                        )}
+                    </Form>
+
+                    {status === 'email-change-link-sent' && (
+                        <p className="text-sm font-medium text-green-600">
+                            A confirmation link and code were sent to your new
+                            email address.
+                        </p>
+                    )}
+                </div>
+            )}
 
             <DeleteUser />
         </>

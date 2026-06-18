@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -19,6 +20,7 @@ use Illuminate\Support\Carbon;
  * @property string $id
  * @property string $name
  * @property string $slug
+ * @property string $subdomain
  * @property bool $is_personal
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -26,8 +28,10 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, TeamInvitation> $invitations
  * @property-read Collection<int, Membership> $memberships
  * @property-read Collection<int, User> $members
+ * @property-read Collection<int, Workspace> $workspaces
+ * @property-read Collection<int, Project> $projects
  */
-#[Fillable(['name', 'slug', 'is_personal'])]
+#[Fillable(['name', 'slug', 'subdomain', 'is_personal'])]
 class Team extends Model
 {
     /** @use HasFactory<TeamFactory> */
@@ -43,6 +47,10 @@ class Team extends Model
         static::creating(function (Team $team) {
             if (empty($team->slug)) {
                 $team->slug = static::generateUniqueTeamSlug($team->name);
+            }
+
+            if (empty($team->subdomain)) {
+                $team->subdomain = static::generateUniqueTeamSubdomain($team->name);
             }
         });
 
@@ -94,6 +102,26 @@ class Team extends Model
     public function invitations(): HasMany
     {
         return $this->hasMany(TeamInvitation::class);
+    }
+
+    /**
+     * Get all workspaces for this team.
+     *
+     * @return HasMany<Workspace, $this>
+     */
+    public function workspaces(): HasMany
+    {
+        return $this->hasMany(Workspace::class);
+    }
+
+    /**
+     * Get all projects owned by this team.
+     *
+     * @return MorphMany<Project, $this>
+     */
+    public function projects(): MorphMany
+    {
+        return $this->morphMany(Project::class, 'owner');
     }
 
     /**

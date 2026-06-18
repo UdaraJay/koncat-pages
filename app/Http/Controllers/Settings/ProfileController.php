@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Models\MagicLoginChallenge;
+use App\Services\Auth\MagicLoginService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,6 +16,11 @@ use Inertia\Response;
 
 class ProfileController extends Controller
 {
+    public function __construct(private MagicLoginService $magicLogin)
+    {
+        //
+    }
+
     /**
      * Show the user's profile settings page.
      */
@@ -21,6 +28,8 @@ class ProfileController extends Controller
     {
         return Inertia::render('settings/profile', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'emailChangeChallengeId' => $request->session()->get('email_change.challenge_id'),
+            'pendingEmail' => $request->session()->get('email_change.email'),
             'status' => $request->session()->get('status'),
         ]);
     }
@@ -30,13 +39,28 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $validated = $request->validated();
+        $user = $request->user();
+        $newEmail = $this->magicLogin->normalizeEmail($validated['email']);
+        $currentEmail = $this->magicLogin->normalizeEmail($user->email);
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        $user->forceFill(['name' => $validated['name']])->save();
+
+        if ($newEmail !== $currentEmail) {
+            $result = $this->magicLogin->createAndSend(
+                email: $newEmail,
+                request: $request,
+                purpose: MagicLoginChallenge::PURPOSE_EMAIL_CHANGE,
+                user: $user,
+            );
+
+            $request->session()->put('email_change.challenge_id', $result['challenge']->id);
+            $request->session()->put('email_change.email', $newEmail);
+
+            Inertia::flash('toast', ['type' => 'success', 'message' => __('Check your new email address to confirm the change.')]);
+
+            return to_route('profile.edit')->with('status', 'email-change-link-sent');
         }
-
-        $request->user()->save();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
 

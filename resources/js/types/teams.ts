@@ -4,6 +4,9 @@ export type Team = {
     id: string;
     name: string;
     slug: string;
+    subdomain: string;
+    hostingDomain?: string;
+    hostingScheme?: string;
     isPersonal: boolean;
     role?: TeamRole;
     roleLabel?: string;

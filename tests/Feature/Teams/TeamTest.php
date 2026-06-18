@@ -38,7 +38,27 @@ class TeamTest extends TestCase
 
         $this->assertDatabaseHas('teams', [
             'name' => 'Test Team',
+            'subdomain' => 'test-team',
             'is_personal' => false,
+        ]);
+    }
+
+    public function test_team_subdomain_uses_next_available_suffix()
+    {
+        $user = User::factory()->create();
+
+        Team::factory()->create(['name' => 'Acme', 'slug' => 'acme', 'subdomain' => 'acme']);
+        Team::factory()->create(['name' => 'Acme One', 'slug' => 'acme-1', 'subdomain' => 'acme-1']);
+
+        $this
+            ->actingAs($user)
+            ->post(route('teams.store'), [
+                'name' => 'Acme',
+            ]);
+
+        $this->assertDatabaseHas('teams', [
+            'name' => 'Acme',
+            'subdomain' => 'acme-2',
         ]);
     }
 
@@ -93,6 +113,7 @@ class TeamTest extends TestCase
             ->actingAs($user)
             ->patch(route('teams.update', $team), [
                 'name' => 'Updated Name',
+                'subdomain' => 'updated-team',
             ]);
 
         $response->assertRedirect(route('teams.edit', $team->fresh()));
@@ -100,6 +121,32 @@ class TeamTest extends TestCase
         $this->assertDatabaseHas('teams', [
             'id' => $team->id,
             'name' => 'Updated Name',
+            'subdomain' => 'updated-team',
+        ]);
+    }
+
+    public function test_team_subdomain_does_not_change_when_name_changes_without_editing_it()
+    {
+        $user = User::factory()->create();
+        $team = Team::factory()->create([
+            'name' => 'Original Name',
+            'subdomain' => 'original-team',
+        ]);
+
+        $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+
+        $this
+            ->actingAs($user)
+            ->patch(route('teams.update', $team), [
+                'name' => 'Updated Name',
+                'subdomain' => 'original-team',
+            ])
+            ->assertRedirect(route('teams.edit', $team->fresh()));
+
+        $this->assertDatabaseHas('teams', [
+            'id' => $team->id,
+            'name' => 'Updated Name',
+            'subdomain' => 'original-team',
         ]);
     }
 
@@ -116,6 +163,7 @@ class TeamTest extends TestCase
             ->actingAs($member)
             ->patch(route('teams.update', $team), [
                 'name' => 'Updated Name',
+                'subdomain' => $team->subdomain,
             ]);
 
         $response->assertForbidden();

@@ -4,10 +4,16 @@ namespace App\Concerns;
 
 use App\Data\TeamPermissions;
 use App\Data\UserTeam;
+use App\Data\WorkspacePermissions;
 use App\Enums\TeamPermission;
 use App\Enums\TeamRole;
+use App\Enums\WorkspacePermission;
+use App\Enums\WorkspaceRole;
 use App\Models\Membership;
+use App\Models\Project;
 use App\Models\Team;
+use App\Models\User;
+use App\Models\Workspace;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -154,6 +160,7 @@ trait HasTeams
             id: $team->id,
             name: $team->name,
             slug: $team->slug,
+            subdomain: $team->subdomain,
             isPersonal: $team->is_personal,
             role: $role?->value,
             roleLabel: $role?->label(),
@@ -193,5 +200,126 @@ trait HasTeams
     public function hasTeamPermission(Team $team, TeamPermission $permission): bool
     {
         return $this->teamRole($team)?->hasPermission($permission) ?? false;
+    }
+
+    public function belongsToWorkspace(Workspace $workspace): bool
+    {
+        return $this->workspaces()->where('workspaces.id', $workspace->id)->exists();
+    }
+
+    public function workspaceRole(Workspace $workspace): ?WorkspaceRole
+    {
+        return $this->workspaces()
+            ->where('workspaces.id', $workspace->id)
+            ->first()
+            ?->pivot
+            ?->role;
+    }
+
+    public function canManageTeamWorkspaces(Team $team): bool
+    {
+        $role = $this->teamRole($team);
+
+        return $role === TeamRole::Owner || $role === TeamRole::Admin;
+    }
+
+    public function hasWorkspacePermission(Workspace $workspace, WorkspacePermission $permission): bool
+    {
+        if (! $this->belongsToTeam($workspace->team)) {
+            return false;
+        }
+
+        if ($this->canManageTeamWorkspaces($workspace->team)) {
+            return true;
+        }
+
+        return $this->workspaceRole($workspace)?->hasPermission($permission) ?? false;
+    }
+
+    public function canCreateTeamProject(Team $team): bool
+    {
+        return $this->canManageTeamWorkspaces($team);
+    }
+
+    public function canCreateWorkspaceProject(Workspace $workspace): bool
+    {
+        return $this->hasWorkspacePermission($workspace, WorkspacePermission::CreateProject);
+    }
+
+    public function canAccessProject(Project $project): bool
+    {
+        if ($project->owner_type === User::class) {
+            return $project->owner_id === $this->id;
+        }
+
+        if ($project->owner_type !== Team::class) {
+            return false;
+        }
+
+        if ($project->workspace_id !== null) {
+            $workspace = $project->workspace;
+
+            return $workspace !== null
+                && ($this->canManageTeamWorkspaces($workspace->team) || $this->belongsToWorkspace($workspace));
+        }
+
+        $team = $project->owner;
+
+        return $team instanceof Team && $this->belongsToTeam($team);
+    }
+
+    public function canUpdateProject(Project $project): bool
+    {
+        return $this->canManageProject($project, WorkspacePermission::UpdateProject);
+    }
+
+    public function canDeleteProject(Project $project): bool
+    {
+        return $this->canManageProject($project, WorkspacePermission::DeleteProject);
+    }
+
+    public function canDeployProject(Project $project): bool
+    {
+        return $this->canManageProject($project, WorkspacePermission::DeployProject);
+    }
+
+    public function canAccessHostedProject(Project $project): bool
+    {
+        return $this->canAccessProject($project);
+    }
+
+    protected function canManageProject(Project $project, WorkspacePermission $workspacePermission): bool
+    {
+        if ($project->owner_type === User::class) {
+            return $project->owner_id === $this->id;
+        }
+
+        if ($project->owner_type !== Team::class) {
+            return false;
+        }
+
+        if ($project->workspace_id !== null) {
+            return $project->workspace !== null
+                && $this->hasWorkspacePermission($project->workspace, $workspacePermission);
+        }
+
+        $team = $project->owner;
+
+        return $team instanceof Team && $this->canManageTeamWorkspaces($team);
+    }
+
+    public function toWorkspacePermissions(Workspace $workspace): WorkspacePermissions
+    {
+        return new WorkspacePermissions(
+            canUpdateWorkspace: $this->hasWorkspacePermission($workspace, WorkspacePermission::UpdateWorkspace),
+            canDeleteWorkspace: $this->hasWorkspacePermission($workspace, WorkspacePermission::DeleteWorkspace),
+            canAddMember: $this->hasWorkspacePermission($workspace, WorkspacePermission::AddMember),
+            canUpdateMember: $this->hasWorkspacePermission($workspace, WorkspacePermission::UpdateMember),
+            canRemoveMember: $this->hasWorkspacePermission($workspace, WorkspacePermission::RemoveMember),
+            canCreateProject: $this->hasWorkspacePermission($workspace, WorkspacePermission::CreateProject),
+            canUpdateProject: $this->hasWorkspacePermission($workspace, WorkspacePermission::UpdateProject),
+            canDeleteProject: $this->hasWorkspacePermission($workspace, WorkspacePermission::DeleteProject),
+            canDeployProject: $this->hasWorkspacePermission($workspace, WorkspacePermission::DeployProject),
+        );
     }
 }

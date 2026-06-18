@@ -2,8 +2,11 @@
 
 namespace Tests\Feature\Settings;
 
+use App\Models\MagicLoginChallenge;
 use App\Models\User;
+use App\Notifications\Auth\MagicLoginNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class ProfileUpdateTest extends TestCase
@@ -27,9 +30,10 @@ class ProfileUpdateTest extends TestCase
 
         $response = $this
             ->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
             ->patch(route('profile.update'), [
                 'name' => 'Test User',
-                'email' => 'test@example.com',
+                'email' => $user->email,
             ]);
 
         $response
@@ -39,11 +43,46 @@ class ProfileUpdateTest extends TestCase
         $user->refresh();
 
         $this->assertSame('Test User', $user->name);
-        $this->assertSame('test@example.com', $user->email);
-        $this->assertNull($user->email_verified_at);
+        $this->assertNotNull($user->email_verified_at);
     }
 
-    public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged()
+    public function test_email_change_requires_new_email_confirmation()
+    {
+        Notification::fake();
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->patch(route('profile.update'), [
+                'name' => 'Test User',
+                'email' => 'new@example.com',
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('profile.edit'));
+
+        $user->refresh();
+
+        $this->assertSame('Test User', $user->name);
+        $this->assertNotSame('new@example.com', $user->email);
+
+        Notification::assertSentOnDemand(MagicLoginNotification::class, function (MagicLoginNotification $notification) {
+            $this->post(route('profile.email.verify'), [
+                'challenge_id' => $notification->challenge->id,
+                'code' => $notification->code,
+            ])->assertRedirect(route('profile.edit'));
+
+            return true;
+        });
+
+        $this->assertSame('new@example.com', $user->refresh()->email);
+        $this->assertNotNull($user->email_verified_at);
+        $this->assertNotNull(MagicLoginChallenge::query()->firstOrFail()->consumed_at);
+    }
+
+    public function test_profile_update_requires_recent_access_confirmation()
     {
         $user = User::factory()->create();
 
@@ -54,11 +93,7 @@ class ProfileUpdateTest extends TestCase
                 'email' => $user->email,
             ]);
 
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('profile.edit'));
-
-        $this->assertNotNull($user->refresh()->email_verified_at);
+        $response->assertRedirect(route('password.confirm'));
     }
 
     public function test_user_can_delete_their_account()
@@ -67,9 +102,8 @@ class ProfileUpdateTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->delete(route('profile.destroy'), [
-                'password' => 'password',
-            ]);
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->delete(route('profile.destroy'));
 
         $response
             ->assertSessionHasNoErrors()
@@ -79,20 +113,16 @@ class ProfileUpdateTest extends TestCase
         $this->assertNull($user->fresh());
     }
 
-    public function test_correct_password_must_be_provided_to_delete_account()
+    public function test_delete_account_requires_recent_access_confirmation()
     {
         $user = User::factory()->create();
 
         $response = $this
             ->actingAs($user)
             ->from(route('profile.edit'))
-            ->delete(route('profile.destroy'), [
-                'password' => 'wrong-password',
-            ]);
+            ->delete(route('profile.destroy'));
 
-        $response
-            ->assertSessionHasErrors('password')
-            ->assertRedirect(route('profile.edit'));
+        $response->assertRedirect(route('password.confirm'));
 
         $this->assertNotNull($user->fresh());
     }

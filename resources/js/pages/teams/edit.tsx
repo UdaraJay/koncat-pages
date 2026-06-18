@@ -62,6 +62,7 @@ export default function TeamEdit({
         useState(false);
     const [invitationToCancel, setInvitationToCancel] =
         useState<TeamInvitation | null>(null);
+    const [subdomain, setSubdomain] = useState(team.subdomain);
 
     const pageTitle = useMemo(
         () =>
@@ -122,6 +123,32 @@ export default function TeamEdit({
                                                 required
                                             />
                                             <InputError message={errors.name} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="subdomain">
+                                                Publishing subdomain
+                                            </Label>
+                                            <Input
+                                                id="subdomain"
+                                                name="subdomain"
+                                                data-test="team-subdomain-input"
+                                                defaultValue={team.subdomain}
+                                                onChange={(event) =>
+                                                    setSubdomain(
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                required
+                                            />
+                                            <p className="text-sm text-muted-foreground">
+                                                {team.hostingScheme}://
+                                                {subdomain || team.subdomain}.
+                                                {team.hostingDomain}
+                                            </p>
+                                            <InputError
+                                                message={errors.subdomain}
+                                            />
                                         </div>
 
                                         <div className="flex items-center gap-4">

@@ -23,6 +23,7 @@ class TeamFactory extends Factory
         return [
             'name' => $name,
             'slug' => Str::slug($name),
+            'subdomain' => Str::slug($name),
             'is_personal' => false,
         ];
     }

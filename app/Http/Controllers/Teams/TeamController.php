@@ -55,6 +55,9 @@ class TeamController extends Controller
                 'id' => $team->id,
                 'name' => $team->name,
                 'slug' => $team->slug,
+                'subdomain' => $team->subdomain,
+                'hostingDomain' => config('matterpipe.hosting_domain'),
+                'hostingScheme' => config('matterpipe.hosting_scheme'),
                 'isPersonal' => $team->is_personal,
             ],
             'members' => $team->members()->get()->map(function (User $member) {
@@ -95,7 +98,10 @@ class TeamController extends Controller
         $team = DB::transaction(function () use ($request, $team) {
             $team = Team::whereKey($team->id)->lockForUpdate()->firstOrFail();
 
-            $team->update(['name' => $request->validated('name')]);
+            $team->update([
+                'name' => $request->validated('name'),
+                'subdomain' => $request->validated('subdomain'),
+            ]);
 
             return $team;
         });
@@ -132,6 +138,8 @@ class TeamController extends Controller
                 ->where('id', '!=', $user->id)
                 ->each(fn (User $affectedUser) => $affectedUser->switchTeam($affectedUser->personalTeam()));
 
+            $team->projects()->each(fn ($project) => $project->delete());
+            $team->workspaces()->each(fn ($workspace) => $workspace->delete());
             $team->invitations()->delete();
             $team->memberships()->delete();
             $team->delete();

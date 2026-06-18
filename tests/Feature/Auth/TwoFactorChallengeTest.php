@@ -3,7 +3,9 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use App\Notifications\Auth\MagicLoginNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
 use Tests\TestCase;
@@ -28,6 +30,8 @@ class TwoFactorChallengeTest extends TestCase
 
     public function test_two_factor_challenge_can_be_rendered(): void
     {
+        Notification::fake();
+
         Features::twoFactorAuthentication([
             'confirm' => true,
             'confirmPassword' => true,
@@ -35,10 +39,16 @@ class TwoFactorChallengeTest extends TestCase
 
         $user = User::factory()->withTwoFactor()->create();
 
-        $this->post(route('login'), [
-            'email' => $user->email,
-            'password' => 'password',
-        ]);
+        $this->post(route('login.magic.request'), ['email' => $user->email]);
+
+        Notification::assertSentOnDemand(MagicLoginNotification::class, function (MagicLoginNotification $notification) {
+            $this->post(route('login.code.verify'), [
+                'challenge_id' => $notification->challenge->id,
+                'code' => $notification->code,
+            ])->assertRedirect(route('two-factor.login'));
+
+            return true;
+        });
 
         $this->get(route('two-factor.login'))
             ->assertOk()
