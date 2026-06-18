@@ -18,8 +18,7 @@ class CreateNewUser implements CreatesNewUsers
     public function __construct(
         private CreateTeam $createTeam,
         private ProjectShareService $projectShareService,
-    )
-    {
+    ) {
         //
     }
 

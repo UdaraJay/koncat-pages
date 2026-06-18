@@ -42,8 +42,8 @@ class MagicLoginNotification extends Notification implements ShouldQueue
                 __('Confirm email'),
             ],
             default => [
-                __('Sign in to Matterpipe'),
-                __('Use this link or code to sign in to Matterpipe.'),
+                __('Sign in to Koncat'),
+                __('Use this link or code to sign in to Koncat.'),
                 __('Continue'),
             ],
         };

@@ -3,6 +3,8 @@ import {
     Archive,
     ArrowUpRight,
     CalendarClock,
+    Check,
+    Copy,
     Folder,
     HardDrive,
     MoreHorizontal,
@@ -15,8 +17,9 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import PendingInvitationsModal from '@/components/pending-invitations-modal';
+import { toast } from 'sonner';
 import InputError from '@/components/input-error';
+import PendingInvitationsModal from '@/components/pending-invitations-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,6 +45,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useClipboard } from '@/hooks/use-clipboard';
+import { ClaudeIcon, CursorIcon, VSCodeIcon } from '@/icons';
 import { dashboard } from '@/routes';
 import type {
     DashboardInvitation,
@@ -214,9 +219,7 @@ export default function Dashboard({
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex items-center gap-2">
                                 <Share2 className="h-4 w-4 text-muted-foreground" />
-                                <h2 className="font-medium">
-                                    Shared with you
-                                </h2>
+                                <h2 className="font-medium">Shared with you</h2>
                             </div>
                             <Badge variant="secondary">
                                 {sharedProjects.length}{' '}
@@ -243,20 +246,39 @@ export default function Dashboard({
 }
 
 function MCPSetupPanel({ mcpUrl }: { mcpUrl: string }) {
-    const config = `{
-  "mcpServers": {
-    "matterpipe": {
-      "url": "${mcpUrl}"
-    }
-  }
-}`;
+    const [copiedText, copy] = useClipboard();
+    const mcpUrlCopied = copiedText === mcpUrl;
+    const encodedMcpUrl = encodeURIComponent(mcpUrl);
+    const cursorConfig =
+        typeof window === 'undefined'
+            ? ''
+            : window.btoa(JSON.stringify({ url: mcpUrl }));
+    const claudeUrl = `https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=Koncat&connectorUrl=${encodedMcpUrl}`;
+    const cursorUrl = `https://cursor.com/install-mcp?name=Koncat&config=${encodeURIComponent(cursorConfig)}`;
+    const vscodeUrl = `vscode:mcp/install?${encodeURIComponent(
+        JSON.stringify({
+            name: 'koncat',
+            type: 'http',
+            url: mcpUrl,
+        }),
+    )}`;
+
+    const copyMcpUrl = async () => {
+        const copied = await copy(mcpUrl);
+
+        if (copied) {
+            toast.success('MCP URL copied');
+        } else {
+            toast.error('Could not copy MCP URL');
+        }
+    };
 
     return (
-        <section className="rounded-lg border bg-card p-5 text-card-foreground">
-            <div className="grid gap-5 lg:grid-cols-[1fr_minmax(320px,460px)]">
-                <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-background">
+        <section className="rounded-lg border bg-muted p-4 text-card-foreground">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,540px)] lg:divide-x">
+                <div className="space-y-4 lg:pr-4">
+                    <div className="flex items-start gap-3 px-1">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-background/80">
                             <Rocket className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <div className="space-y-1">
@@ -268,58 +290,60 @@ function MCPSetupPanel({ mcpUrl }: { mcpUrl: string }) {
                             </p>
                         </div>
                     </div>
-
-                    <div className="grid gap-3 text-sm md:grid-cols-3">
-                        <SetupStep
-                            number="1"
-                            title="Add the server"
-                            text="Use the endpoint in your MCP client."
-                        />
-                        <SetupStep
-                            number="2"
-                            title="Approve access"
-                            text="Sign in and grant the mcp:use scope."
-                        />
-                        <SetupStep
-                            number="3"
-                            title="Deploy files"
-                            text="Ask the agent to call deploy-project with inline files."
-                        />
-                    </div>
                 </div>
 
-                <div className="min-w-0 rounded-md border bg-muted/40 p-3">
-                    <div className="mb-2 text-xs font-medium text-muted-foreground">
-                        MCP client config
+                <div className="min-w-0 space-y-3 lg:pl-4">
+                    <div className="px-1 text-sm font-medium">
+                        Give your agent this MCP URL and let it publish.
                     </div>
-                    <pre className="overflow-x-auto text-xs leading-relaxed">
-                        <code>{config}</code>
-                    </pre>
+
+                    <Input
+                        className="rounded-full border bg-background px-4 font-medium"
+                        value={mcpUrl}
+                        readOnly
+                    />
+
+                    <div className="flex flex-wrap gap-1">
+                        <Button asChild variant="outline" size="sm">
+                            <a href={claudeUrl}>
+                                <ClaudeIcon className="size-4" />
+                                Connect to Claude
+                            </a>
+                        </Button>
+                        <Button asChild variant="outline" size="sm">
+                            <a href={cursorUrl}>
+                                <CursorIcon className="size-4" />
+                                Install in Cursor
+                            </a>
+                        </Button>
+                        <Button asChild variant="outline" size="sm">
+                            <a href={vscodeUrl}>
+                                <VSCodeIcon className="size-4" />
+                                Install in VS Code
+                            </a>
+                        </Button>
+
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={copyMcpUrl}
+                        >
+                            {mcpUrlCopied ? (
+                                <Check className="size-4" />
+                            ) : (
+                                <Copy className="size-4" />
+                            )}
+                            {mcpUrlCopied ? 'Copied' : 'Copy MCP URL'}
+                        </Button>
+                    </div>
+
+                    <p className="max-w-md px-1 text-sm text-muted-foreground">
+                        Add the MCP to your agent with the URL and authenticate
+                        with your email to publish.
+                    </p>
                 </div>
             </div>
         </section>
-    );
-}
-
-function SetupStep({
-    number,
-    title,
-    text,
-}: {
-    number: string;
-    title: string;
-    text: string;
-}) {
-    return (
-        <div className="rounded-md border bg-background p-3">
-            <div className="mb-2 flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-medium text-primary-foreground">
-                    {number}
-                </span>
-                <span className="font-medium">{title}</span>
-            </div>
-            <p className="text-muted-foreground">{text}</p>
-        </div>
     );
 }
 
@@ -349,97 +373,97 @@ function ProjectCard({
             />
             <article className="group flex overflow-hidden border bg-background transition">
                 <div className="flex min-w-0 flex-1 flex-col">
-                <div className="relative">
-                    <ProjectPreview project={project} />
-                    <div className="absolute top-4 left-4 flex shrink-0 items-center gap-1">
-                        {scope ? (
+                    <div className="relative">
+                        <ProjectPreview project={project} />
+                        <div className="absolute top-4 left-4 flex shrink-0 items-center gap-1">
+                            {scope ? (
+                                <Badge
+                                    variant={
+                                        project.currentDeployment
+                                            ? 'secondary'
+                                            : 'outline'
+                                    }
+                                    className="shrink-0 bg-background/60 text-foreground"
+                                >
+                                    {scope}
+                                </Badge>
+                            ) : null}
+
                             <Badge
                                 variant={
-                                    project.currentDeployment
+                                    project.currentDeployment && !isArchived
                                         ? 'secondary'
                                         : 'outline'
                                 }
-                                className="shrink-0 bg-background/60 text-foreground"
+                                className="shrink-0"
                             >
-                                {scope}
+                                {isArchived
+                                    ? 'Archived'
+                                    : project.currentDeployment
+                                      ? 'Live'
+                                      : 'Draft'}
                             </Badge>
-                        ) : null}
-
-                        <Badge
-                            variant={
-                                project.currentDeployment && !isArchived
-                                    ? 'secondary'
-                                    : 'outline'
-                            }
-                            className="shrink-0"
-                        >
-                            {isArchived
-                                ? 'Archived'
-                                : project.currentDeployment
-                                  ? 'Live'
-                                  : 'Draft'}
-                        </Badge>
-                        {project.sharePermissionLabel ? (
-                            <Badge variant="outline" className="shrink-0">
-                                {project.sharePermissionLabel}
-                            </Badge>
-                        ) : null}
+                            {project.sharePermissionLabel ? (
+                                <Badge variant="outline" className="shrink-0">
+                                    {project.sharePermissionLabel}
+                                </Badge>
+                            ) : null}
+                        </div>
+                        <div className="absolute top-3 right-3">
+                            <ProjectCardMenu
+                                project={project}
+                                onShare={() => setShareDialogOpen(true)}
+                            />
+                        </div>
                     </div>
-                    <div className="absolute top-3 right-3">
-                        <ProjectCardMenu
-                            project={project}
-                            onShare={() => setShareDialogOpen(true)}
-                        />
-                    </div>
-                </div>
 
-                <div className="flex flex-1 flex-col gap-4 p-4">
-                    <div className="space-y-2">
-                        <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                                <h3 className="truncate font-medium">
-                                    {project.name}
-                                </h3>
-                                <p className="truncate text-sm text-muted-foreground">
-                                    {project.slug}
-                                </p>
+                    <div className="flex flex-1 flex-col gap-4 p-4">
+                        <div className="space-y-2">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <h3 className="truncate font-medium">
+                                        {project.name}
+                                    </h3>
+                                    <p className="truncate text-sm text-muted-foreground">
+                                        {project.slug}
+                                    </p>
+                                </div>
                             </div>
+
+                            {project.description ? (
+                                <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
+                                    {project.description}
+                                </p>
+                            ) : (
+                                <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
+                                    No description added.
+                                </p>
+                            )}
                         </div>
 
-                        {project.description ? (
-                            <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
-                                {project.description}
-                            </p>
-                        ) : (
-                            <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
-                                No description added.
-                            </p>
-                        )}
-                    </div>
+                        <div className="mt-auto flex items-end justify-between gap-3">
+                            <ProjectMeta
+                                project={project}
+                                deployedAt={deployedAt}
+                            />
 
-                    <div className="mt-auto flex items-end justify-between gap-3">
-                        <ProjectMeta
-                            project={project}
-                            deployedAt={deployedAt}
-                        />
-
-                        {isArchived ? (
-                            <Badge variant="outline">Hidden</Badge>
-                        ) : (
-                            <Button asChild variant="outline" size="sm">
-                                <a
-                                    href={project.url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                >
-                                    Open
-                                    <ArrowUpRight className="h-4 w-4" />
-                                </a>
-                            </Button>
-                        )}
+                            {isArchived ? (
+                                <Badge variant="outline">Hidden</Badge>
+                            ) : (
+                                <Button asChild variant="outline" size="sm">
+                                    <a
+                                        href={project.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                    >
+                                        Open
+                                        <ArrowUpRight className="h-4 w-4" />
+                                    </a>
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
             </article>
         </>
     );
@@ -556,10 +580,7 @@ function ShareProjectDialog({
         });
     };
 
-    const updateShare = (
-        code: string,
-        permission: ProjectSharePermission,
-    ) => {
+    const updateShare = (code: string, permission: ProjectSharePermission) => {
         router.patch(
             projectShareUrl(project, code),
             { permission },

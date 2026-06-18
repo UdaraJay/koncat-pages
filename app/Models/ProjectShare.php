@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ProjectSharePermission;
+use Database\Factories\ProjectShareFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -28,7 +29,7 @@ use Illuminate\Support\Str;
 #[Fillable(['project_id', 'email', 'user_id', 'permission', 'shared_by'])]
 class ProjectShare extends Model
 {
-    /** @use HasFactory<\Database\Factories\ProjectShareFactory> */
+    /** @use HasFactory<ProjectShareFactory> */
     use HasFactory, HasUlids;
 
     protected static function boot(): void
