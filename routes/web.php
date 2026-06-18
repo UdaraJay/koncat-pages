@@ -10,6 +10,7 @@ use App\Http\Controllers\Hosted\MatterpipeSdkController;
 use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\Projects\DeploymentController;
 use App\Http\Controllers\Projects\ProjectController;
+use App\Http\Controllers\Projects\ProjectShareController;
 use App\Http\Controllers\Teams\TeamInvitationController;
 use App\Http\Controllers\Workspaces\WorkspaceController;
 use App\Http\Controllers\Workspaces\WorkspaceMemberController;
@@ -43,6 +44,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('home', DashboardController::class)->name('dashboard');
     Route::post('projects', [ProjectController::class, 'store'])->name('projects.store');
     Route::post('projects/{project}/deployments', [DeploymentController::class, 'storeGlobal'])->name('projects.deployments.store');
+    Route::post('projects/{project}/shares', [ProjectShareController::class, 'store'])->name('projects.shares.store');
+    Route::patch('projects/{project}/shares/{share}', [ProjectShareController::class, 'update'])->name('projects.shares.update');
+    Route::delete('projects/{project}/shares/{share}', [ProjectShareController::class, 'destroy'])->name('projects.shares.destroy');
     Route::post('projects/{project}/unpublish', [ProjectController::class, 'unpublish'])->name('projects.unpublish');
     Route::delete('projects/{project}', [ProjectController::class, 'archive'])->name('projects.archive');
     Route::post('projects/{project}/restore', [ProjectController::class, 'restore'])->withTrashed()->name('projects.restore');

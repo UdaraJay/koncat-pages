@@ -5,6 +5,7 @@ namespace App\Concerns;
 use App\Data\TeamPermissions;
 use App\Data\UserTeam;
 use App\Data\WorkspacePermissions;
+use App\Enums\ProjectSharePermission;
 use App\Enums\TeamPermission;
 use App\Enums\TeamRole;
 use App\Enums\WorkspacePermission;
@@ -248,6 +249,11 @@ trait HasTeams
 
     public function canAccessProject(Project $project): bool
     {
+        return $this->canAccessProjectInherited($project) || $this->hasProjectShare($project);
+    }
+
+    public function canAccessProjectInherited(Project $project): bool
+    {
         if ($project->owner_type === User::class) {
             return $project->owner_id === $this->id;
         }
@@ -268,6 +274,31 @@ trait HasTeams
         return $team instanceof Team && $this->belongsToTeam($team);
     }
 
+    public function canWriteProjectContent(Project $project): bool
+    {
+        return $this->canAccessProjectInherited($project) || $this->hasProjectShare($project, ProjectSharePermission::Write);
+    }
+
+    public function canManageProjectShares(Project $project): bool
+    {
+        if ($project->owner_type === User::class) {
+            return $project->owner_id === $this->id;
+        }
+
+        if ($project->owner_type !== Team::class) {
+            return false;
+        }
+
+        if ($project->workspace_id !== null) {
+            return $project->workspace !== null
+                && $this->hasWorkspacePermission($project->workspace, WorkspacePermission::AddMember);
+        }
+
+        $team = $project->owner;
+
+        return $team instanceof Team && $this->canManageTeamWorkspaces($team);
+    }
+
     public function canUpdateProject(Project $project): bool
     {
         return $this->canManageProject($project, WorkspacePermission::UpdateProject);
@@ -286,6 +317,18 @@ trait HasTeams
     public function canAccessHostedProject(Project $project): bool
     {
         return $this->canAccessProject($project);
+    }
+
+    protected function hasProjectShare(Project $project, ?ProjectSharePermission $minimumPermission = null): bool
+    {
+        return $project->shares()
+            ->where(function ($query) {
+                $query
+                    ->where('user_id', $this->id)
+                    ->orWhereRaw('LOWER(email) = ?', [strtolower($this->email)]);
+            })
+            ->when($minimumPermission === ProjectSharePermission::Write, fn ($query) => $query->where('permission', ProjectSharePermission::Write->value))
+            ->exists();
     }
 
     protected function canManageProject(Project $project, WorkspacePermission $workspacePermission): bool

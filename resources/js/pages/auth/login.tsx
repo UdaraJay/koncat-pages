@@ -1,5 +1,6 @@
 import { Form, Head } from '@inertiajs/react';
 import InputError from '@/components/input-error';
+import ProjectShareAlert from '@/components/project-share-alert';
 import TeamInvitationAlert from '@/components/team-invitation-alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -7,14 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { request as requestMagicLink } from '@/routes/login/magic';
-import type { TeamInvitationContext } from '@/types';
+import type { ProjectShareContext, TeamInvitationContext } from '@/types';
 
 type Props = {
     status?: string;
     teamInvitation?: TeamInvitationContext | null;
+    projectShare?: ProjectShareContext | null;
 };
 
-export default function Login({ status, teamInvitation }: Props) {
+export default function Login({ status, teamInvitation, projectShare }: Props) {
     return (
         <>
             <Head title="Log in" />
@@ -24,6 +26,10 @@ export default function Login({ status, teamInvitation }: Props) {
                     invitation={teamInvitation}
                     action="Log in"
                 />
+            )}
+
+            {projectShare && (
+                <ProjectShareAlert share={projectShare} action="Log in" />
             )}
 
             <Form
@@ -54,6 +60,14 @@ export default function Login({ status, teamInvitation }: Props) {
                                     type="hidden"
                                     name="invitation"
                                     value={teamInvitation.code}
+                                />
+                            )}
+
+                            {projectShare && (
+                                <input
+                                    type="hidden"
+                                    name="project_share"
+                                    value={projectShare.code}
                                 />
                             )}
 

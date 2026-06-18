@@ -18,6 +18,7 @@ class MatterpipeFileController extends Controller
     public function store(Request $request, string $team, string $project, MatterpipeQuota $quota): JsonResponse
     {
         $hostedProject = $this->hostedProject($request, $team, $project);
+        abort_unless($request->user()?->canWriteProjectContent($hostedProject), 403);
 
         $validated = $request->validate([
             'file' => ['required', 'file', 'max:102400'],
@@ -58,6 +59,7 @@ class MatterpipeFileController extends Controller
     public function destroy(Request $request, string $team, string $project, ProjectFile $file): JsonResponse
     {
         $hostedProject = $this->hostedProject($request, $team, $project);
+        abort_unless($request->user()?->canWriteProjectContent($hostedProject), 403);
         abort_unless($file->project_id === $hostedProject->id, 404);
 
         Storage::disk($file->disk)->delete($file->path);

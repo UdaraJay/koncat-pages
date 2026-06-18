@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import {
     Archive,
     ArrowUpRight,
@@ -8,13 +8,24 @@ import {
     MoreHorizontal,
     RotateCcw,
     Rocket,
+    Share2,
     SlidersHorizontal,
+    Trash2,
     Unplug,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
 import PendingInvitationsModal from '@/components/pending-invitations-modal';
+import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -22,6 +33,8 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -30,7 +43,12 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { dashboard } from '@/routes';
-import type { DashboardInvitation, Project } from '@/types';
+import type {
+    DashboardInvitation,
+    Project,
+    ProjectSharePermission,
+    ProjectSharePermissionOption,
+} from '@/types';
 
 type ProjectFilterStatus = 'active' | 'archived' | 'all';
 type ProjectSort = 'updated_desc' | 'created_desc' | 'name_asc';
@@ -38,6 +56,8 @@ type ProjectSort = 'updated_desc' | 'created_desc' | 'name_asc';
 type Props = {
     pendingInvitations?: DashboardInvitation[];
     projects?: Project[];
+    sharedProjects?: Project[];
+    projectSharePermissions?: ProjectSharePermissionOption[];
     projectFilters?: {
         status: ProjectFilterStatus;
         sort: ProjectSort;
@@ -47,6 +67,11 @@ type Props = {
 export default function Dashboard({
     pendingInvitations = [],
     projects = [],
+    sharedProjects = [],
+    projectSharePermissions = [
+        { value: 'read', label: 'Read only' },
+        { value: 'write', label: 'Can edit' },
+    ],
     projectFilters = { status: 'active', sort: 'updated_desc' },
 }: Props) {
     const [showInvitations, setShowInvitations] = useState(
@@ -166,6 +191,7 @@ export default function Dashboard({
                                 <ProjectCard
                                     key={project.id}
                                     project={project}
+                                    sharePermissions={projectSharePermissions}
                                 />
                             ))}
                         </div>
@@ -182,6 +208,35 @@ export default function Dashboard({
                         </div>
                     )}
                 </section>
+
+                {sharedProjects.length > 0 ? (
+                    <section className="space-y-3">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex items-center gap-2">
+                                <Share2 className="h-4 w-4 text-muted-foreground" />
+                                <h2 className="font-medium">
+                                    Shared with you
+                                </h2>
+                            </div>
+                            <Badge variant="secondary">
+                                {sharedProjects.length}{' '}
+                                {sharedProjects.length === 1
+                                    ? 'project'
+                                    : 'projects'}
+                            </Badge>
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                            {sharedProjects.map((project) => (
+                                <ProjectCard
+                                    key={project.id}
+                                    project={project}
+                                    sharePermissions={projectSharePermissions}
+                                />
+                            ))}
+                        </div>
+                    </section>
+                ) : null}
             </main>
         </>
     );
@@ -268,7 +323,14 @@ function SetupStep({
     );
 }
 
-function ProjectCard({ project }: { project: Project }) {
+function ProjectCard({
+    project,
+    sharePermissions,
+}: {
+    project: Project;
+    sharePermissions: ProjectSharePermissionOption[];
+}) {
+    const [shareDialogOpen, setShareDialogOpen] = useState(false);
     const deployedAt = project.currentDeployment?.deployedAt
         ? formatDate(project.currentDeployment.deployedAt)
         : null;
@@ -278,8 +340,15 @@ function ProjectCard({ project }: { project: Project }) {
     const isArchived = Boolean(project.deletedAt);
 
     return (
-        <article className="group flex overflow-hidden border bg-background transition">
-            <div className="flex min-w-0 flex-1 flex-col">
+        <>
+            <ShareProjectDialog
+                project={project}
+                permissions={sharePermissions}
+                open={shareDialogOpen}
+                onOpenChange={setShareDialogOpen}
+            />
+            <article className="group flex overflow-hidden border bg-background transition">
+                <div className="flex min-w-0 flex-1 flex-col">
                 <div className="relative">
                     <ProjectPreview project={project} />
                     <div className="absolute top-4 left-4 flex shrink-0 items-center gap-1">
@@ -310,9 +379,17 @@ function ProjectCard({ project }: { project: Project }) {
                                   ? 'Live'
                                   : 'Draft'}
                         </Badge>
+                        {project.sharePermissionLabel ? (
+                            <Badge variant="outline" className="shrink-0">
+                                {project.sharePermissionLabel}
+                            </Badge>
+                        ) : null}
                     </div>
                     <div className="absolute top-3 right-3">
-                        <ProjectCardMenu project={project} />
+                        <ProjectCardMenu
+                            project={project}
+                            onShare={() => setShareDialogOpen(true)}
+                        />
                     </div>
                 </div>
 
@@ -363,11 +440,18 @@ function ProjectCard({ project }: { project: Project }) {
                     </div>
                 </div>
             </div>
-        </article>
+            </article>
+        </>
     );
 }
 
-function ProjectCardMenu({ project }: { project: Project }) {
+function ProjectCardMenu({
+    project,
+    onShare,
+}: {
+    project: Project;
+    onShare: () => void;
+}) {
     const archiveProject = () => {
         router.delete(projectActionUrl(project, ''), {
             preserveScroll: true,
@@ -405,6 +489,15 @@ function ProjectCardMenu({ project }: { project: Project }) {
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
+                {project.canManageShares ? (
+                    <>
+                        <DropdownMenuItem onSelect={onShare}>
+                            <Share2 className="h-4 w-4" />
+                            Share
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                    </>
+                ) : null}
                 {project.canRestore ? (
                     <DropdownMenuItem onSelect={restoreProject}>
                         <RotateCcw className="h-4 w-4" />
@@ -432,6 +525,185 @@ function ProjectCardMenu({ project }: { project: Project }) {
                 )}
             </DropdownMenuContent>
         </DropdownMenu>
+    );
+}
+
+function ShareProjectDialog({
+    project,
+    permissions,
+    open,
+    onOpenChange,
+}: {
+    project: Project;
+    permissions: ProjectSharePermissionOption[];
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}) {
+    const form = useForm<{
+        email: string;
+        permission: ProjectSharePermission;
+    }>({
+        email: '',
+        permission: 'read',
+    });
+
+    const submitShare = (event: FormEvent) => {
+        event.preventDefault();
+
+        form.post(projectShareUrl(project), {
+            preserveScroll: true,
+            onSuccess: () => form.reset(),
+        });
+    };
+
+    const updateShare = (
+        code: string,
+        permission: ProjectSharePermission,
+    ) => {
+        router.patch(
+            projectShareUrl(project, code),
+            { permission },
+            { preserveScroll: true },
+        );
+    };
+
+    const deleteShare = (code: string) => {
+        router.delete(projectShareUrl(project, code), {
+            preserveScroll: true,
+        });
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Share project</DialogTitle>
+                </DialogHeader>
+
+                <form onSubmit={submitShare} className="grid gap-4">
+                    <div className="grid gap-4 sm:grid-cols-[1fr_160px_auto]">
+                        <div className="grid gap-2">
+                            <Label htmlFor={`share-${project.id}-email`}>
+                                Email address
+                            </Label>
+                            <Input
+                                id={`share-${project.id}-email`}
+                                type="email"
+                                value={form.data.email}
+                                onChange={(event) =>
+                                    form.setData('email', event.target.value)
+                                }
+                                placeholder="colleague@example.com"
+                                required
+                            />
+                            <InputError message={form.errors.email} />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label>Permission</Label>
+                            <Select
+                                value={form.data.permission}
+                                onValueChange={(value) =>
+                                    form.setData(
+                                        'permission',
+                                        value as ProjectSharePermission,
+                                    )
+                                }
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {permissions.map((permission) => (
+                                        <SelectItem
+                                            key={permission.value}
+                                            value={permission.value}
+                                        >
+                                            {permission.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <InputError message={form.errors.permission} />
+                        </div>
+                        <div className="flex items-end">
+                            <Button type="submit" disabled={form.processing}>
+                                Share
+                            </Button>
+                        </div>
+                    </div>
+                </form>
+
+                <div className="grid gap-3">
+                    {(project.shares ?? []).length > 0 ? (
+                        (project.shares ?? []).map((share) => (
+                            <div
+                                key={share.code}
+                                className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"
+                            >
+                                <div className="min-w-0">
+                                    <div className="truncate font-medium">
+                                        {share.name ?? share.email}
+                                    </div>
+                                    <div className="truncate text-sm text-muted-foreground">
+                                        {share.pending
+                                            ? `${share.email} - Pending account`
+                                            : share.email}
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Select
+                                        value={share.permission}
+                                        onValueChange={(value) =>
+                                            updateShare(
+                                                share.code,
+                                                value as ProjectSharePermission,
+                                            )
+                                        }
+                                    >
+                                        <SelectTrigger className="w-36">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent align="end">
+                                            {permissions.map((permission) => (
+                                                <SelectItem
+                                                    key={permission.value}
+                                                    value={permission.value}
+                                                >
+                                                    {permission.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        aria-label={`Remove ${share.email}`}
+                                        onClick={() => deleteShare(share.code)}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                            No one has direct access yet.
+                        </div>
+                    )}
+                </div>
+
+                <DialogFooter>
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => onOpenChange(false)}
+                    >
+                        Done
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -470,6 +742,12 @@ function projectActionUrl(
     const url = `/projects/${project.id}`;
 
     return action ? `${url}/${action}` : url;
+}
+
+function projectShareUrl(project: Project, share?: string) {
+    const url = `/projects/${project.id}/shares`;
+
+    return share ? `${url}/${share}` : url;
 }
 
 function emptyProjectsTitle(status: ProjectFilterStatus): string {

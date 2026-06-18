@@ -35,6 +35,12 @@ export type TeamInvitationContext = {
     teamName: string;
 };
 
+export type ProjectShareContext = {
+    code: string;
+    projectName: string;
+    sharerName: string;
+};
+
 export type DashboardInvitation = {
     code: string;
     inviterName: string;

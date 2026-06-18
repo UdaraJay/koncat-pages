@@ -6,6 +6,7 @@ use App\Actions\Teams\CreateTeam;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\User;
+use App\Services\ProjectShareService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
@@ -14,7 +15,10 @@ class CreateNewUser implements CreatesNewUsers
 {
     use PasswordValidationRules, ProfileValidationRules;
 
-    public function __construct(private CreateTeam $createTeam)
+    public function __construct(
+        private CreateTeam $createTeam,
+        private ProjectShareService $projectShareService,
+    )
     {
         //
     }
@@ -39,6 +43,7 @@ class CreateNewUser implements CreatesNewUsers
             ]);
 
             $this->createTeam->handlePersonal($user);
+            $this->projectShareService->claimPendingForUser($user);
 
             return $user;
         });

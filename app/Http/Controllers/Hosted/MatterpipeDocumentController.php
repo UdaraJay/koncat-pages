@@ -31,6 +31,7 @@ class MatterpipeDocumentController extends Controller
     public function store(Request $request, string $team, string $project, string $collection, MatterpipeQuota $quota): JsonResponse
     {
         $hostedProject = $this->hostedProject($request, $team, $project);
+        abort_unless($request->user()?->canWriteProjectContent($hostedProject), 403);
 
         $validated = $request->validate([
             'data' => ['required', 'array'],
@@ -59,6 +60,7 @@ class MatterpipeDocumentController extends Controller
     public function update(Request $request, string $team, string $project, string $collection, ProjectDocument $document): JsonResponse
     {
         $hostedProject = $this->hostedProject($request, $team, $project);
+        abort_unless($request->user()?->canWriteProjectContent($hostedProject), 403);
         $this->authorizeDocument($hostedProject->id, $collection, $document);
 
         $validated = $request->validate([
@@ -76,6 +78,7 @@ class MatterpipeDocumentController extends Controller
     public function destroy(Request $request, string $team, string $project, string $collection, ProjectDocument $document): JsonResponse
     {
         $hostedProject = $this->hostedProject($request, $team, $project);
+        abort_unless($request->user()?->canWriteProjectContent($hostedProject), 403);
         $this->authorizeDocument($hostedProject->id, $collection, $document);
 
         $document->delete();

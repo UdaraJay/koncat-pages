@@ -30,6 +30,7 @@ class PasswordlessLoginController extends Controller
         return Inertia::render('auth/login', [
             'status' => $request->session()->get('status'),
             'teamInvitation' => $this->teamInvitationContext($request->query('invitation')),
+            'projectShare' => $this->projectShareContext($request->query('project_share')),
         ]);
     }
 
@@ -39,10 +40,12 @@ class PasswordlessLoginController extends Controller
             'email' => ['required', 'string', 'email', 'max:255'],
             'remember' => ['nullable', 'boolean'],
             'invitation' => ['nullable', 'string'],
+            'project_share' => ['nullable', 'string'],
         ]);
 
         $email = $this->magicLogin->normalizeEmail($validated['email']);
         $invitation = $this->invitationForCode($validated['invitation'] ?? null);
+        $projectShare = $this->projectShareForCode($validated['project_share'] ?? null);
 
         if ($invitation && $this->magicLogin->normalizeEmail($invitation->email) !== $email) {
             throw ValidationException::withMessages([
@@ -50,11 +53,20 @@ class PasswordlessLoginController extends Controller
             ]);
         }
 
+        if ($projectShare && $this->magicLogin->normalizeEmail($projectShare->email) !== $email) {
+            throw ValidationException::withMessages([
+                'email' => __('This project was shared with a different email address.'),
+            ]);
+        }
+
         $result = $this->magicLogin->createAndSend(
             email: $email,
             request: $request,
             remember: $request->boolean('remember'),
-            metadata: ['invitation' => $invitation?->code],
+            metadata: [
+                'invitation' => $invitation?->code,
+                'project_share' => $projectShare?->code,
+            ],
         );
 
         return to_route('login.magic.check', ['challenge' => $result['challenge']]);
@@ -96,6 +108,7 @@ class PasswordlessLoginController extends Controller
         return Inertia::render('auth/complete-account', [
             'email' => $email,
             'teamInvitation' => $this->teamInvitationContext($request->session()->get('magic_login.invitation')),
+            'projectShare' => $this->projectShareContext($request->session()->get('magic_login.project_share')),
         ]);
     }
 
@@ -119,7 +132,7 @@ class PasswordlessLoginController extends Controller
 
         Auth::guard(config('fortify.guard'))->login($user);
         $request->session()->regenerate();
-        $request->session()->forget('magic_login.invitation');
+        $request->session()->forget(['magic_login.invitation', 'magic_login.project_share']);
 
         return redirect()->intended(route('dashboard'));
     }

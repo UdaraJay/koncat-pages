@@ -1,19 +1,25 @@
 import { Form, Head } from '@inertiajs/react';
 import InputError from '@/components/input-error';
+import ProjectShareAlert from '@/components/project-share-alert';
 import TeamInvitationAlert from '@/components/team-invitation-alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { store } from '@/routes/login/complete';
-import type { TeamInvitationContext } from '@/types';
+import type { ProjectShareContext, TeamInvitationContext } from '@/types';
 
 type Props = {
     email: string;
     teamInvitation?: TeamInvitationContext | null;
+    projectShare?: ProjectShareContext | null;
 };
 
-export default function CompleteAccount({ email, teamInvitation }: Props) {
+export default function CompleteAccount({
+    email,
+    teamInvitation,
+    projectShare,
+}: Props) {
     return (
         <>
             <Head title="Complete account" />
@@ -23,6 +29,10 @@ export default function CompleteAccount({ email, teamInvitation }: Props) {
                     invitation={teamInvitation}
                     action="Log in"
                 />
+            )}
+
+            {projectShare && (
+                <ProjectShareAlert share={projectShare} action="Register" />
             )}
 
             <Form

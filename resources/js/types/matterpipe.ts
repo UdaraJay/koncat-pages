@@ -60,6 +60,11 @@ export type Project = {
     canUnpublish?: boolean;
     canArchive?: boolean;
     canRestore?: boolean;
+    canManageShares?: boolean;
+    sharePermission?: ProjectSharePermission | null;
+    sharePermissionLabel?: string | null;
+    sharedByName?: string | null;
+    shares?: ProjectShare[];
     createdAt?: string | null;
     updatedAt?: string | null;
     deletedAt?: string | null;
@@ -69,6 +74,22 @@ export type Project = {
         totalBytes: number;
         deployedAt: string;
     } | null;
+};
+
+export type ProjectSharePermission = 'read' | 'write';
+
+export type ProjectShare = {
+    code: string;
+    email: string;
+    name?: string | null;
+    permission: ProjectSharePermission;
+    permissionLabel: string;
+    pending: boolean;
+};
+
+export type ProjectSharePermissionOption = {
+    value: ProjectSharePermission;
+    label: string;
 };
 
 export type UserApiToken = {

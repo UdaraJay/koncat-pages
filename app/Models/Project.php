@@ -35,6 +35,7 @@ use LogicException;
  * @property-read User|null $creator
  * @property-read Deployment|null $currentDeployment
  * @property-read Collection<int, Deployment> $deployments
+ * @property-read Collection<int, ProjectShare> $shares
  */
 #[Fillable(['owner_type', 'owner_id', 'workspace_id', 'hosting_team_id', 'created_by', 'current_deployment_id', 'name', 'slug', 'description'])]
 class Project extends Model
@@ -150,6 +151,14 @@ class Project extends Model
     }
 
     /**
+     * @return HasMany<ProjectShare, $this>
+     */
+    public function shares(): HasMany
+    {
+        return $this->hasMany(ProjectShare::class);
+    }
+
+    /**
      * @return HasMany<ProjectDocument, $this>
      */
     public function documents(): HasMany
@@ -163,6 +172,11 @@ class Project extends Model
     public function files(): HasMany
     {
         return $this->hasMany(ProjectFile::class);
+    }
+
+    public function hasInheritedAccess(User $user): bool
+    {
+        return $user->canAccessProjectInherited($this);
     }
 
     public function url(): string

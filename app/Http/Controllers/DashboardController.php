@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ProjectSharePermission;
 use App\Models\Project;
+use App\Models\ProjectShare;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\User;
@@ -58,7 +60,7 @@ class DashboardController extends Controller
             ->pluck('id');
 
         $projects = Project::query()
-            ->with(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment'])
+            ->with(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment', 'shares.user', 'shares.sharer'])
             ->withCount('deployments')
             ->when($status === 'archived', fn ($query) => $query->onlyTrashed())
             ->when($status === 'all', fn ($query) => $query->withTrashed())
@@ -83,9 +85,27 @@ class DashboardController extends Controller
             ->get()
             ->map(fn (Project $project) => $this->projectPayload($project, $user));
 
+        $sharedProjects = Project::query()
+            ->with(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment', 'shares.user', 'shares.sharer'])
+            ->withCount('deployments')
+            ->whereHas('shares', fn ($shares) => $shares
+                ->where(fn ($query) => $query
+                    ->where('user_id', $user->id)
+                    ->orWhereRaw('LOWER(email) = ?', [$email])))
+            ->when($status === 'archived', fn ($query) => $query->onlyTrashed())
+            ->when($status === 'all', fn ($query) => $query->withTrashed())
+            ->when($sort === 'updated_desc', fn ($query) => $query->latest('updated_at'))
+            ->when($sort === 'created_desc', fn ($query) => $query->latest('created_at'))
+            ->when($sort === 'name_asc', fn ($query) => $query->orderByRaw('LOWER(name)'))
+            ->get()
+            ->reject(fn (Project $project) => $user->canAccessProjectInherited($project))
+            ->map(fn (Project $project) => $this->projectPayload($project, $user));
+
         return Inertia::render('dashboard', [
             'pendingInvitations' => $pendingInvitations,
             'projects' => $projects,
+            'sharedProjects' => $sharedProjects->values(),
+            'projectSharePermissions' => ProjectSharePermission::options(),
             'projectFilters' => [
                 'status' => $status,
                 'sort' => $sort,
@@ -131,6 +151,24 @@ class DashboardController extends Controller
             'canUnpublish' => $project->current_deployment_id !== null && $user->canDeployProject($project) && ! $project->trashed(),
             'canArchive' => $user->canDeleteProject($project) && ! $project->trashed(),
             'canRestore' => $user->canDeleteProject($project) && $project->trashed(),
+            'canManageShares' => $user->canManageProjectShares($project),
+            'sharePermission' => $this->shareForUser($project, $user)?->permission->value,
+            'sharePermissionLabel' => $this->shareForUser($project, $user)?->permission->label(),
+            'sharedByName' => $this->shareForUser($project, $user)?->sharer?->name,
+            'shares' => $user->canManageProjectShares($project)
+                ? $project->shares
+                    ->sortBy(fn (ProjectShare $share) => strtolower($share->email))
+                    ->map(fn (ProjectShare $share) => [
+                        'code' => $share->code,
+                        'email' => $share->email,
+                        'name' => $share->user?->name,
+                        'permission' => $share->permission->value,
+                        'permissionLabel' => $share->permission->label(),
+                        'pending' => $share->user_id === null,
+                    ])
+                    ->values()
+                    ->all()
+                : [],
             'createdAt' => $project->created_at?->toISOString(),
             'updatedAt' => $project->updated_at?->toISOString(),
             'deletedAt' => $project->deleted_at?->toISOString(),
@@ -141,6 +179,14 @@ class DashboardController extends Controller
                 'deployedAt' => $project->currentDeployment->deployed_at->toISOString(),
             ] : null,
         ];
+    }
+
+    protected function shareForUser(Project $project, User $user): ?ProjectShare
+    {
+        $email = strtolower($user->email);
+
+        return $project->shares
+            ->first(fn (ProjectShare $share) => $share->user_id === $user->id || strtolower($share->email) === $email);
     }
 
     /**

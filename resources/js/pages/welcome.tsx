@@ -108,7 +108,7 @@ export default function Welcome() {
                             </div>
                             <h1 className="mt-4 text-5xl leading-14 font-medium tracking-tighter text-foreground">
                                 Your agent made it.
-                                <br /> Now everyone can use it.
+                                <br /> Now anyone can use it.
                             </h1>
                             <div className="mt-4 max-w-lg text-xl font-medium tracking-tight text-muted-foreground">
                                 Koncat takes the dashboards, sites, and reports

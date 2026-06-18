@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Auth\Concerns;
 
 use App\Actions\Teams\CreateTeam;
 use App\Models\MagicLoginChallenge;
+use App\Models\ProjectShare;
 use App\Models\TeamInvitation;
 use App\Models\User;
 use App\Services\Auth\MagicLoginService;
+use App\Services\ProjectShareService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -34,6 +36,8 @@ trait HandlesMagicLoginResults
                 'email_verified_at' => now(),
             ])->save();
 
+            app(ProjectShareService::class)->claimPendingForUser($request->user());
+
             Inertia::flash('toast', ['type' => 'success', 'message' => __('Email address updated.')]);
 
             return to_route('profile.edit');
@@ -45,6 +49,7 @@ trait HandlesMagicLoginResults
             $request->session()->put('magic_login.verified_email', $challenge->email);
             $request->session()->put('magic_login.verified_until', now()->addMinutes(MagicLoginChallenge::EXPIRES_MINUTES)->unix());
             $request->session()->put('magic_login.invitation', $challenge->metadata['invitation'] ?? null);
+            $request->session()->put('magic_login.project_share', $challenge->metadata['project_share'] ?? null);
 
             return to_route('login.complete');
         }
@@ -80,6 +85,7 @@ trait HandlesMagicLoginResults
         ]);
 
         $createTeam->handlePersonal($user);
+        app(ProjectShareService::class)->claimPendingForUser($user);
 
         $request->session()->forget([
             'magic_login.verified_email',
@@ -104,6 +110,18 @@ trait HandlesMagicLoginResults
             ->first();
     }
 
+    protected function projectShareForCode(?string $code): ?ProjectShare
+    {
+        if (! $code) {
+            return null;
+        }
+
+        return ProjectShare::query()
+            ->with(['project', 'sharer'])
+            ->where('code', $code)
+            ->first();
+    }
+
     /**
      * @return array{code: string, teamName: string}|null
      */
@@ -118,6 +136,24 @@ trait HandlesMagicLoginResults
         return [
             'code' => $invitation->code,
             'teamName' => $invitation->team->name,
+        ];
+    }
+
+    /**
+     * @return array{code: string, projectName: string, sharerName: string}|null
+     */
+    protected function projectShareContext(?string $code): ?array
+    {
+        $share = $this->projectShareForCode($code);
+
+        if (! $share) {
+            return null;
+        }
+
+        return [
+            'code' => $share->code,
+            'projectName' => $share->project->name,
+            'sharerName' => $share->sharer->name,
         ];
     }
 
