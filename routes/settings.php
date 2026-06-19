@@ -3,6 +3,7 @@
 use App\Http\Controllers\Settings\ConnectedApplicationController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
+use App\Http\Controllers\Settings\UsageController;
 use App\Http\Controllers\Settings\UserApiTokenController;
 use App\Http\Controllers\Teams\TeamController;
 use App\Http\Controllers\Teams\TeamInvitationController;
@@ -28,6 +29,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('settings/security', [SecurityController::class, 'edit'])
         ->middleware(RequirePassword::class)
         ->name('security.edit');
+
+    Route::get('settings/usage', [UsageController::class, 'index'])->name('usage.index');
 
     Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
 

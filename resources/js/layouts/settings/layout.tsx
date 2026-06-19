@@ -28,6 +28,11 @@ const sidebarNavItems: NavItem[] = [
         icon: null,
     },
     {
+        title: 'Usage',
+        href: '/settings/usage',
+        icon: null,
+    },
+    {
         title: 'API tokens',
         href: '/settings/api-tokens',
         icon: null,

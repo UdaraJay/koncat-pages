@@ -482,7 +482,7 @@ function WeddingPreview() {
                         <div className="font-serif text-lg text-[#a75862] italic">
                             Willow House, Hudson Valley
                         </div>
-                        <h2 className="mt-5 max-w-lg font-serif text-7xl leading-[0.9]">
+                        <h2 className="mt-5 max-w-lg font-serif text-7xl leading-[0.9] tracking-tight">
                             We are getting married.
                         </h2>
                         <p className="mt-5 max-w-md text-lg leading-snug font-medium text-[#746862]">

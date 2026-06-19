@@ -5,8 +5,12 @@ import {
     Copy,
     Globe2,
     KeyRound,
+    Landmark,
+    Lock,
     Mail,
     Play,
+    ShieldCheck,
+    Sparkles,
     UserRound,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -209,7 +213,6 @@ export default function Welcome() {
                                     If your agent can build it, you can share it
                                     with Koncat.
                                 </div>
-
                                 <div className="inline-flex items-center gap-2 rounded-full bg-red-100 px-3 py-1 font-medium tracking-tight text-red-600">
                                     Watch a video <Play className="size-4" />
                                 </div>
@@ -218,7 +221,7 @@ export default function Welcome() {
                         </div>
 
                         <div className="mt-3 flex gap-3">
-                            <div className="flex h-100 w-90 flex-col justify-between bg-secondary p-4">
+                            <div className="flex h-100 w-90 flex-col justify-between bg-muted p-4">
                                 <div>
                                     <div className="font-medium tracking-tight text-emerald-600">
                                         Dashboards & Reports
@@ -235,7 +238,7 @@ export default function Welcome() {
                                     numbers.
                                 </div>
                             </div>
-                            <div className="flex h-100 w-90 flex-col justify-between bg-secondary p-4">
+                            <div className="flex h-100 w-90 flex-col justify-between bg-muted p-4">
                                 <div>
                                     <div className="font-medium tracking-tight text-pink-600">
                                         Shared pages
@@ -250,7 +253,7 @@ export default function Welcome() {
                                     deal with "which version is this" again.
                                 </div>
                             </div>
-                            <div className="flex h-100 w-90 flex-col justify-between bg-secondary p-4">
+                            <div className="flex h-100 w-90 flex-col justify-between bg-muted p-4">
                                 <div>
                                     <div className="font-medium tracking-tight text-amber-600">
                                         Forms & Surveys
@@ -267,7 +270,95 @@ export default function Welcome() {
                             </div>
                         </div>
 
+                        <div className="mt-20">
+                            <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 font-medium tracking-tight text-muted-foreground">
+                                Ready for teams
+                            </div>
+                            <div className="mt-5 text-5xl leading-14 font-medium tracking-tighter">
+                                The home for your team's
+                                <br /> living pages.
+                            </div>
+                            <div className="mt-4 max-w-lg text-xl leading-tight font-medium tracking-tight text-muted-foreground">
+                                Keep AI-generated dashboards, reports, and
+                                resources live, current, and controlled — all
+                                from the same agents your team already uses
+                            </div>
+
+                            <div className="mt-10 grid gap-3 overflow-hidden sm:grid-cols-2 lg:grid-cols-4">
+                                <div className="bg-muted p-5">
+                                    <div className="flex items-start justify-between gap-4 text-muted-foreground">
+                                        <div className="font-medium tracking-tight">
+                                            Permissions
+                                        </div>
+                                        <Lock className="size-5" />
+                                    </div>
+                                    <h3 className="mt-32 text-2xl leading-7 font-medium tracking-tighter text-foreground">
+                                        Control who gets in
+                                    </h3>
+                                    <div className="mt-1 max-w-sm text-sm leading-tight text-muted-foreground">
+                                        Set each page to public, private,
+                                        password-protected, team-only, or
+                                        approved-email access.
+                                    </div>
+                                </div>
+
+                                <div className="bg-muted p-5">
+                                    <div className="flex items-start justify-between gap-4 text-muted-foreground">
+                                        <div className="font-medium tracking-tight">
+                                            Insights
+                                        </div>
+                                        <Sparkles className="size-5" />
+                                    </div>
+                                    <h3 className="mt-32 text-2xl font-medium tracking-tighter text-foreground">
+                                        Know what gets read
+                                    </h3>
+                                    <div className="mt-1 max-w-sm text-sm leading-tight text-muted-foreground">
+                                        See opens, return visits, and engagement
+                                        across the reports, dashboards, and
+                                        resources your team publishes.
+                                    </div>
+                                </div>
+
+                                <div className="bg-muted p-5">
+                                    <div className="flex items-start justify-between gap-4 text-muted-foreground">
+                                        <div className="font-medium tracking-tight">
+                                            Safety
+                                        </div>
+                                        <ShieldCheck className="size-5" />
+                                    </div>
+                                    <h3 className="mt-32 text-2xl font-medium tracking-tighter text-foreground">
+                                        Publish with checks
+                                    </h3>
+                                    <div className="mt-1 max-w-sm text-sm leading-tight text-muted-foreground">
+                                        Detect suspicious scripts, external
+                                        calls, injected code, and risky updates
+                                        before they reach your team.
+                                    </div>
+                                </div>
+
+                                <div className="bg-muted p-5">
+                                    <div className="flex items-start justify-between gap-4 text-muted-foreground">
+                                        <div className="font-medium tracking-tight">
+                                            Lifecycle
+                                        </div>
+                                        <Landmark className="size-5" />
+                                    </div>
+                                    <h3 className="mt-32 text-2xl font-medium tracking-tighter text-foreground">
+                                        Manage every live page
+                                    </h3>
+                                    <div className="mt-1 max-w-sm text-sm leading-tight text-muted-foreground">
+                                        Track owners, versions, updates,
+                                        rollbacks, and page status from one
+                                        shared workspace.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* <div className="mt-20">
+                            <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 font-medium tracking-tight text-muted-foreground">
+                                Ready for teams
+                            </div>
                             <div className="mt-15 text-5xl leading-14 font-medium tracking-tighter">
                                 You're making more than ever.
                                 <br /> It's all stuck in a folder.
