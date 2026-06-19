@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ProjectSharePermission;
 use App\Enums\TeamRole;
 use App\Enums\WorkspaceRole;
 use App\Models\Project;
@@ -69,6 +70,65 @@ class DashboardTest extends TestCase
             ->where('projects.0.url', 'http://preview-team.localhost/preview-app')
             ->where('projects.0.previewUrl', 'http://preview-team.localhost/preview-app/__matterpipe/render/index.html'),
         );
+    }
+
+    public function test_project_owner_can_update_project_card_details()
+    {
+        $user = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'hosting_team_id' => $user->personalTeam()->id,
+            'name' => 'Original App',
+            'description' => 'Original description',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->patch(route('projects.update', $project), [
+                'name' => 'Updated App',
+                'description' => 'Updated description',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('projects', [
+            'id' => $project->id,
+            'name' => 'Updated App',
+            'description' => 'Updated description',
+        ]);
+    }
+
+    public function test_direct_project_share_cannot_update_project_card_details()
+    {
+        $owner = User::factory()->create();
+        $recipient = User::factory()->create(['email' => 'writer@example.com']);
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+            'name' => 'Owner App',
+            'description' => 'Owner description',
+        ]);
+
+        ProjectShare::factory()->forUser($recipient)->create([
+            'project_id' => $project->id,
+            'shared_by' => $owner->id,
+            'permission' => ProjectSharePermission::Write,
+        ]);
+
+        $this
+            ->actingAs($recipient)
+            ->patch(route('projects.update', $project), [
+                'name' => 'Shared Rename',
+                'description' => 'Shared description',
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('projects', [
+            'id' => $project->id,
+            'name' => 'Owner App',
+            'description' => 'Owner description',
+        ]);
     }
 
     public function test_dashboard_hides_archived_projects_by_default()

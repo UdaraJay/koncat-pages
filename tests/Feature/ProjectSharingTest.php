@@ -270,7 +270,10 @@ class ProjectSharingTest extends TestCase
 
     public function test_notification_links_existing_users_to_home_and_unknown_users_to_claim_link(): void
     {
-        $owner = User::factory()->create();
+        $owner = User::factory()->create([
+            'name' => 'Project Sender',
+            'email' => 'sender@example.com',
+        ]);
         $recipient = User::factory()->create(['email' => 'known@example.com']);
         $project = Project::factory()->create([
             'owner_type' => User::class,
@@ -286,8 +289,12 @@ class ProjectSharingTest extends TestCase
             'email' => 'unknown@example.com',
             'shared_by' => $owner->id,
         ]);
+        $knownMail = (new ProjectShared($knownShare))->toMail((object) []);
+        $unknownMail = (new ProjectShared($unknownShare))->toMail((object) []);
 
-        $this->assertSame(route('dashboard'), (new ProjectShared($knownShare))->toMail((object) [])->actionUrl);
-        $this->assertSame(route('login', ['project_share' => $unknownShare->code]), (new ProjectShared($unknownShare))->toMail((object) [])->actionUrl);
+        $this->assertSame(route('dashboard'), $knownMail->actionUrl);
+        $this->assertSame(route('login', ['project_share' => $unknownShare->code]), $unknownMail->actionUrl);
+        $this->assertSame([['sender@example.com', 'Project Sender']], $knownMail->replyTo);
+        $this->assertStringContainsString('Sender email: sender@example.com', implode(' ', $knownMail->introLines));
     }
 }

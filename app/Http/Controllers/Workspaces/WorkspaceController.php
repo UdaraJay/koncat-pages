@@ -10,6 +10,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Models\WorkspaceMembership;
+use App\Services\MatterpipeLimitResolver;
 use App\Services\MatterpipeQuota;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,7 +23,7 @@ class WorkspaceController extends Controller
 {
     use BuildsProjectMoveTargets;
 
-    public function index(Request $request, Team $current_team): Response
+    public function index(Request $request, Team $current_team, MatterpipeLimitResolver $limits): Response
     {
         $user = $request->user();
         abort_unless($user->belongsToTeam($current_team), 403);
@@ -41,7 +42,7 @@ class WorkspaceController extends Controller
             'canCreateWorkspace' => $user->canManageTeamWorkspaces($current_team),
             'quota' => [
                 'workspaces' => $current_team->workspaces()->count(),
-                'maxWorkspaces' => config('matterpipe.quotas.team_workspaces'),
+                'maxWorkspaces' => $limits->teamWorkspaces($current_team),
             ],
         ]);
     }
@@ -70,7 +71,7 @@ class WorkspaceController extends Controller
         return to_route('workspaces.show', [$current_team, $workspace]);
     }
 
-    public function show(Request $request, Team $current_team, Workspace $workspace): Response
+    public function show(Request $request, Team $current_team, Workspace $workspace, MatterpipeLimitResolver $limits): Response
     {
         $user = $request->user();
         $this->authorizeWorkspaceView($user, $current_team, $workspace);
@@ -127,8 +128,8 @@ class WorkspaceController extends Controller
             'teamMembers' => $current_team->members()->orderBy('name')->get(['users.id', 'users.name', 'users.email']),
             'moveTargets' => $this->projectMoveTargets($user),
             'quota' => [
-                'projects' => $workspace->projects()->count(),
-                'maxProjects' => config('matterpipe.quotas.workspace_projects'),
+                'projects' => $workspace->projects()->withTrashed()->count(),
+                'maxProjects' => $limits->workspaceProjects($workspace),
             ],
         ]);
     }

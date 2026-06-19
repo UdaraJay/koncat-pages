@@ -56,6 +56,7 @@ export type Project = {
         slug?: string;
     } | null;
     deploymentsCount: number;
+    canUpdate?: boolean;
     canDeploy?: boolean;
     canUnpublish?: boolean;
     canArchive?: boolean;

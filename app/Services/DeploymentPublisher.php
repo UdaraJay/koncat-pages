@@ -24,6 +24,8 @@ class DeploymentPublisher
      */
     public function publishFiles(Project $project, array $files, ?User $user = null): Deployment
     {
+        $this->quota->ensureDeploymentFilesWithinLimits($project, $files);
+
         $path = tempnam(sys_get_temp_dir(), 'deployment-');
 
         if ($path === false) {
@@ -71,7 +73,11 @@ class DeploymentPublisher
             throw ValidationException::withMessages(['archive' => 'The deployment archive must include an index.html file.']);
         }
 
-        $this->quota->ensureDeploymentWithinLimits($totalBytes, $fileCount);
+        foreach ($manifest as $file) {
+            $this->quota->ensureDeploymentFileWithinLimit($project, $file['size']);
+        }
+
+        $this->quota->ensureDeploymentWithinLimits($project, $totalBytes, $fileCount);
 
         $disk = (string) config('matterpipe.storage_disk');
 

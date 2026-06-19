@@ -5,6 +5,7 @@ import {
     CalendarClock,
     Check,
     Copy,
+    Pencil,
     Folder,
     HardDrive,
     MoreHorizontal,
@@ -18,6 +19,7 @@ import {
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { toast } from 'sonner';
+import EditProjectDialog from '@/components/edit-project-dialog';
 import InputError from '@/components/input-error';
 import MoveProjectDialog from '@/components/move-project-dialog';
 import PendingInvitationsModal from '@/components/pending-invitations-modal';
@@ -99,6 +101,8 @@ export default function Dashboard({
     const hasPushedProject = projects.some(
         (project) => project.currentDeployment,
     );
+    const showSharedProjectsSection =
+        Boolean(homeScope?.team.isPersonal) || sharedProjects.length > 0;
     const mcpUrl = useMemo(() => {
         if (typeof window === 'undefined') {
             return '/mcp';
@@ -238,12 +242,12 @@ export default function Dashboard({
                     )}
                 </section>
 
-                {sharedProjects.length > 0 ? (
+                {showSharedProjectsSection ? (
                     <section className="space-y-3">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex items-center gap-2">
                                 <Share2 className="h-4 w-4 text-muted-foreground" />
-                                <h2 className="font-medium">Shared with you</h2>
+                                <h2 className="font-medium">Shared with me</h2>
                             </div>
                             <Badge variant="secondary">
                                 {sharedProjects.length}{' '}
@@ -253,16 +257,33 @@ export default function Dashboard({
                             </Badge>
                         </div>
 
-                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                            {sharedProjects.map((project) => (
-                                <ProjectCard
-                                    key={project.id}
-                                    project={project}
-                                    moveTargets={moveTargets}
-                                    sharePermissions={projectSharePermissions}
-                                />
-                            ))}
-                        </div>
+                        {sharedProjects.length > 0 ? (
+                            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                                {sharedProjects.map((project) => (
+                                    <ProjectCard
+                                        key={project.id}
+                                        project={project}
+                                        moveTargets={moveTargets}
+                                        sharePermissions={
+                                            projectSharePermissions
+                                        }
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="grid min-h-80 place-items-center bg-muted p-8 text-center">
+                                <div className="max-w-sm space-y-2">
+                                    <Share2 className="mx-auto mb-5 size-8 text-border" />
+                                    <h3 className="font-medium">
+                                        No shared projects yet
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Projects shared directly with your email
+                                        address will appear here.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                     </section>
                 ) : null}
             </main>
@@ -414,6 +435,7 @@ function ProjectCard({
 }) {
     const [shareDialogOpen, setShareDialogOpen] = useState(false);
     const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
     const deployedAt = project.currentDeployment?.deployedAt
         ? formatDate(project.currentDeployment.deployedAt)
         : null;
@@ -436,6 +458,12 @@ function ProjectCard({
                 targets={moveTargets}
                 open={moveDialogOpen}
                 onOpenChange={setMoveDialogOpen}
+            />
+            <EditProjectDialog
+                key={projectEditDialogKey(project)}
+                project={project}
+                open={editDialogOpen}
+                onOpenChange={setEditDialogOpen}
             />
             <article className="group flex overflow-hidden border bg-background transition">
                 <div className="flex min-w-0 flex-1 flex-col">
@@ -479,6 +507,7 @@ function ProjectCard({
                             <ProjectCardMenu
                                 project={project}
                                 canMove={moveTargets.length > 0}
+                                onEdit={() => setEditDialogOpen(true)}
                                 onMove={() => setMoveDialogOpen(true)}
                                 onShare={() => setShareDialogOpen(true)}
                             />
@@ -540,11 +569,13 @@ function ProjectCard({
 function ProjectCardMenu({
     project,
     canMove,
+    onEdit,
     onMove,
     onShare,
 }: {
     project: Project;
     canMove: boolean;
+    onEdit: () => void;
     onMove: () => void;
     onShare: () => void;
 }) {
@@ -585,6 +616,12 @@ function ProjectCardMenu({
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
+                {project.canUpdate ? (
+                    <DropdownMenuItem onSelect={onEdit}>
+                        <Pencil className="h-4 w-4" />
+                        Edit
+                    </DropdownMenuItem>
+                ) : null}
                 {project.canManageShares ? (
                     <>
                         <DropdownMenuItem onSelect={onShare}>
@@ -599,7 +636,9 @@ function ProjectCardMenu({
                         Move
                     </DropdownMenuItem>
                 ) : null}
-                {project.canManageShares || project.canMove ? (
+                {project.canUpdate ||
+                project.canManageShares ||
+                project.canMove ? (
                     <DropdownMenuSeparator />
                 ) : null}
                 {project.canRestore ? (
@@ -853,6 +892,10 @@ function projectMoveDialogKey(project: Project) {
         project.workspace?.id,
         project.slug,
     ].join(':');
+}
+
+function projectEditDialogKey(project: Project) {
+    return [project.id, project.name, project.description ?? ''].join(':');
 }
 
 function projectShareUrl(project: Project, share?: string) {

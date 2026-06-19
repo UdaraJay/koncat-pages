@@ -6,6 +6,7 @@ use App\Enums\TeamRole;
 use App\Enums\WorkspaceRole;
 use App\Models\Deployment;
 use App\Models\Project;
+use App\Models\ProjectFile;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\UserApiToken;
@@ -359,6 +360,75 @@ class MatterpipePlatformTest extends TestCase
         ]);
     }
 
+    public function test_project_quotas_count_archived_projects(): void
+    {
+        config([
+            'matterpipe.quotas.user_projects' => 1,
+            'matterpipe.quotas.team_projects' => 1,
+            'matterpipe.quotas.workspace_projects' => 1,
+        ]);
+
+        $personalUser = User::factory()->create();
+        Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $personalUser->id,
+            'hosting_team_id' => $personalUser->personalTeam()->id,
+            'slug' => 'archived-personal',
+        ])->delete();
+
+        $this
+            ->actingAs($personalUser)
+            ->post(route('projects.store'), [
+                'owner_type' => 'user',
+                'name' => 'New Personal',
+                'slug' => 'new-personal',
+            ])
+            ->assertSessionHasErrors(['quota' => 'Your account has reached its project limit.']);
+
+        $teamUser = User::factory()->create();
+        $team = Team::factory()->create();
+        $team->members()->attach($teamUser, ['role' => TeamRole::Owner->value]);
+        Project::factory()->create([
+            'owner_type' => Team::class,
+            'owner_id' => $team->id,
+            'hosting_team_id' => $team->id,
+            'slug' => 'archived-team',
+        ])->delete();
+
+        $this
+            ->actingAs($teamUser)
+            ->post(route('projects.store'), [
+                'owner_type' => 'team',
+                'team_id' => $team->id,
+                'name' => 'New Team',
+                'slug' => 'new-team',
+            ])
+            ->assertSessionHasErrors(['quota' => 'This team has reached its project limit.']);
+
+        $workspaceUser = User::factory()->create();
+        $workspaceTeam = Team::factory()->create();
+        $workspaceTeam->members()->attach($workspaceUser, ['role' => TeamRole::Owner->value]);
+        $workspace = Workspace::factory()->create(['team_id' => $workspaceTeam->id]);
+        $workspace->members()->attach($workspaceUser, ['role' => WorkspaceRole::Owner->value]);
+        Project::factory()->create([
+            'owner_type' => Team::class,
+            'owner_id' => $workspaceTeam->id,
+            'workspace_id' => $workspace->id,
+            'hosting_team_id' => $workspaceTeam->id,
+            'slug' => 'archived-workspace',
+        ])->delete();
+
+        config(['matterpipe.quotas.team_projects' => 10]);
+
+        $this
+            ->actingAs($workspaceUser)
+            ->post(route('workspaces.projects.store', [$workspaceTeam, $workspace]), [
+                'name' => 'New Workspace',
+                'slug' => 'new-workspace',
+            ])
+            ->assertSessionHasErrors(['quota' => 'This workspace has reached its project limit.']);
+    }
+
     public function test_project_owner_can_unpublish_a_project_without_deleting_deployments(): void
     {
         $user = User::factory()->create();
@@ -532,6 +602,63 @@ class MatterpipePlatformTest extends TestCase
         $this->assertSame('frameable', $rawResponse->streamedContent());
     }
 
+    public function test_zip_deployment_rejects_one_uncompressed_file_over_limit(): void
+    {
+        $this->skipWithoutZip();
+        Storage::fake('local');
+        config([
+            'matterpipe.storage_disk' => 'local',
+            'matterpipe.quotas.deployment_bytes' => 1024,
+            'matterpipe.quotas.deployment_file_bytes' => 100,
+        ]);
+
+        $owner = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'created_by' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+            'slug' => 'large-file-app',
+        ]);
+
+        $this
+            ->actingAs($owner)
+            ->post(route('projects.deployments.store', $project), [
+                'archive' => $this->zipUpload(['index.html' => str_repeat('x', 101)]),
+            ])
+            ->assertSessionHasErrors(['quota' => 'This deployment contains a file that is too large.']);
+    }
+
+    public function test_zip_deployment_rejects_total_uncompressed_bytes_over_limit(): void
+    {
+        $this->skipWithoutZip();
+        Storage::fake('local');
+        config([
+            'matterpipe.storage_disk' => 'local',
+            'matterpipe.quotas.deployment_bytes' => 1024,
+            'matterpipe.quotas.deployment_file_bytes' => 2048,
+        ]);
+
+        $owner = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'created_by' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+            'slug' => 'large-deployment-app',
+        ]);
+
+        $this
+            ->actingAs($owner)
+            ->post(route('projects.deployments.store', $project), [
+                'archive' => $this->zipUpload([
+                    'index.html' => str_repeat('x', 700),
+                    'app.js' => str_repeat('y', 400),
+                ]),
+            ])
+            ->assertSessionHasErrors(['quota' => 'This deployment is too large.']);
+    }
+
     public function test_hosted_render_url_uses_index_path_for_relative_assets(): void
     {
         $this->skipWithoutZip();
@@ -662,6 +789,82 @@ class MatterpipePlatformTest extends TestCase
             ->assertJsonCount(1, 'data');
     }
 
+    public function test_hosted_file_upload_rejects_file_over_upload_limit(): void
+    {
+        Storage::fake('local');
+        config([
+            'matterpipe.storage_disk' => 'local',
+            'matterpipe.quotas.project_file_upload_bytes' => 1024,
+        ]);
+
+        [$user, $project] = $this->hostedFileProject('upload-limit-team', 'upload-limit-app');
+
+        $this
+            ->actingAs($user)
+            ->post('http://upload-limit-team.localhost/upload-limit-app/__matterpipe/files', [
+                'file' => UploadedFile::fake()->create('asset.bin', 2),
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors(['file' => 'The uploaded file is too large.']);
+    }
+
+    public function test_hosted_file_upload_rejects_project_file_count_over_limit(): void
+    {
+        Storage::fake('local');
+        config([
+            'matterpipe.storage_disk' => 'local',
+            'matterpipe.quotas.project_files' => 1,
+        ]);
+
+        [$user, $project] = $this->hostedFileProject('file-count-team', 'file-count-app');
+        ProjectFile::create([
+            'project_id' => $project->id,
+            'uploaded_by' => $user->id,
+            'disk' => 'local',
+            'path' => 'existing.txt',
+            'original_name' => 'existing.txt',
+            'mime_type' => 'text/plain',
+            'size' => 1,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post('http://file-count-team.localhost/file-count-app/__matterpipe/files', [
+                'file' => UploadedFile::fake()->create('asset.bin', 1),
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors(['quota' => 'This project has reached its file limit.']);
+    }
+
+    public function test_hosted_file_upload_rejects_total_project_file_storage_over_limit(): void
+    {
+        Storage::fake('local');
+        config([
+            'matterpipe.storage_disk' => 'local',
+            'matterpipe.quotas.project_file_bytes' => 1024,
+            'matterpipe.quotas.project_file_upload_bytes' => 1024,
+        ]);
+
+        [$user, $project] = $this->hostedFileProject('storage-limit-team', 'storage-limit-app');
+        ProjectFile::create([
+            'project_id' => $project->id,
+            'uploaded_by' => $user->id,
+            'disk' => 'local',
+            'path' => 'existing.txt',
+            'original_name' => 'existing.txt',
+            'mime_type' => 'text/plain',
+            'size' => 1020,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post('http://storage-limit-team.localhost/storage-limit-app/__matterpipe/files', [
+                'file' => UploadedFile::fake()->create('asset.bin', 1),
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors(['quota' => 'This project has reached its file storage limit.']);
+    }
+
     public function test_user_api_token_can_deploy_project_zip(): void
     {
         $this->skipWithoutZip();
@@ -709,6 +912,24 @@ class MatterpipePlatformTest extends TestCase
         $zip->close();
 
         return new UploadedFile($path, 'deployment.zip', 'application/zip', null, true);
+    }
+
+    /**
+     * @return array{0: User, 1: Project}
+     */
+    protected function hostedFileProject(string $subdomain, string $slug): array
+    {
+        $user = User::factory()->create();
+        $user->personalTeam()->update(['subdomain' => $subdomain]);
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'created_by' => $user->id,
+            'hosting_team_id' => $user->personalTeam()->id,
+            'slug' => $slug,
+        ]);
+
+        return [$user, $project];
     }
 
     protected function skipWithoutZip(): void

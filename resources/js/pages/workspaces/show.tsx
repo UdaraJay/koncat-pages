@@ -3,15 +3,18 @@ import {
     ArrowUpRight,
     FileArchive,
     FolderPlus,
+    MoreHorizontal,
     MoveRight,
+    Pencil,
     Rocket,
     Settings2,
     Trash2,
     UserPlus,
     Users,
 } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import EditProjectDialog from '@/components/edit-project-dialog';
 import InputError from '@/components/input-error';
 import MoveProjectDialog from '@/components/move-project-dialog';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +27,13 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type {
@@ -144,6 +154,7 @@ export default function WorkspaceShow({
                                     key={project.id}
                                     project={project}
                                     canDeploy={permissions.canDeployProject}
+                                    canEdit={permissions.canUpdateProject}
                                     canMove={permissions.canDeleteProject}
                                     moveTargets={moveTargets}
                                     onDeploy={deployProject}
@@ -522,20 +533,30 @@ function EditWorkspaceDialog({
 function ProjectTile({
     project,
     canDeploy,
+    canEdit,
     canMove,
     moveTargets,
     onDeploy,
 }: {
     project: Project;
     canDeploy: boolean;
+    canEdit: boolean;
     canMove: boolean;
     moveTargets: ProjectMoveTarget[];
     onDeploy: (project: Project, file?: File) => void;
 }) {
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+    const uploadInputRef = useRef<HTMLInputElement>(null);
 
     return (
         <>
+            <EditProjectDialog
+                key={projectEditDialogKey(project)}
+                project={project}
+                open={editDialogOpen}
+                onOpenChange={setEditDialogOpen}
+            />
             <MoveProjectDialog
                 key={projectMoveDialogKey(project)}
                 project={project}
@@ -552,6 +573,31 @@ function ProjectTile({
                     <div className="absolute right-4 bottom-4 left-4 rounded-md border border-white/25 bg-background/90 p-3 shadow-sm">
                         <div className="h-2 w-2/3 rounded-full bg-foreground/25" />
                         <div className="mt-2 h-2 w-1/2 rounded-full bg-foreground/15" />
+                    </div>
+                    <div className="absolute top-3 right-3">
+                        <ProjectTileMenu
+                            project={project}
+                            canDeploy={canDeploy}
+                            canEdit={canEdit}
+                            canMove={canMove}
+                            hasMoveTargets={moveTargets.length > 0}
+                            onDeploy={() => uploadInputRef.current?.click()}
+                            onEdit={() => setEditDialogOpen(true)}
+                            onMove={() => setMoveDialogOpen(true)}
+                        />
+                        <input
+                            ref={uploadInputRef}
+                            type="file"
+                            accept=".zip,application/zip"
+                            className="sr-only"
+                            onChange={(event) => {
+                                onDeploy(
+                                    project,
+                                    event.currentTarget.files?.[0],
+                                );
+                                event.currentTarget.value = '';
+                            }}
+                        />
                     </div>
                 </div>
 
@@ -599,39 +645,72 @@ function ProjectTile({
                                 <ArrowUpRight /> Open
                             </a>
                         </Button>
-                        {canMove ? (
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                disabled={moveTargets.length === 0}
-                                onClick={() => setMoveDialogOpen(true)}
-                            >
-                                <MoveRight /> Move
-                            </Button>
-                        ) : null}
-                        {canDeploy ? (
-                            <label className="inline-flex h-8 cursor-pointer items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground transition hover:bg-primary/90">
-                                <Rocket className="h-4 w-4" />
-                                Deploy
-                                <input
-                                    type="file"
-                                    accept=".zip,application/zip"
-                                    className="sr-only"
-                                    onChange={(event) =>
-                                        onDeploy(
-                                            project,
-                                            event.currentTarget.files?.[0],
-                                        )
-                                    }
-                                />
-                            </label>
-                        ) : null}
                         <FileArchive className="ml-auto h-4 w-4 text-muted-foreground" />
                     </div>
                 </div>
             </article>
         </>
+    );
+}
+
+function ProjectTileMenu({
+    project,
+    canDeploy,
+    canEdit,
+    canMove,
+    hasMoveTargets,
+    onDeploy,
+    onEdit,
+    onMove,
+}: {
+    project: Project;
+    canDeploy: boolean;
+    canEdit: boolean;
+    canMove: boolean;
+    hasMoveTargets: boolean;
+    onDeploy: () => void;
+    onEdit: () => void;
+    onMove: () => void;
+}) {
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    variant="secondary"
+                    size="icon-sm"
+                    className="bg-background/85 shadow-sm backdrop-blur"
+                    aria-label={`${project.name} actions`}
+                >
+                    <MoreHorizontal className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+                {canEdit ? (
+                    <DropdownMenuItem onSelect={onEdit}>
+                        <Pencil className="h-4 w-4" />
+                        Edit
+                    </DropdownMenuItem>
+                ) : null}
+                {canMove ? (
+                    <DropdownMenuItem
+                        disabled={!hasMoveTargets}
+                        onSelect={onMove}
+                    >
+                        <MoveRight className="h-4 w-4" />
+                        Move
+                    </DropdownMenuItem>
+                ) : null}
+                {(canEdit || canMove) && canDeploy ? (
+                    <DropdownMenuSeparator />
+                ) : null}
+                {canDeploy ? (
+                    <DropdownMenuItem onSelect={onDeploy}>
+                        <Rocket className="h-4 w-4" />
+                        Deploy
+                    </DropdownMenuItem>
+                ) : null}
+            </DropdownMenuContent>
+        </DropdownMenu>
     );
 }
 
@@ -643,6 +722,10 @@ function projectMoveDialogKey(project: Project) {
         project.workspace?.id,
         project.slug,
     ].join(':');
+}
+
+function projectEditDialogKey(project: Project) {
+    return [project.id, project.name, project.description ?? ''].join(':');
 }
 
 WorkspaceShow.layout = (props: PageProps & { workspace?: Workspace }) => ({

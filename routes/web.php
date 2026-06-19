@@ -43,6 +43,7 @@ Route::domain('{team}.'.config('matterpipe.hosting_domain'))
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('home', DashboardController::class)->name('dashboard');
     Route::post('projects', [ProjectController::class, 'store'])->name('projects.store');
+    Route::patch('projects/{project}', [ProjectController::class, 'updateDetails'])->name('projects.update');
     Route::post('projects/{project}/deployments', [DeploymentController::class, 'storeGlobal'])->name('projects.deployments.store');
     Route::post('projects/{project}/shares', [ProjectShareController::class, 'store'])->name('projects.shares.store');
     Route::patch('projects/{project}/shares/{share}', [ProjectShareController::class, 'update'])->name('projects.shares.update');

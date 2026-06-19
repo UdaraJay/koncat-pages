@@ -10,11 +10,16 @@ use Illuminate\Validation\ValidationException;
 
 class MatterpipeQuota
 {
+    public function __construct(protected MatterpipeLimitResolver $limits)
+    {
+        //
+    }
+
     public function ensureTeamCanCreateWorkspace(Team $team): void
     {
         $this->ensureLimit(
             $team->workspaces()->count(),
-            (int) config('matterpipe.quotas.team_workspaces'),
+            $this->limits->teamWorkspaces($team),
             'This team has reached its workspace limit.',
         );
     }
@@ -22,8 +27,8 @@ class MatterpipeQuota
     public function ensureUserCanCreateProject(User $user): void
     {
         $this->ensureLimit(
-            $user->projects()->count(),
-            (int) config('matterpipe.quotas.user_projects'),
+            $user->projects()->withTrashed()->count(),
+            $this->limits->userProjects($user),
             'Your account has reached its project limit.',
         );
     }
@@ -31,8 +36,8 @@ class MatterpipeQuota
     public function ensureTeamCanCreateProject(Team $team): void
     {
         $this->ensureLimit(
-            $team->projects()->count(),
-            (int) config('matterpipe.quotas.team_projects'),
+            $team->projects()->withTrashed()->count(),
+            $this->limits->teamProjects($team),
             'This team has reached its project limit.',
         );
     }
@@ -40,33 +45,74 @@ class MatterpipeQuota
     public function ensureWorkspaceCanCreateProject(Workspace $workspace): void
     {
         $this->ensureLimit(
-            $workspace->projects()->count(),
-            (int) config('matterpipe.quotas.workspace_projects'),
+            $workspace->projects()->withTrashed()->count(),
+            $this->limits->workspaceProjects($workspace),
             'This workspace has reached its project limit.',
         );
     }
 
-    public function ensureDeploymentWithinLimits(int $bytes, int $files): void
+    public function ensureDeploymentWithinLimits(Project $project, int $bytes, int $files): void
     {
-        $this->ensureLimit($bytes, (int) config('matterpipe.quotas.deployment_bytes'), 'This deployment is too large.');
-        $this->ensureLimit($files, (int) config('matterpipe.quotas.deployment_files'), 'This deployment has too many files.');
+        $this->ensureLimit($files, $this->limits->deploymentFiles($project), 'This deployment has too many files.', inclusive: true);
+        $this->ensureLimit($bytes, $this->limits->deploymentBytes($project), 'This deployment is too large.', inclusive: true);
+    }
+
+    public function ensureDeploymentFileWithinLimit(Project|User $subject, int $bytes): void
+    {
+        $this->ensureLimit(
+            $bytes,
+            $this->limits->deploymentFileBytes($subject),
+            'This deployment contains a file that is too large.',
+            inclusive: true,
+        );
+    }
+
+    /**
+     * @param  array<int, array{path: string, contents: string}>  $files
+     */
+    public function ensureDeploymentFilesWithinLimits(Project|User $subject, array $files): void
+    {
+        $this->ensureLimit(count($files), $this->limits->deploymentFiles($subject), 'This deployment has too many files.', inclusive: true);
+
+        $totalBytes = 0;
+
+        foreach ($files as $file) {
+            $bytes = strlen($file['contents']);
+            $this->ensureDeploymentFileWithinLimit($subject, $bytes);
+            $totalBytes += $bytes;
+        }
+
+        $this->ensureLimit($totalBytes, $this->limits->deploymentBytes($subject), 'This deployment is too large.', inclusive: true);
     }
 
     public function ensureProjectCanCreateDocument(Project $project): void
     {
         $this->ensureLimit(
             $project->documents()->count(),
-            (int) config('matterpipe.quotas.project_documents'),
+            $this->limits->projectDocuments($project),
             'This project has reached its document limit.',
         );
     }
 
     public function ensureProjectCanStoreFile(Project $project, int $additionalBytes): void
     {
+        $this->ensureLimit(
+            $additionalBytes,
+            $this->limits->projectFileUploadBytes($project),
+            'The uploaded file is too large.',
+            inclusive: true,
+        );
+
+        $this->ensureLimit(
+            $project->files()->count(),
+            $this->limits->projectFiles($project),
+            'This project has reached its file limit.',
+        );
+
         $storedBytes = (int) $project->files()->sum('size');
         $this->ensureLimit(
             $storedBytes + $additionalBytes,
-            (int) config('matterpipe.quotas.project_file_bytes'),
+            $this->limits->projectFileBytes($project),
             'This project has reached its file storage limit.',
             inclusive: true,
         );

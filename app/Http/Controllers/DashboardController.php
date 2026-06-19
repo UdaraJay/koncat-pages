@@ -208,6 +208,7 @@ class DashboardController extends Controller
                 'slug' => $project->workspace->slug,
             ] : null,
             'deploymentsCount' => $project->deployments_count,
+            'canUpdate' => $user->canUpdateProject($project) && ! $project->trashed(),
             'canDeploy' => $user->canDeployProject($project),
             'canUnpublish' => $project->current_deployment_id !== null && $user->canDeployProject($project) && ! $project->trashed(),
             'canArchive' => $user->canDeleteProject($project) && ! $project->trashed(),

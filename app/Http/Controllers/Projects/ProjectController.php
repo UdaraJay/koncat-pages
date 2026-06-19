@@ -128,6 +128,23 @@ class ProjectController extends Controller
         return back();
     }
 
+    public function updateDetails(Request $request, Project $project): RedirectResponse
+    {
+        abort_unless(! $project->trashed(), 404);
+        abort_unless($request->user()->canUpdateProject($project), 403);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $project->update($validated);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Project updated.')]);
+
+        return back();
+    }
+
     public function move(Request $request, Project $project, MatterpipeQuota $quota): RedirectResponse
     {
         $user = $request->user();

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Hosted;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Hosted\Concerns\ResolvesHostedProject;
 use App\Models\ProjectFile;
+use App\Services\MatterpipeLimitResolver;
 use App\Services\MatterpipeQuota;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,13 +16,22 @@ class MatterpipeFileController extends Controller
 {
     use ResolvesHostedProject;
 
-    public function store(Request $request, string $team, string $project, MatterpipeQuota $quota): JsonResponse
+    public function store(Request $request, string $team, string $project, MatterpipeQuota $quota, MatterpipeLimitResolver $limits): JsonResponse
     {
         $hostedProject = $this->hostedProject($request, $team, $project);
         abort_unless($request->user()?->canWriteProjectContent($hostedProject), 403);
 
+        $fileRules = ['required', 'file'];
+        $maxUploadBytes = $limits->projectFileUploadBytes($hostedProject);
+
+        if ($maxUploadBytes > 0) {
+            $fileRules[] = 'max:'.ceil($maxUploadBytes / 1024);
+        }
+
         $validated = $request->validate([
-            'file' => ['required', 'file', 'max:102400'],
+            'file' => $fileRules,
+        ], [
+            'file.max' => 'The uploaded file is too large.',
         ]);
 
         $file = $validated['file'];

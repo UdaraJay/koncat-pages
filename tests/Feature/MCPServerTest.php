@@ -463,6 +463,7 @@ class MCPServerTest extends TestCase
         config([
             'matterpipe.quotas.deployment_files' => 1,
             'matterpipe.quotas.deployment_bytes' => 1024,
+            'matterpipe.quotas.deployment_file_bytes' => 1024,
         ]);
 
         $user = User::factory()->create();
@@ -484,6 +485,16 @@ class MCPServerTest extends TestCase
                 ['path' => 'index.html', 'content' => str_repeat('x', 11)],
             ],
         ])->assertHasErrors(['This deployment is too large.']);
+
+        config(['matterpipe.quotas.deployment_bytes' => 1024]);
+        config(['matterpipe.quotas.deployment_file_bytes' => 10]);
+
+        MCPServer::actingAs($user)->tool(DeployProjectTool::class, [
+            'name' => 'One File Too Large',
+            'files' => [
+                ['path' => 'index.html', 'base64' => base64_encode(str_repeat('x', 11))],
+            ],
+        ])->assertHasErrors(['This deployment contains a file that is too large.']);
     }
 
     protected function toolCallPayload(array $arguments = []): array

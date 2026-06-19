@@ -32,9 +32,13 @@ class ProjectShared extends Notification implements ShouldQueue
 
         return (new MailMessage)
             ->subject(__('A project was shared with you'))
+            ->replyTo($sharer->email, $sharer->name)
             ->line(__(':sharerName shared the :projectName project with you.', [
                 'sharerName' => $sharer->name,
                 'projectName' => $project->name,
+            ]))
+            ->line(__('Sender email: :sharerEmail', [
+                'sharerEmail' => $sharer->email,
             ]))
             ->line(__('Log in or create an account with this email address to access it.'))
             ->action(
