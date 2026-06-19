@@ -43,9 +43,7 @@ class ProjectShared extends Notification implements ShouldQueue
             ->line(__('Log in or create an account with this email address to access it.'))
             ->action(
                 __('Open project'),
-                $this->share->user_id
-                    ? route('dashboard')
-                    : route('login', ['project_share' => $this->share->code]),
+                route('login', ['project_share' => $this->share->code]),
             );
     }
 

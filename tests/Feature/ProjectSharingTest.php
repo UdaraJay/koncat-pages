@@ -257,7 +257,7 @@ class ProjectSharingTest extends TestCase
             ->post(route('login.complete.store'), [
                 'name' => 'New Collaborator',
             ])
-            ->assertRedirect(route('dashboard'));
+            ->assertRedirect($project->url());
 
         $user = User::query()->where('email', 'new@example.com')->firstOrFail();
 
@@ -268,7 +268,105 @@ class ProjectSharingTest extends TestCase
         ]);
     }
 
-    public function test_notification_links_existing_users_to_home_and_unknown_users_to_claim_link(): void
+    public function test_project_share_email_links_are_bound_to_each_share_recipient(): void
+    {
+        Notification::fake();
+
+        $owner = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+        ]);
+
+        $this
+            ->actingAs($owner)
+            ->post(route('projects.shares.store', $project), [
+                'email' => 'b@example.com',
+                'permission' => ProjectSharePermission::Read->value,
+            ])
+            ->assertRedirect();
+
+        $this
+            ->actingAs($owner)
+            ->post(route('projects.shares.store', $project), [
+                'email' => 'a@example.com',
+                'permission' => ProjectSharePermission::Write->value,
+            ])
+            ->assertRedirect();
+
+        $bShare = ProjectShare::query()->where('email', 'b@example.com')->firstOrFail();
+        $aShare = ProjectShare::query()->where('email', 'a@example.com')->firstOrFail();
+
+        $this->assertNotSame($bShare->code, $aShare->code);
+        $this->assertSame(route('login', ['project_share' => $bShare->code]), (new ProjectShared($bShare))->toMail((object) [])->actionUrl);
+        $this->assertSame(route('login', ['project_share' => $aShare->code]), (new ProjectShared($aShare))->toMail((object) [])->actionUrl);
+
+        auth()->logout();
+
+        $this
+            ->post(route('login.magic.request'), [
+                'email' => 'a@example.com',
+                'project_share' => $bShare->code,
+            ])
+            ->assertSessionHasErrors('email');
+
+        $this
+            ->post(route('login.magic.request'), [
+                'email' => 'a@example.com',
+                'project_share' => $aShare->code,
+            ])
+            ->assertRedirect();
+
+        $challenge = MagicLoginChallenge::query()->latest()->firstOrFail();
+
+        $this->assertSame('a@example.com', $challenge->email);
+        $this->assertSame($aShare->code, $challenge->metadata['project_share']);
+    }
+
+    public function test_existing_user_project_share_link_redirects_to_shared_project_after_login(): void
+    {
+        Notification::fake();
+
+        $owner = User::factory()->create();
+        $recipient = User::factory()->create(['email' => 'known@example.com']);
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+        ]);
+
+        $this
+            ->actingAs($owner)
+            ->post(route('projects.shares.store', $project), [
+                'email' => 'known@example.com',
+                'permission' => ProjectSharePermission::Read->value,
+            ])
+            ->assertRedirect();
+
+        $share = ProjectShare::query()->where('user_id', $recipient->id)->firstOrFail();
+
+        auth()->logout();
+
+        $this
+            ->post(route('login.magic.request'), [
+                'email' => 'known@example.com',
+                'project_share' => $share->code,
+            ])
+            ->assertRedirect();
+
+        Notification::assertSentOnDemand(MagicLoginNotification::class, function (MagicLoginNotification $notification) use ($project) {
+            $this
+                ->post(route('login.magic.consume', $notification->challenge), [
+                    'token' => $notification->token,
+                ])
+                ->assertRedirect($project->url());
+
+            return true;
+        });
+    }
+
+    public function test_notification_links_users_to_claim_link(): void
     {
         $owner = User::factory()->create([
             'name' => 'Project Sender',
@@ -292,7 +390,7 @@ class ProjectSharingTest extends TestCase
         $knownMail = (new ProjectShared($knownShare))->toMail((object) []);
         $unknownMail = (new ProjectShared($unknownShare))->toMail((object) []);
 
-        $this->assertSame(route('dashboard'), $knownMail->actionUrl);
+        $this->assertSame(route('login', ['project_share' => $knownShare->code]), $knownMail->actionUrl);
         $this->assertSame(route('login', ['project_share' => $unknownShare->code]), $unknownMail->actionUrl);
         $this->assertSame([['sender@example.com', 'Project Sender']], $knownMail->replyTo);
         $this->assertStringContainsString('Sender email: sender@example.com', implode(' ', $knownMail->introLines));

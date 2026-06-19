@@ -56,6 +56,9 @@ trait HandlesMagicLoginResults
 
         $user->forceFill(['email_verified_at' => $user->email_verified_at ?: now()])->save();
 
+        $projectShareCode = $challenge->metadata['project_share'] ?? null;
+        $projectShareCode = is_string($projectShareCode) ? $projectShareCode : null;
+
         if ($this->requiresTwoFactorChallenge($user)) {
             $this->forgetAuthFlowIntendedUrl($request);
 
@@ -64,13 +67,17 @@ trait HandlesMagicLoginResults
                 'login.remember' => $challenge->remember,
             ]);
 
+            if ($projectShareUrl = $this->projectShareRedirectUrlForUser($user, $projectShareCode)) {
+                $request->session()->put('url.intended', $projectShareUrl);
+            }
+
             return to_route('two-factor.login');
         }
 
         Auth::guard(config('fortify.guard'))->login($user, $challenge->remember);
         $request->session()->regenerate();
 
-        return $this->redirectAfterMagicLogin($request);
+        return $this->redirectAfterMagicLogin($request, $projectShareCode);
     }
 
     protected function createVerifiedUser(Request $request, CreateTeam $createTeam): User
@@ -166,11 +173,33 @@ trait HandlesMagicLoginResults
             in_array(TwoFactorAuthenticatable::class, class_uses_recursive($user));
     }
 
-    protected function redirectAfterMagicLogin(Request $request): RedirectResponse
+    protected function redirectAfterMagicLogin(Request $request, ?string $projectShareCode = null): RedirectResponse
     {
         $this->forgetAuthFlowIntendedUrl($request);
 
+        if ($projectShareUrl = $this->projectShareRedirectUrlForUser($request->user(), $projectShareCode)) {
+            return redirect()->to($projectShareUrl);
+        }
+
         return redirect()->intended(route('dashboard'));
+    }
+
+    protected function projectShareRedirectUrlForUser(?User $user, ?string $projectShareCode): ?string
+    {
+        if (! $user || ! $projectShareCode) {
+            return null;
+        }
+
+        $share = ProjectShare::query()
+            ->with(['project.hostingTeam'])
+            ->where('code', $projectShareCode)
+            ->first();
+
+        if (! $share || ! $user->canAccessProject($share->project)) {
+            return null;
+        }
+
+        return $share->project->url();
     }
 
     protected function forgetAuthFlowIntendedUrl(Request $request): void

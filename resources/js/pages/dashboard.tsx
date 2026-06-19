@@ -143,7 +143,7 @@ export default function Dashboard({
                         <div className="flex items-center gap-2">
                             <Folder className="size-5 text-muted-foreground" />
                             <h2 className="font-medium tracking-tight">
-                                {homeScope?.projectLabel ?? 'Your projects'}
+                                {homeScope?.projectLabel ?? 'My projects'}
                             </h2>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">

@@ -123,6 +123,8 @@ class PasswordlessLoginController extends Controller
             abort(403);
         }
 
+        $projectShareCode = $request->session()->get('magic_login.project_share');
+
         $user = DB::transaction(function () use ($request, $createTeam, $email) {
             $existingUser = $this->magicLogin->findUserByEmail($email);
 
@@ -133,6 +135,6 @@ class PasswordlessLoginController extends Controller
         $request->session()->regenerate();
         $request->session()->forget(['magic_login.invitation', 'magic_login.project_share']);
 
-        return $this->redirectAfterMagicLogin($request);
+        return $this->redirectAfterMagicLogin($request, is_string($projectShareCode) ? $projectShareCode : null);
     }
 }
