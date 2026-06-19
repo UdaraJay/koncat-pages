@@ -157,7 +157,7 @@ export default function Welcome() {
                         </div>
 
                         <div className="mt-3 flex gap-3">
-                            <div className="flex h-100 w-90 flex-col justify-between bg-muted p-4">
+                            <div className="flex h-60 w-90 flex-col justify-between bg-muted p-4">
                                 <div>
                                     <div className="font-medium tracking-tight text-emerald-600">
                                         Dashboards & Reports
@@ -174,7 +174,7 @@ export default function Welcome() {
                                     numbers.
                                 </div>
                             </div>
-                            <div className="flex h-100 w-90 flex-col justify-between bg-muted p-4">
+                            <div className="flex h-60 w-90 flex-col justify-between bg-muted p-4">
                                 <div>
                                     <div className="font-medium tracking-tight text-pink-600">
                                         Shared pages
@@ -189,7 +189,7 @@ export default function Welcome() {
                                     deal with "which version is this" again.
                                 </div>
                             </div>
-                            <div className="flex h-100 w-90 flex-col justify-between bg-muted p-4">
+                            <div className="flex h-60 w-90 flex-col justify-between bg-muted p-4">
                                 <div>
                                     <div className="font-medium tracking-tight text-amber-600">
                                         Forms & Surveys

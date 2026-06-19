@@ -601,7 +601,7 @@ export default function BrochurePreviews({
                     />
                 </svg>
 
-                <div className="absolute inset-px z-10 overflow-hidden rounded-[23px] border-3 border-background bg-background">
+                <div className="absolute inset-px z-10 overflow-hidden rounded-[23px] border-3 border-white bg-background">
                     {PREVIEW_EXAMPLES.map((example, index) => (
                         <div
                             className={`absolute inset-0 transition duration-700 ${
@@ -625,7 +625,7 @@ export default function BrochurePreviews({
                 >
                     <path
                         d={tab.d}
-                        fill="var(--color-background)"
+                        fill="white"
                         stroke="none"
                         strokeWidth="0"
                         vectorEffect="non-scaling-stroke"
