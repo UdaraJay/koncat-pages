@@ -423,7 +423,7 @@ class DashboardTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('dashboard')
                 ->where('homeScope.team.isPersonal', true)
-                ->where('homeScope.projectLabel', 'Your projects')
+                ->where('homeScope.projectLabel', 'My projects')
                 ->has('projects', 1)
                 ->where('projects.0.name', 'Personal App')
                 ->has('sharedProjects', 1)

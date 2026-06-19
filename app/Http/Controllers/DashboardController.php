@@ -146,7 +146,7 @@ class DashboardController extends Controller
                 'slug' => $team->slug,
                 'isPersonal' => $team->is_personal,
             ],
-            'projectLabel' => $team->is_personal ? __('Your projects') : __('Team projects'),
+            'projectLabel' => $team->is_personal ? __('My projects') : __('Team projects'),
             'emptyTitle' => $this->emptyProjectsTitle($status),
             'emptyText' => $this->emptyProjectsText($team, $status),
         ];
