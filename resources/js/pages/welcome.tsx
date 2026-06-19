@@ -85,14 +85,15 @@ export default function Welcome() {
                             {auth.user ? (
                                 <Link
                                     href={dashboardUrl}
-                                    className="inline-flex items-center gap-1 rounded-full bg-muted px-5 py-2 pr-3 text-base leading-normal font-medium tracking-tight text-foreground"
+                                    className="inline-flex items-center gap-1 rounded-full bg-muted px-5 py-2 pr-3 text-base leading-normal font-semibold tracking-tight text-foreground"
                                 >
-                                    My pages <ChevronRight className="size-4" />
+                                    My Projects{' '}
+                                    <ChevronRight className="size-5" />
                                 </Link>
                             ) : (
                                 <Link
                                     href={login()}
-                                    className="inline-block rounded-sm border border-border px-5 py-1.5 text-sm leading-normal text-foreground"
+                                    className="inline-flex items-center gap-1 rounded-full bg-muted px-5 py-2 text-base leading-normal font-semibold tracking-tight text-foreground"
                                 >
                                     Log in
                                 </Link>
@@ -185,9 +186,9 @@ export default function Welcome() {
                                         <div className="flex gap-1">
                                             <Link
                                                 href="/login"
-                                                className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2 pr-4 text-lg font-medium tracking-tight text-background"
+                                                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 pr-4 text-lg font-medium tracking-tight text-background"
                                             >
-                                                Create an account{' '}
+                                                Continue with email{' '}
                                                 <ChevronRight className="size-6" />
                                             </Link>
                                         </div>

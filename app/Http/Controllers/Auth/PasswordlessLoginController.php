@@ -38,7 +38,6 @@ class PasswordlessLoginController extends Controller
     {
         $validated = $request->validate([
             'email' => ['required', 'string', 'email', 'max:255'],
-            'remember' => ['nullable', 'boolean'],
             'invitation' => ['nullable', 'string'],
             'project_share' => ['nullable', 'string'],
         ]);
@@ -62,7 +61,7 @@ class PasswordlessLoginController extends Controller
         $result = $this->magicLogin->createAndSend(
             email: $email,
             request: $request,
-            remember: $request->boolean('remember'),
+            remember: true,
             metadata: [
                 'invitation' => $invitation?->code,
                 'project_share' => $projectShare?->code,
@@ -134,6 +133,6 @@ class PasswordlessLoginController extends Controller
         $request->session()->regenerate();
         $request->session()->forget(['magic_login.invitation', 'magic_login.project_share']);
 
-        return redirect()->intended(route('dashboard'));
+        return $this->redirectAfterMagicLogin($request);
     }
 }

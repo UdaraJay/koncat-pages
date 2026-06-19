@@ -3,6 +3,8 @@
 namespace App\Http\Middleware;
 
 use App\Models\Project;
+use App\Models\Team;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -52,47 +54,7 @@ class HandleInertiaRequests extends Middleware
                     return [];
                 }
 
-                $team = $user->currentTeam;
-
-                return $team
-                    ->projects()
-                    ->with('workspace')
-                    ->with('hostingTeam')
-                    ->withCount('deployments')
-                    ->where(function ($query) use ($team, $user) {
-                        $query
-                            ->whereNull('workspace_id')
-                            ->orWhereHas('workspace', function ($workspaces) use ($team, $user) {
-                                $workspaces->where('team_id', $team->id);
-
-                                if (! $user->canManageTeamWorkspaces($team)) {
-                                    $workspaces->whereHas('members', fn ($members) => $members->whereKey($user->id));
-                                }
-                            });
-                    })
-                    ->latest('updated_at')
-                    ->get()
-                    ->map(fn (Project $project) => [
-                        'id' => $project->id,
-                        'name' => $project->name,
-                        'slug' => $project->slug,
-                        'description' => $project->description,
-                        'url' => $project->url(),
-                        'previewUrl' => $project->previewUrl(),
-                        'ownerType' => 'team',
-                        'ownerName' => $team->name,
-                        'team' => [
-                            'id' => $team->id,
-                            'name' => $team->name,
-                            'slug' => $team->slug,
-                        ],
-                        'workspace' => $project->workspace ? [
-                            'id' => $project->workspace->id,
-                            'name' => $project->workspace->name,
-                            'slug' => $project->workspace->slug,
-                        ] : null,
-                        'deploymentsCount' => $project->deployments_count,
-                    ]);
+                return $this->currentTeamProjects($user);
             },
             'currentTeamWorkspaces' => fn () => $user?->currentTeam
                 ? $user->currentTeam
@@ -114,5 +76,66 @@ class HandleInertiaRequests extends Middleware
                     ])
                 : [],
         ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    protected function currentTeamProjects(User $user): array
+    {
+        $team = $user->currentTeam;
+
+        if (! $team instanceof Team) {
+            return [];
+        }
+
+        return Project::query()
+            ->with(['workspace', 'hostingTeam'])
+            ->withCount('deployments')
+            ->when($team->is_personal, function ($query) use ($user) {
+                $query
+                    ->where('owner_type', User::class)
+                    ->where('owner_id', $user->id);
+            }, function ($query) use ($team, $user) {
+                $query
+                    ->where('owner_type', Team::class)
+                    ->where('owner_id', $team->id)
+                    ->where(function ($projects) use ($team, $user) {
+                        $projects
+                            ->whereNull('workspace_id')
+                            ->orWhereHas('workspace', function ($workspaces) use ($team, $user) {
+                                $workspaces->where('team_id', $team->id);
+
+                                if (! $user->canManageTeamWorkspaces($team)) {
+                                    $workspaces->whereHas('members', fn ($members) => $members->whereKey($user->id));
+                                }
+                            });
+                    });
+            })
+            ->latest('updated_at')
+            ->get()
+            ->map(fn (Project $project) => [
+                'id' => $project->id,
+                'name' => $project->name,
+                'slug' => $project->slug,
+                'description' => $project->description,
+                'url' => $project->url(),
+                'previewUrl' => $project->previewUrl(),
+                'ownerType' => $team->is_personal ? 'user' : 'team',
+                'ownerName' => $team->is_personal ? __('Personal') : $team->name,
+                'team' => $team->is_personal ? null : [
+                    'id' => $team->id,
+                    'name' => $team->name,
+                    'slug' => $team->slug,
+                ],
+                'workspace' => $project->workspace ? [
+                    'id' => $project->workspace->id,
+                    'name' => $project->workspace->name,
+                    'slug' => $project->workspace->slug,
+                ] : null,
+                'deploymentsCount' => $project->deployments_count,
+            ])
+            ->values()
+            ->all();
     }
 }

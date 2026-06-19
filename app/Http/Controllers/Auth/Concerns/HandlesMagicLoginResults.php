@@ -57,6 +57,8 @@ trait HandlesMagicLoginResults
         $user->forceFill(['email_verified_at' => $user->email_verified_at ?: now()])->save();
 
         if ($this->requiresTwoFactorChallenge($user)) {
+            $this->forgetAuthFlowIntendedUrl($request);
+
             $request->session()->put([
                 'login.id' => $user->getKey(),
                 'login.remember' => $challenge->remember,
@@ -68,7 +70,7 @@ trait HandlesMagicLoginResults
         Auth::guard(config('fortify.guard'))->login($user, $challenge->remember);
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard'));
+        return $this->redirectAfterMagicLogin($request);
     }
 
     protected function createVerifiedUser(Request $request, CreateTeam $createTeam): User
@@ -162,5 +164,33 @@ trait HandlesMagicLoginResults
         return $user->two_factor_secret &&
             ! is_null($user->two_factor_confirmed_at) &&
             in_array(TwoFactorAuthenticatable::class, class_uses_recursive($user));
+    }
+
+    protected function redirectAfterMagicLogin(Request $request): RedirectResponse
+    {
+        $this->forgetAuthFlowIntendedUrl($request);
+
+        return redirect()->intended(route('dashboard'));
+    }
+
+    protected function forgetAuthFlowIntendedUrl(Request $request): void
+    {
+        $intended = $request->session()->get('url.intended');
+
+        if (! is_string($intended)) {
+            return;
+        }
+
+        $path = parse_url($intended, PHP_URL_PATH);
+
+        if (! is_string($path)) {
+            return;
+        }
+
+        $path = '/'.ltrim($path, '/');
+
+        if ($path === '/login' || str_starts_with($path, '/login/')) {
+            $request->session()->forget('url.intended');
+        }
     }
 }

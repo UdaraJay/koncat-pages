@@ -9,8 +9,8 @@ use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\User;
 use App\Models\Workspace;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,6 +19,10 @@ class DashboardController extends Controller
     public function __invoke(Request $request): Response
     {
         $user = $request->user();
+        $currentTeam = $user->currentTeam;
+
+        abort_unless($currentTeam instanceof Team, 403);
+
         $email = strtolower($user->email);
         $validated = $request->validate([
             'status' => ['nullable', 'string', 'in:active,archived,all'],
@@ -27,79 +31,62 @@ class DashboardController extends Controller
         $status = $validated['status'] ?? 'active';
         $sort = $validated['sort'] ?? 'updated_desc';
 
-        $pendingInvitations = TeamInvitation::query()
-            ->with(['inviter', 'team'])
-            ->whereRaw('LOWER(email) = ?', [$email])
-            ->whereNull('accepted_at')
-            ->where(fn ($query) => $query
-                ->whereNull('expires_at')
-                ->orWhere('expires_at', '>=', now()))
-            ->latest()
-            ->get()
-            ->map(fn (TeamInvitation $invitation) => [
-                'code' => $invitation->code,
-                'inviterName' => $invitation->inviter->name,
-                'team' => [
-                    'name' => $invitation->team->name,
-                    'slug' => $invitation->team->slug,
-                ],
-            ]);
-
-        $teams = $user->teams()
-            ->with(['workspaces' => fn ($query) => $query->orderBy('name')])
-            ->orderByRaw('LOWER(teams.name)')
-            ->get();
-
-        $manageableTeamIds = $teams
-            ->filter(fn (Team $team) => $user->canManageTeamWorkspaces($team))
-            ->pluck('id');
-
-        $workspaceIds = Workspace::query()
-            ->whereIn('team_id', $manageableTeamIds)
-            ->orWhereHas('members', fn ($members) => $members->whereKey($user->id))
-            ->pluck('id');
+        $pendingInvitations = $currentTeam->is_personal
+            ? TeamInvitation::query()
+                ->with(['inviter', 'team'])
+                ->whereRaw('LOWER(email) = ?', [$email])
+                ->whereNull('accepted_at')
+                ->where(fn ($query) => $query
+                    ->whereNull('expires_at')
+                    ->orWhere('expires_at', '>=', now()))
+                ->latest()
+                ->get()
+                ->map(fn (TeamInvitation $invitation) => [
+                    'code' => $invitation->code,
+                    'inviterName' => $invitation->inviter->name,
+                    'team' => [
+                        'name' => $invitation->team->name,
+                        'slug' => $invitation->team->slug,
+                    ],
+                ])
+            : collect();
 
         $projects = Project::query()
             ->with(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment', 'shares.user', 'shares.sharer'])
             ->withCount('deployments')
-            ->when($status === 'archived', fn ($query) => $query->onlyTrashed())
-            ->when($status === 'all', fn ($query) => $query->withTrashed())
-            ->where(function ($query) use ($teams, $user, $workspaceIds) {
+            ->when($currentTeam->is_personal, function ($query) use ($user) {
                 $query
-                    ->where(function ($personal) use ($user) {
-                        $personal
-                            ->where('owner_type', User::class)
-                            ->where('owner_id', $user->id);
-                    })
-                    ->orWhere(function ($teamProjects) use ($teams) {
+                    ->where('owner_type', User::class)
+                    ->where('owner_id', $user->id);
+            }, function ($query) use ($currentTeam, $user) {
+                $workspaceIds = $this->accessibleWorkspaceIds($currentTeam, $user);
+
+                $query
+                    ->where('owner_type', Team::class)
+                    ->where('owner_id', $currentTeam->id)
+                    ->where(function ($teamProjects) use ($workspaceIds) {
                         $teamProjects
-                            ->where('owner_type', Team::class)
-                            ->whereIn('owner_id', $teams->pluck('id'))
-                            ->whereNull('workspace_id');
-                    })
-                    ->orWhereIn('workspace_id', $workspaceIds);
+                            ->whereNull('workspace_id')
+                            ->orWhereIn('workspace_id', $workspaceIds);
+                    });
             })
-            ->when($sort === 'updated_desc', fn ($query) => $query->latest('updated_at'))
-            ->when($sort === 'created_desc', fn ($query) => $query->latest('created_at'))
-            ->when($sort === 'name_asc', fn ($query) => $query->orderByRaw('LOWER(name)'))
+            ->tap(fn ($query) => $this->applyProjectFilters($query, $status, $sort))
             ->get()
             ->map(fn (Project $project) => $this->projectPayload($project, $user));
 
-        $sharedProjects = Project::query()
-            ->with(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment', 'shares.user', 'shares.sharer'])
-            ->withCount('deployments')
-            ->whereHas('shares', fn ($shares) => $shares
-                ->where(fn ($query) => $query
-                    ->where('user_id', $user->id)
-                    ->orWhereRaw('LOWER(email) = ?', [$email])))
-            ->when($status === 'archived', fn ($query) => $query->onlyTrashed())
-            ->when($status === 'all', fn ($query) => $query->withTrashed())
-            ->when($sort === 'updated_desc', fn ($query) => $query->latest('updated_at'))
-            ->when($sort === 'created_desc', fn ($query) => $query->latest('created_at'))
-            ->when($sort === 'name_asc', fn ($query) => $query->orderByRaw('LOWER(name)'))
-            ->get()
-            ->reject(fn (Project $project) => $user->canAccessProjectInherited($project))
-            ->map(fn (Project $project) => $this->projectPayload($project, $user));
+        $sharedProjects = $currentTeam->is_personal
+            ? Project::query()
+                ->with(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment', 'shares.user', 'shares.sharer'])
+                ->withCount('deployments')
+                ->whereHas('shares', fn ($shares) => $shares
+                    ->where(fn ($query) => $query
+                        ->where('user_id', $user->id)
+                        ->orWhereRaw('LOWER(email) = ?', [$email])))
+                ->tap(fn ($query) => $this->applyProjectFilters($query, $status, $sort))
+                ->get()
+                ->reject(fn (Project $project) => $user->canAccessProjectInherited($project))
+                ->map(fn (Project $project) => $this->projectPayload($project, $user))
+            : collect();
 
         return Inertia::render('dashboard', [
             'pendingInvitations' => $pendingInvitations,
@@ -110,10 +97,80 @@ class DashboardController extends Controller
                 'status' => $status,
                 'sort' => $sort,
             ],
+            'homeScope' => $this->homeScope($currentTeam, $status),
             'createOptions' => [
-                'owners' => $this->ownerOptions($teams, $user),
+                'owners' => $this->ownerOptions($currentTeam, $user),
             ],
         ]);
+    }
+
+    protected function applyProjectFilters(Builder $query, string $status, string $sort): void
+    {
+        $query
+            ->when($status === 'archived', fn ($query) => $query->onlyTrashed())
+            ->when($status === 'all', fn ($query) => $query->withTrashed())
+            ->when($sort === 'updated_desc', fn ($query) => $query->latest('updated_at'))
+            ->when($sort === 'created_desc', fn ($query) => $query->latest('created_at'))
+            ->when($sort === 'name_asc', fn ($query) => $query->orderByRaw('LOWER(name)'));
+    }
+
+    protected function accessibleWorkspaceIds(Team $team, User $user): array
+    {
+        return Workspace::query()
+            ->where('team_id', $team->id)
+            ->when(! $user->canManageTeamWorkspaces($team), function ($query) use ($user) {
+                $query->whereHas('members', fn ($members) => $members->whereKey($user->id));
+            })
+            ->pluck('id')
+            ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function homeScope(Team $team, string $status): array
+    {
+        return [
+            'team' => [
+                'id' => $team->id,
+                'name' => $team->name,
+                'slug' => $team->slug,
+                'isPersonal' => $team->is_personal,
+            ],
+            'projectLabel' => $team->is_personal ? __('Your projects') : __('Team projects'),
+            'emptyTitle' => $this->emptyProjectsTitle($status),
+            'emptyText' => $this->emptyProjectsText($team, $status),
+        ];
+    }
+
+    protected function emptyProjectsTitle(string $status): string
+    {
+        if ($status === 'archived') {
+            return __('No archived projects');
+        }
+
+        if ($status === 'all') {
+            return __('No projects found');
+        }
+
+        return __('No projects yet');
+    }
+
+    protected function emptyProjectsText(Team $team, string $status): string
+    {
+        if ($status === 'archived') {
+            return __('Archived projects will appear here after you archive them from a project card.');
+        }
+
+        if ($status === 'all') {
+            return __('Try a different filter, or deploy a project from your agent.');
+        }
+
+        if (! $team->is_personal) {
+            return __('Projects created in this team or your workspaces will appear here.');
+        }
+
+        return __('Set up the MCP server above, then ask your agent to deploy a project.');
     }
 
     /**
@@ -190,46 +247,44 @@ class DashboardController extends Controller
     }
 
     /**
-     * @param  Collection<int, Team>  $teams
      * @return array<int, array<string, mixed>>
      */
-    protected function ownerOptions(Collection $teams, User $user): array
+    protected function ownerOptions(Team $currentTeam, User $user): array
     {
-        $owners = [[
-            'type' => 'user',
-            'id' => $user->id,
-            'name' => __('Personal'),
-            'label' => __('Personal'),
-            'canCreateProject' => true,
-            'workspaces' => [],
-        ]];
+        if ($currentTeam->is_personal) {
+            return [[
+                'type' => 'user',
+                'id' => $user->id,
+                'name' => __('Personal'),
+                'label' => __('Personal'),
+                'canCreateProject' => true,
+                'workspaces' => [],
+            ]];
+        }
 
-        return [
-            ...$owners,
-            ...$teams
-                ->reject(fn (Team $team) => $team->is_personal)
-                ->map(function (Team $team) use ($user) {
-                    $workspaces = $team->workspaces
-                        ->filter(fn (Workspace $workspace) => $user->canCreateWorkspaceProject($workspace))
-                        ->map(fn (Workspace $workspace) => [
-                            'id' => $workspace->id,
-                            'name' => $workspace->name,
-                        ])
-                        ->values()
-                        ->all();
+        $workspaces = $currentTeam
+            ->workspaces()
+            ->orderBy('name')
+            ->get()
+            ->filter(fn (Workspace $workspace) => $user->canCreateWorkspaceProject($workspace))
+            ->map(fn (Workspace $workspace) => [
+                'id' => $workspace->id,
+                'name' => $workspace->name,
+            ])
+            ->values()
+            ->all();
 
-                    return [
-                        'type' => 'team',
-                        'id' => $team->id,
-                        'name' => $team->name,
-                        'label' => $team->name,
-                        'canCreateProject' => $user->canCreateTeamProject($team),
-                        'workspaces' => $workspaces,
-                    ];
-                })
-                ->filter(fn (array $owner) => $owner['canCreateProject'] || count($owner['workspaces']) > 0)
-                ->values()
-                ->all(),
+        $owner = [
+            'type' => 'team',
+            'id' => $currentTeam->id,
+            'name' => $currentTeam->name,
+            'label' => $currentTeam->name,
+            'canCreateProject' => $user->canCreateTeamProject($currentTeam),
+            'workspaces' => $workspaces,
         ];
+
+        return ($owner['canCreateProject'] || count($owner['workspaces']) > 0)
+            ? [$owner]
+            : [];
     }
 }

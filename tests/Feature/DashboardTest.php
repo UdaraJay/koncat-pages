@@ -3,10 +3,13 @@
 namespace Tests\Feature;
 
 use App\Enums\TeamRole;
+use App\Enums\WorkspaceRole;
 use App\Models\Project;
+use App\Models\ProjectShare;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\User;
+use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -249,5 +252,227 @@ class DashboardTest extends TestCase
         $this->assertDatabaseHas('team_invitations', [
             'id' => $invitation->id,
         ]);
+    }
+
+    public function test_personal_home_shows_personal_projects_and_direct_shares_only(): void
+    {
+        $owner = User::factory()->create();
+        $recipient = User::factory()->create(['email' => 'recipient@example.com']);
+        $team = Team::factory()->create(['name' => 'Acme']);
+        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+        $team->members()->attach($recipient, ['role' => TeamRole::Member->value]);
+
+        Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $recipient->id,
+            'hosting_team_id' => $recipient->personalTeam()->id,
+            'name' => 'Personal App',
+        ]);
+
+        Project::factory()->create([
+            'owner_type' => Team::class,
+            'owner_id' => $team->id,
+            'hosting_team_id' => $team->id,
+            'workspace_id' => null,
+            'name' => 'Team App',
+        ]);
+
+        $sharedProject = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+            'name' => 'Shared App',
+        ]);
+
+        ProjectShare::factory()->forUser($recipient)->create([
+            'project_id' => $sharedProject->id,
+            'shared_by' => $owner->id,
+        ]);
+
+        $recipient->switchTeam($recipient->personalTeam());
+
+        $this
+            ->actingAs($recipient)
+            ->get(route('dashboard', ['sort' => 'name_asc']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('dashboard')
+                ->where('homeScope.team.isPersonal', true)
+                ->where('homeScope.projectLabel', 'Your projects')
+                ->has('projects', 1)
+                ->where('projects.0.name', 'Personal App')
+                ->has('sharedProjects', 1)
+                ->where('sharedProjects.0.name', 'Shared App'));
+    }
+
+    public function test_work_team_home_uses_team_and_workspace_access(): void
+    {
+        [$owner, $member] = User::factory()->count(2)->create();
+        $team = Team::factory()->create(['name' => 'Acme']);
+        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+        $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+        $member->switchTeam($team);
+
+        $memberWorkspace = Workspace::factory()->create(['team_id' => $team->id]);
+        $memberWorkspace->members()->attach($member, ['role' => WorkspaceRole::Member->value]);
+        $privateWorkspace = Workspace::factory()->create(['team_id' => $team->id]);
+
+        Project::factory()->create([
+            'owner_type' => Team::class,
+            'owner_id' => $team->id,
+            'hosting_team_id' => $team->id,
+            'workspace_id' => null,
+            'name' => 'Team Level App',
+        ]);
+        Project::factory()->create([
+            'owner_type' => Team::class,
+            'owner_id' => $team->id,
+            'hosting_team_id' => $team->id,
+            'workspace_id' => $memberWorkspace->id,
+            'name' => 'Member Workspace App',
+        ]);
+        Project::factory()->create([
+            'owner_type' => Team::class,
+            'owner_id' => $team->id,
+            'hosting_team_id' => $team->id,
+            'workspace_id' => $privateWorkspace->id,
+            'name' => 'Private Workspace App',
+        ]);
+
+        $this
+            ->actingAs($member)
+            ->get(route('dashboard', ['sort' => 'name_asc']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('dashboard')
+                ->where('homeScope.team.isPersonal', false)
+                ->where('homeScope.projectLabel', 'Team projects')
+                ->has('projects', 2)
+                ->where('projects.0.name', 'Member Workspace App')
+                ->where('projects.1.name', 'Team Level App')
+                ->has('sharedProjects', 0)
+                ->has('createOptions.owners', 1)
+                ->where('createOptions.owners.0.type', 'team')
+                ->where('createOptions.owners.0.canCreateProject', false)
+                ->has('createOptions.owners.0.workspaces', 1));
+    }
+
+    public function test_team_owners_can_see_all_workspace_projects_on_work_team_home(): void
+    {
+        $owner = User::factory()->create();
+        $team = Team::factory()->create(['name' => 'Acme']);
+        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+        $owner->switchTeam($team);
+
+        $workspace = Workspace::factory()->create(['team_id' => $team->id]);
+
+        Project::factory()->create([
+            'owner_type' => Team::class,
+            'owner_id' => $team->id,
+            'hosting_team_id' => $team->id,
+            'workspace_id' => $workspace->id,
+            'name' => 'Workspace App',
+        ]);
+
+        $this
+            ->actingAs($owner)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('dashboard')
+                ->has('projects', 1)
+                ->where('projects.0.name', 'Workspace App')
+                ->where('createOptions.owners.0.canCreateProject', true));
+    }
+
+    public function test_direct_email_shares_do_not_appear_on_work_team_home(): void
+    {
+        [$owner, $recipient] = User::factory()->count(2)->create();
+        $team = Team::factory()->create(['name' => 'Acme']);
+        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+        $team->members()->attach($recipient, ['role' => TeamRole::Member->value]);
+
+        $workspace = Workspace::factory()->create(['team_id' => $team->id]);
+        $sharedProject = Project::factory()->create([
+            'owner_type' => Team::class,
+            'owner_id' => $team->id,
+            'hosting_team_id' => $team->id,
+            'workspace_id' => $workspace->id,
+            'name' => 'Directly Shared Workspace App',
+        ]);
+        ProjectShare::factory()->forUser($recipient)->create([
+            'project_id' => $sharedProject->id,
+            'shared_by' => $owner->id,
+        ]);
+
+        $recipient->switchTeam($team);
+
+        $this
+            ->actingAs($recipient)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('dashboard')
+                ->has('projects', 0)
+                ->has('sharedProjects', 0));
+
+        $recipient->switchTeam($recipient->personalTeam());
+
+        $this
+            ->actingAs($recipient)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('dashboard')
+                ->has('projects', 0)
+                ->has('sharedProjects', 1)
+                ->where('sharedProjects.0.name', 'Directly Shared Workspace App'));
+    }
+
+    public function test_switching_current_team_changes_home_and_sidebar_projects(): void
+    {
+        $user = User::factory()->create();
+        $team = Team::factory()->create(['name' => 'Acme']);
+        $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+
+        Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'hosting_team_id' => $user->personalTeam()->id,
+            'name' => 'Personal App',
+        ]);
+        Project::factory()->create([
+            'owner_type' => Team::class,
+            'owner_id' => $team->id,
+            'hosting_team_id' => $team->id,
+            'workspace_id' => null,
+            'name' => 'Team App',
+        ]);
+
+        $user->switchTeam($user->personalTeam());
+
+        $this
+            ->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('dashboard')
+                ->has('projects', 1)
+                ->where('projects.0.name', 'Personal App')
+                ->has('currentTeamProjects', 1)
+                ->where('currentTeamProjects.0.name', 'Personal App'));
+
+        $user->switchTeam($team);
+
+        $this
+            ->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('dashboard')
+                ->has('projects', 1)
+                ->where('projects.0.name', 'Team App')
+                ->has('currentTeamProjects', 1)
+                ->where('currentTeamProjects.0.name', 'Team App'));
     }
 }

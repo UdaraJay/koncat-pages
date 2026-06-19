@@ -60,7 +60,6 @@ class AuthenticationTest extends TestCase
 
         $response = $this->post(route('login.magic.request'), [
             'email' => 'user@example.com',
-            'remember' => '1',
         ]);
 
         $challenge = MagicLoginChallenge::query()->firstOrFail();
@@ -92,6 +91,34 @@ class AuthenticationTest extends TestCase
 
         $this->assertAuthenticatedAs($user);
         $this->assertNotNull(MagicLoginChallenge::query()->firstOrFail()->consumed_at);
+    }
+
+    public function test_magic_link_login_ignores_stale_auth_flow_intended_url(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create();
+
+        $this->post(route('login.magic.request'), ['email' => $user->email]);
+
+        Notification::assertSentOnDemand(MagicLoginNotification::class, function (MagicLoginNotification $notification) {
+            $response = $this
+                ->withSession([
+                    'url.intended' => route('login.magic.link', [
+                        'challenge' => $notification->challenge,
+                        'token' => $notification->token,
+                    ]),
+                ])
+                ->post(route('login.magic.consume', $notification->challenge), [
+                    'token' => $notification->token,
+                ]);
+
+            $response->assertRedirect(route('dashboard'));
+            $response->assertSessionMissing('url.intended');
+
+            return true;
+        });
+
+        $this->assertAuthenticatedAs($user);
     }
 
     public function test_users_can_authenticate_with_a_magic_code(): void
@@ -265,13 +292,21 @@ class AuthenticationTest extends TestCase
         $this->post(route('login.magic.request'), ['email' => $user->email]);
 
         Notification::assertSentOnDemand(MagicLoginNotification::class, function (MagicLoginNotification $notification) use ($user) {
-            $response = $this->post(route('login.code.verify'), [
-                'challenge_id' => $notification->challenge->id,
-                'code' => $notification->code,
-            ]);
+            $response = $this
+                ->withSession([
+                    'url.intended' => route('login.magic.link', [
+                        'challenge' => $notification->challenge,
+                        'token' => $notification->token,
+                    ]),
+                ])
+                ->post(route('login.code.verify'), [
+                    'challenge_id' => $notification->challenge->id,
+                    'code' => $notification->code,
+                ]);
 
             $response->assertRedirect(route('two-factor.login'));
             $response->assertSessionHas('login.id', $user->id);
+            $response->assertSessionMissing('url.intended');
 
             return true;
         });

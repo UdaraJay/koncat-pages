@@ -53,11 +53,18 @@ import type {
     Project,
     ProjectSharePermission,
     ProjectSharePermissionOption,
+    Team,
 } from '@/types';
-import AppLogo from '@/components/app-logo';
 
 type ProjectFilterStatus = 'active' | 'archived' | 'all';
 type ProjectSort = 'updated_desc' | 'created_desc' | 'name_asc';
+
+type HomeScope = {
+    team: Pick<Team, 'id' | 'name' | 'slug' | 'isPersonal'>;
+    projectLabel: string;
+    emptyTitle: string;
+    emptyText: string;
+};
 
 type Props = {
     pendingInvitations?: DashboardInvitation[];
@@ -68,6 +75,7 @@ type Props = {
         status: ProjectFilterStatus;
         sort: ProjectSort;
     };
+    homeScope?: HomeScope;
 };
 
 export default function Dashboard({
@@ -79,6 +87,7 @@ export default function Dashboard({
         { value: 'write', label: 'Can edit' },
     ],
     projectFilters = { status: 'active', sort: 'updated_desc' },
+    homeScope,
 }: Props) {
     const [showInvitations, setShowInvitations] = useState(
         pendingInvitations.length > 0,
@@ -125,7 +134,7 @@ export default function Dashboard({
                         <div className="flex items-center gap-2">
                             <Folder className="size-5 text-muted-foreground" />
                             <h2 className="font-medium tracking-tight">
-                                Your projects
+                                {homeScope?.projectLabel ?? 'Your projects'}
                             </h2>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -208,10 +217,16 @@ export default function Dashboard({
                             <div className="max-w-sm space-y-2">
                                 <LogoIcon className="mx-auto mb-5 size-10 text-border" />
                                 <h3 className="font-medium">
-                                    {emptyProjectsTitle(projectFilters.status)}
+                                    {homeScope?.emptyTitle ??
+                                        emptyProjectsTitle(
+                                            projectFilters.status,
+                                        )}
                                 </h3>
                                 <p className="text-sm text-muted-foreground">
-                                    {emptyProjectsText(projectFilters.status)}
+                                    {homeScope?.emptyText ??
+                                        emptyProjectsText(
+                                            projectFilters.status,
+                                        )}
                                 </p>
                             </div>
                         </div>

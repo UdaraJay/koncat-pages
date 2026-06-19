@@ -1,9 +1,8 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, Link } from '@inertiajs/react';
 import InputError from '@/components/input-error';
 import ProjectShareAlert from '@/components/project-share-alert';
 import TeamInvitationAlert from '@/components/team-invitation-alert';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -39,7 +38,7 @@ export default function Login({ status, teamInvitation, projectShare }: Props) {
             >
                 {({ processing, errors }) => (
                     <>
-                        <div className="grid gap-6">
+                        <div className="grid gap-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="email">Email address</Label>
                                 <Input
@@ -71,28 +70,35 @@ export default function Login({ status, teamInvitation, projectShare }: Props) {
                                 />
                             )}
 
-                            <div className="flex items-center space-x-3">
-                                <Checkbox
-                                    id="remember"
-                                    name="remember"
-                                    value="1"
-                                    tabIndex={2}
-                                />
-                                <Label htmlFor="remember">
-                                    Keep me signed in
-                                </Label>
-                            </div>
-
                             <Button
                                 type="submit"
                                 className="w-full"
-                                tabIndex={3}
+                                size="lg"
+                                tabIndex={2}
                                 disabled={processing}
                                 data-test="login-button"
                             >
                                 {processing && <Spinner />}
                                 Send sign-in link
                             </Button>
+
+                            <p className="mx-auto max-w-2xs text-center text-sm leading-5 text-muted-foreground">
+                                By using Koncat, you agree to the{' '}
+                                <Link
+                                    href="/terms"
+                                    className="font-medium text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                                >
+                                    Terms
+                                </Link>{' '}
+                                and{' '}
+                                <Link
+                                    href="/privacy"
+                                    className="font-medium text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                                >
+                                    Privacy Policy
+                                </Link>
+                                .
+                            </p>
                         </div>
                     </>
                 )}
@@ -108,6 +114,6 @@ export default function Login({ status, teamInvitation, projectShare }: Props) {
 }
 
 Login.layout = {
-    title: 'Log in to your account',
+    title: 'Continue with your email',
     description: "Enter your email and we'll send a secure sign-in link.",
 };
