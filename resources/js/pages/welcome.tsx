@@ -57,8 +57,8 @@ export default function Welcome() {
     return (
         <>
             <Head title="Welcome" />
-            <div className="bg-backgroundp-6 flex min-h-screen flex-col items-center text-[#1b1b18] lg:justify-center lg:p-8 lg:pt-3">
-                <header className="mb-6 w-full max-w-[335px] text-sm not-has-[nav]:hidden lg:max-w-5xl">
+            <div className="flex min-h-screen flex-col items-center bg-background px-4 py-4 text-[#1b1b18] sm:px-6 lg:justify-center lg:px-8 lg:py-8 lg:pt-3">
+                <header className="mb-6 w-full max-w-5xl text-sm not-has-[nav]:hidden">
                     <nav className="flex items-center justify-between gap-4">
                         <div>
                             <Link
@@ -73,7 +73,7 @@ export default function Welcome() {
                             {auth.user ? (
                                 <Link
                                     href={dashboardUrl}
-                                    className="inline-flex items-center gap-1 rounded-full bg-muted px-5 py-2 pr-3 text-base leading-normal font-semibold tracking-tight text-foreground"
+                                    className="inline-flex items-center gap-1 rounded-full bg-muted px-4 py-2 pr-3 text-sm leading-normal font-semibold tracking-tight text-foreground sm:px-5 sm:text-base"
                                 >
                                     My Projects{' '}
                                     <ChevronRight className="size-5" />
@@ -81,7 +81,7 @@ export default function Welcome() {
                             ) : (
                                 <Link
                                     href={login()}
-                                    className="inline-flex items-center gap-1 rounded-full bg-muted px-5 py-2 text-base leading-normal font-semibold tracking-tight text-foreground"
+                                    className="inline-flex items-center gap-1 rounded-full bg-muted px-4 py-2 text-sm leading-normal font-semibold tracking-tight text-foreground sm:px-5 sm:text-base"
                                 >
                                     Log in
                                 </Link>
@@ -90,16 +90,16 @@ export default function Welcome() {
                     </nav>
                 </header>
                 <div className="flex w-full items-center justify-center opacity-100 transition-opacity duration-750 lg:grow starting:opacity-0">
-                    <main className="w-full max-w-[335px] lg:max-w-5xl">
-                        <div className="mt-12">
+                    <main className="w-full max-w-5xl">
+                        <div className="mt-8 sm:mt-12">
                             <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 font-medium tracking-tight text-muted-foreground">
                                 Now in early access
                             </div>
-                            <h1 className="mt-4 text-5xl leading-14 font-medium tracking-tighter text-foreground">
+                            <h1 className="mt-4 text-4xl leading-[1.05] font-medium tracking-tight text-foreground sm:text-5xl sm:leading-14 sm:tracking-tighter">
                                 Your agent made it.
                                 <br /> Now anyone can use it.
                             </h1>
-                            <div className="mt-4 max-w-lg text-xl font-medium tracking-tight text-muted-foreground">
+                            <div className="mt-4 max-w-lg text-lg font-medium tracking-tight text-muted-foreground sm:text-xl">
                                 Koncat takes the dashboards, sites, and reports
                                 you build with AI off your laptop and onto the
                                 web–a real link, the access you choose, and
@@ -108,17 +108,19 @@ export default function Welcome() {
                         </div>
 
                         <div className="mt-8">
-                            <div className="flex max-w-4xl divide-x bg-muted">
+                            <div className="flex max-w-4xl flex-col divide-y divide-border bg-muted md:flex-row md:divide-x md:divide-y-0">
                                 <MCPConnectionPanel
                                     mcpUrl={MCP_URL}
                                     title="Give your agent our MCP and let it publish."
                                     description="Add the MCP to your agent with the url and authenticate with your email to publish."
-                                    className="p-4"
+                                    className="min-w-0 p-4 md:flex-1"
                                     titleClassName="mb-2 px-2"
+                                    inputWrapperClassName="min-w-0"
+                                    inputClassName="min-w-0 w-full text-sm sm:text-base"
                                     actionsClassName="mt-2"
                                     descriptionClassName="mt-3 px-2"
                                 />
-                                <div className="flex flex-col justify-between p-4">
+                                <div className="flex min-w-0 flex-col justify-between p-4 md:flex-1">
                                     <div>
                                         <div className="mb-2 px-2 text-sm font-medium">
                                             Manage your pages, teams and access.
@@ -127,10 +129,12 @@ export default function Welcome() {
                                         <div className="flex gap-1">
                                             <Link
                                                 href="/login"
-                                                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 pr-4 text-lg font-medium tracking-tight text-background"
+                                                className="inline-flex max-w-full items-center gap-2 rounded-full bg-primary px-4 py-2 pr-3 text-base font-medium tracking-tight text-background sm:px-5 sm:pr-4 sm:text-lg"
                                             >
-                                                Continue with email{' '}
-                                                <ChevronRight className="size-6" />
+                                                <span className="min-w-0 truncate">
+                                                    Continue with email
+                                                </span>
+                                                <ChevronRight className="size-5 shrink-0 sm:size-6" />
                                             </Link>
                                         </div>
                                     </div>
@@ -144,13 +148,13 @@ export default function Welcome() {
                             </div>
                         </div>
 
-                        <div className="mt-20">
-                            <div className="mb-4 flex items-center justify-between">
+                        <div className="mt-14 sm:mt-20">
+                            <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="font-medium tracking-tight text-muted-foreground">
                                     If your agent can build it, you can share it
                                     with Koncat.
                                 </div>
-                                <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 font-medium tracking-tight text-muted-foreground">
+                                <div className="inline-flex shrink-0 items-center gap-2 rounded-full bg-muted px-3 py-1 font-medium tracking-tight text-muted-foreground">
                                     Watch a video <Play className="size-4" />
                                 </div>
                             </div>
@@ -158,7 +162,7 @@ export default function Welcome() {
                         </div>
 
                         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                            <div className="flex min-h-84 flex-col justify-between bg-muted p-4">
+                            <div className="flex min-h-72 flex-col justify-between bg-muted p-4 sm:min-h-84">
                                 <div>
                                     <div className="font-medium tracking-tight text-emerald-600">
                                         Dashboards & Reports
@@ -270,7 +274,7 @@ export default function Welcome() {
                                     numbers.
                                 </div>
                             </div>
-                            <div className="flex min-h-84 flex-col justify-between bg-muted p-4">
+                            <div className="flex min-h-72 flex-col justify-between bg-muted p-4 sm:min-h-84">
                                 <div>
                                     <div className="font-medium tracking-tight text-pink-600">
                                         Shared pages
@@ -320,7 +324,7 @@ export default function Welcome() {
                                             </div>
                                         </div>
                                         <div className="mt-3 flex items-center gap-2">
-                                            <div className="flex-1 rounded-sm bg-foreground/5 px-2 py-1 text-xs text-muted-foreground">
+                                            <div className="min-w-0 flex-1 truncate rounded-sm bg-foreground/5 px-2 py-1 text-xs text-muted-foreground">
                                                 koncat.co/launch
                                             </div>
                                             <div className="rounded-sm bg-pink-600 px-2 py-1 text-xs text-background">
@@ -335,7 +339,7 @@ export default function Welcome() {
                                     deal with "which version is this" again.
                                 </div>
                             </div>
-                            <div className="flex min-h-84 flex-col justify-between bg-muted p-4">
+                            <div className="flex min-h-72 flex-col justify-between bg-muted p-4 sm:min-h-84">
                                 <div>
                                     <div className="font-medium tracking-tight text-amber-600">
                                         Forms & Surveys
@@ -389,14 +393,14 @@ export default function Welcome() {
                             </div>
                         </div>
 
-                        <div className="mt-20">
+                        <div className="mt-14 sm:mt-20">
                             <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 font-medium tracking-tight text-muted-foreground">
                                 How it works
                             </div>
-                            <div className="mt-5 text-5xl leading-14 font-medium tracking-tighter">
+                            <div className="mt-5 text-4xl leading-[1.05] font-medium tracking-tight sm:text-5xl sm:leading-14 sm:tracking-tighter">
                                 Publish. Share. Update.
                             </div>
-                            <div className="mt-4 max-w-lg text-xl leading-tight font-medium tracking-tight text-muted-foreground">
+                            <div className="mt-4 max-w-lg text-lg leading-tight font-medium tracking-tight text-muted-foreground sm:text-xl">
                                 It runs right inside the agent you already use —
                                 and there's a page of your own to manage
                                 everything you've put up.
@@ -456,7 +460,7 @@ export default function Welcome() {
                                     </div>
 
                                     <div>
-                                        <h3 className="mt-32 text-2xl leading-7 font-medium tracking-tighter text-foreground">
+                                        <h3 className="mt-16 text-2xl leading-7 font-medium tracking-tighter text-foreground sm:mt-32">
                                             Publish
                                         </h3>
                                         <div className="mt-1 max-w-sm text-sm leading-tight text-muted-foreground">
@@ -539,7 +543,7 @@ export default function Welcome() {
                                         <div className="flex justify-end gap-2 text-right text-sm leading-tight text-muted-foreground">
                                             <div className="max-w-4/5">
                                                 Can you update the report at{' '}
-                                                <span className="border-b text-primary">
+                                                <span className="border-b break-all text-primary">
                                                     acme.koncat.co/q4-report
                                                 </span>{' '}
                                                 with the new numbers we just got
@@ -599,22 +603,22 @@ export default function Welcome() {
                             </div>
                         </div>
 
-                        <div className="mt-20">
+                        <div className="mt-14 sm:mt-20">
                             <div className="inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1 font-medium tracking-tight text-primary-foreground">
                                 Made for teams
                             </div>
-                            <div className="mt-5 text-5xl leading-14 font-medium tracking-tighter text-primary">
+                            <div className="mt-5 text-4xl leading-[1.05] font-medium tracking-tight text-primary sm:text-5xl sm:leading-14 sm:tracking-tighter">
                                 Close the gap between AI creation
                                 <br /> and business use.
                             </div>
-                            <div className="mt-4 max-w-lg text-xl leading-tight font-medium tracking-tight text-muted-foreground">
+                            <div className="mt-4 max-w-lg text-lg leading-tight font-medium tracking-tight text-muted-foreground sm:text-xl">
                                 Keep AI-generated dashboards, reports, and
                                 resources live, current, and controlled — all
                                 from the same agents your team already uses.
                             </div>
 
                             <div className="mt-10 grid gap-3 overflow-hidden sm:grid-cols-2 lg:grid-cols-3">
-                                <div className="flex min-h-110 flex-col justify-between bg-primary p-4 text-primary-foreground">
+                                <div className="flex min-h-88 flex-col justify-between bg-primary p-4 text-primary-foreground sm:min-h-110">
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="font-medium tracking-tight">
                                             Permissions
@@ -630,18 +634,20 @@ export default function Welcome() {
                                             </div>
                                             <div className="mt-3 space-y-2">
                                                 <div className="flex items-center justify-between gap-3 rounded-md bg-primary-foreground/10 px-3 py-2">
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex min-w-0 items-center gap-2">
                                                         <Globe2 className="size-4" />
-                                                        <span>Public link</span>
+                                                        <span className="truncate">
+                                                            Public link
+                                                        </span>
                                                     </div>
                                                     <span className="rounded-sm bg-primary-foreground/10 px-2 py-0.5 text-xs">
                                                         Off
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center justify-between gap-3 rounded-md bg-primary-foreground/20 px-3 py-2">
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex min-w-0 items-center gap-2">
                                                         <KeyRound className="size-4" />
-                                                        <span>
+                                                        <span className="truncate">
                                                             Team workspace
                                                         </span>
                                                     </div>
@@ -650,9 +656,9 @@ export default function Welcome() {
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center justify-between gap-3 rounded-md bg-primary-foreground/10 px-3 py-2">
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex min-w-0 items-center gap-2">
                                                         <Mail className="size-4" />
-                                                        <span>
+                                                        <span className="truncate">
                                                             Approved email
                                                         </span>
                                                     </div>
@@ -675,7 +681,7 @@ export default function Welcome() {
                                     </div>
                                 </div>
 
-                                <div className="flex min-h-110 flex-col justify-between bg-primary p-4 text-primary-foreground">
+                                <div className="flex min-h-88 flex-col justify-between bg-primary p-4 text-primary-foreground sm:min-h-110">
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="font-medium tracking-tight">
                                             Insights
@@ -730,7 +736,7 @@ export default function Welcome() {
                                     </div>
                                 </div>
 
-                                <div className="flex min-h-110 flex-col justify-between bg-primary p-4 text-primary-foreground">
+                                <div className="flex min-h-88 flex-col justify-between bg-primary p-4 text-primary-foreground sm:min-h-110">
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="font-medium tracking-tight">
                                             Lifecycle
@@ -826,7 +832,7 @@ export default function Welcome() {
                                     </div>
                                 </div>
 
-                                <div className="flex min-h-110 flex-col justify-between bg-primary p-4 text-primary-foreground">
+                                <div className="flex min-h-88 flex-col justify-between bg-primary p-4 text-primary-foreground sm:min-h-110">
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="font-medium tracking-tight">
                                             Branding
@@ -848,7 +854,7 @@ export default function Welcome() {
                                                 </div>
                                                 <div className="mt-3 flex items-center gap-2 rounded-sm bg-primary-foreground px-2 py-1.5 text-primary">
                                                     <Globe2 className="size-3.5 shrink-0" />
-                                                    <div className="truncate text-xs font-medium">
+                                                    <div className="min-w-0 truncate text-xs font-medium">
                                                         company.com/reports/q4-board-update
                                                     </div>
                                                 </div>
@@ -892,7 +898,7 @@ export default function Welcome() {
                                     </div>
                                 </div>
 
-                                <div className="flex min-h-110 flex-col justify-between bg-primary p-4 text-primary-foreground">
+                                <div className="flex min-h-88 flex-col justify-between bg-primary p-4 text-primary-foreground sm:min-h-110">
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="font-medium tracking-tight">
                                             Safety
@@ -948,7 +954,7 @@ export default function Welcome() {
                                     </div>
                                 </div>
 
-                                <div className="flex min-h-110 flex-col justify-between bg-primary p-4 text-primary-foreground">
+                                <div className="flex min-h-88 flex-col justify-between bg-primary p-4 text-primary-foreground sm:min-h-110">
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="font-medium tracking-tight">
                                             Collaboration
@@ -1029,16 +1035,16 @@ export default function Welcome() {
                             </div>
                         </div> */}
 
-                        <section className="mt-20 border-t border-border pt-10">
+                        <section className="mt-14 border-t border-border pt-10 sm:mt-20">
                             <div className="">
                                 <div>
                                     <div className="inline-block rounded-full bg-muted px-3 py-1 font-medium tracking-tight text-muted-foreground">
                                         Access controls
                                     </div>
-                                    <h2 className="mt-2 max-w-md text-4xl leading-11 font-medium tracking-tighter text-foreground lg:text-5xl lg:leading-14">
+                                    <h2 className="mt-2 max-w-md text-3xl leading-tight font-medium tracking-tight text-foreground sm:text-4xl sm:leading-11 sm:tracking-tighter lg:text-5xl lg:leading-14">
                                         One page, four ways to lock the door.
                                     </h2>
-                                    <p className="mt-4 max-w-md text-xl leading-tight font-medium tracking-tight text-muted-foreground">
+                                    <p className="mt-4 max-w-md text-lg leading-tight font-medium tracking-tight text-muted-foreground sm:text-xl">
                                         Every page is yours to open up or close
                                         off — set it once, change it whenever.
                                     </p>
@@ -1062,7 +1068,7 @@ export default function Welcome() {
                                                     </div>
                                                     <Icon className="size-5" />
                                                 </div>
-                                                <h3 className="mt-32 text-2xl font-medium tracking-tighter text-foreground">
+                                                <h3 className="mt-16 text-2xl font-medium tracking-tighter text-foreground sm:mt-32">
                                                     {title}
                                                 </h3>
                                                 <div className="mt-1 max-w-sm text-sm leading-tight text-muted-foreground">
@@ -1075,7 +1081,7 @@ export default function Welcome() {
                             </div>
                         </section>
 
-                        <div className="mt-20">
+                        <div className="mt-14 sm:mt-20">
                             <div className="mb-4 flex items-center gap-1.5 text-foreground">
                                 <Info className="size-5" />
                                 Get started today

@@ -584,7 +584,7 @@ export default function BrochurePreviews({
     }, []);
 
     return (
-        <div className="h-170 w-full bg-muted p-3">
+        <div className="h-[28rem] w-full bg-muted p-3 sm:h-[34rem] lg:h-170">
             <div ref={previewRef} className="relative h-full overflow-hidden">
                 <svg
                     className="pointer-events-none absolute inset-0 z-0 h-full w-full"

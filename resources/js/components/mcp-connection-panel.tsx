@@ -58,12 +58,7 @@ export function MCPConnectionPanel({
     return (
         <div className={className}>
             <div className={contentClassName}>
-                <div
-                    className={cn(
-                        'px-1 text-sm font-medium',
-                        titleClassName,
-                    )}
-                >
+                <div className={cn('px-1 text-sm font-medium', titleClassName)}>
                     {title}
                 </div>
 
@@ -78,29 +73,47 @@ export function MCPConnectionPanel({
                     />
                 </div>
 
-                <div
-                    className={cn('flex flex-wrap gap-1', actionsClassName)}
-                >
-                    <Button asChild variant="outline" size="sm">
+                <div className={cn('flex flex-wrap gap-1', actionsClassName)}>
+                    <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="max-w-full whitespace-normal"
+                    >
                         <a href={claudeUrl}>
                             <ClaudeIcon className="size-4" />
                             Connect to Claude
                         </a>
                     </Button>
-                    <Button asChild variant="outline" size="sm">
+                    <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="max-w-full whitespace-normal"
+                    >
                         <a href={cursorUrl}>
                             <CursorIcon className="size-4" />
                             Install in Cursor
                         </a>
                     </Button>
-                    <Button asChild variant="outline" size="sm">
+                    <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="max-w-full whitespace-normal"
+                    >
                         <a href={vscodeUrl}>
                             <VSCodeIcon className="size-4" />
                             Install in VS Code
                         </a>
                     </Button>
 
-                    <Button variant="outline" size="sm" onClick={copyMcpUrl}>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="max-w-full whitespace-normal"
+                        onClick={copyMcpUrl}
+                    >
                         {mcpUrlCopied ? (
                             <Check className="size-4" />
                         ) : (
