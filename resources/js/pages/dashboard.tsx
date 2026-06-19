@@ -46,7 +46,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { useClipboard } from '@/hooks/use-clipboard';
-import { ClaudeIcon, CursorIcon, VSCodeIcon } from '@/icons';
+import { ClaudeIcon, CursorIcon, LogoIcon, VSCodeIcon } from '@/icons';
 import { dashboard } from '@/routes';
 import type {
     DashboardInvitation,
@@ -54,6 +54,7 @@ import type {
     ProjectSharePermission,
     ProjectSharePermissionOption,
 } from '@/types';
+import AppLogo from '@/components/app-logo';
 
 type ProjectFilterStatus = 'active' | 'archived' | 'all';
 type ProjectSort = 'updated_desc' | 'created_desc' | 'name_asc';
@@ -122,8 +123,10 @@ export default function Dashboard({
                 <section className="space-y-3">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-2">
-                            <Folder className="h-4 w-4 text-muted-foreground" />
-                            <h2 className="font-medium">Your projects</h2>
+                            <Folder className="size-5 text-muted-foreground" />
+                            <h2 className="font-medium tracking-tight">
+                                Your projects
+                            </h2>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                             <Badge variant="secondary">
@@ -201,8 +204,9 @@ export default function Dashboard({
                             ))}
                         </div>
                     ) : (
-                        <div className="grid min-h-[180px] place-items-center rounded-lg border border-dashed p-8 text-center">
+                        <div className="grid min-h-100 place-items-center bg-muted p-8 text-center">
                             <div className="max-w-sm space-y-2">
+                                <LogoIcon className="mx-auto mb-5 size-10 text-border" />
                                 <h3 className="font-medium">
                                     {emptyProjectsTitle(projectFilters.status)}
                                 </h3>
@@ -274,51 +278,53 @@ function MCPSetupPanel({ mcpUrl }: { mcpUrl: string }) {
     };
 
     return (
-        <section className="rounded-lg border bg-muted p-4 text-card-foreground">
+        <section className="border p-4 text-card-foreground">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,540px)] lg:divide-x">
-                <div className="min-w-0 space-y-3 lg:pr-4">
-                    <div className="px-1 text-sm font-medium">
-                        Give your agent this MCP URL and let it publish.
-                    </div>
+                <div className="flex min-w-0 flex-col justify-between space-y-3 lg:pr-4">
+                    <div className="space-y-3">
+                        <div className="px-1 text-sm font-medium">
+                            Give your agent this MCP URL and let it publish.
+                        </div>
 
-                    <Input
-                        className="rounded-full border bg-background px-4 font-medium"
-                        value={mcpUrl}
-                        readOnly
-                    />
+                        <Input
+                            className="rounded-full border bg-background px-4 font-medium"
+                            value={mcpUrl}
+                            readOnly
+                        />
 
-                    <div className="flex flex-wrap gap-1">
-                        <Button asChild variant="outline" size="sm">
-                            <a href={claudeUrl}>
-                                <ClaudeIcon className="size-4" />
-                                Connect to Claude
-                            </a>
-                        </Button>
-                        <Button asChild variant="outline" size="sm">
-                            <a href={cursorUrl}>
-                                <CursorIcon className="size-4" />
-                                Install in Cursor
-                            </a>
-                        </Button>
-                        <Button asChild variant="outline" size="sm">
-                            <a href={vscodeUrl}>
-                                <VSCodeIcon className="size-4" />
-                                Install in VS Code
-                            </a>
-                        </Button>
+                        <div className="flex flex-wrap gap-1">
+                            <Button asChild variant="outline" size="sm">
+                                <a href={claudeUrl}>
+                                    <ClaudeIcon className="size-4" />
+                                    Connect to Claude
+                                </a>
+                            </Button>
+                            <Button asChild variant="outline" size="sm">
+                                <a href={cursorUrl}>
+                                    <CursorIcon className="size-4" />
+                                    Install in Cursor
+                                </a>
+                            </Button>
+                            <Button asChild variant="outline" size="sm">
+                                <a href={vscodeUrl}>
+                                    <VSCodeIcon className="size-4" />
+                                    Install in VS Code
+                                </a>
+                            </Button>
 
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={copyMcpUrl}
-                        >
-                            {mcpUrlCopied ? (
-                                <Check className="size-4" />
-                            ) : (
-                                <Copy className="size-4" />
-                            )}
-                            {mcpUrlCopied ? 'Copied' : 'Copy MCP URL'}
-                        </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={copyMcpUrl}
+                            >
+                                {mcpUrlCopied ? (
+                                    <Check className="size-4" />
+                                ) : (
+                                    <Copy className="size-4" />
+                                )}
+                                {mcpUrlCopied ? 'Copied' : 'Copy MCP URL'}
+                            </Button>
+                        </div>
                     </div>
 
                     <p className="max-w-md px-1 text-sm text-muted-foreground">
@@ -327,13 +333,15 @@ function MCPSetupPanel({ mcpUrl }: { mcpUrl: string }) {
                     </p>
                 </div>
 
-                <div className="space-y-4 lg:pl-4">
+                <div className="max-w-sm space-y-4">
                     <div className="flex items-start gap-3 px-1">
-                        <div className="flex size-7 shrink-0 items-center justify-center rounded-sm bg-background text-sm font-medium text-foreground">
+                        <div className="flex size-7 shrink-0 items-center justify-center rounded-sm bg-muted text-sm font-medium text-foreground">
                             1
                         </div>
                         <div className="space-y-1">
-                            <h2 className="font-semibold">Install the MCP</h2>
+                            <h2 className="mt-0.25 font-medium tracking-tight">
+                                Install the MCP
+                            </h2>
                             <p className="max-w-2xl text-sm text-muted-foreground">
                                 Add this MCP server to your agent, approve the
                                 OAuth prompt to login.
@@ -341,16 +349,30 @@ function MCPSetupPanel({ mcpUrl }: { mcpUrl: string }) {
                         </div>
                     </div>
                     <div className="flex items-start gap-3 px-1">
-                        <div className="flex size-7 shrink-0 items-center justify-center rounded-sm bg-background text-sm font-medium text-foreground">
+                        <div className="flex size-7 shrink-0 items-center justify-center rounded-sm bg-muted text-sm font-medium text-foreground">
                             2
                         </div>
                         <div className="space-y-1">
-                            <h2 className="font-semibold">
+                            <h2 className="mt-0.25 font-medium tracking-tight">
                                 Tell your agent to publish
                             </h2>
                             <p className="max-w-2xl text-sm text-muted-foreground">
                                 Ask your agent to publish it's work using the
                                 Koncat and it will appear here as a project.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-start gap-3 px-1">
+                        <div className="flex size-7 shrink-0 items-center justify-center rounded-sm bg-muted text-sm font-medium text-foreground">
+                            3
+                        </div>
+                        <div className="space-y-1">
+                            <h2 className="mt-0.25 font-medium tracking-tight">
+                                Use this dashboard to manage access
+                            </h2>
+                            <p className="max-w-2xl text-sm text-muted-foreground">
+                                Share with specific people, create teams and
+                                organize your pages.
                             </p>
                         </div>
                     </div>

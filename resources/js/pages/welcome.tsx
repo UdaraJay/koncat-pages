@@ -77,7 +77,7 @@ export default function Welcome() {
                                 href="/"
                                 className="flex items-center gap-2 font-[Koulen] text-3xl leading-0 font-medium tracking-tight"
                             >
-                                <AppLogoIcon className="-mt-[2px] h-7 w-auto fill-current text-foreground" />
+                                <AppLogoIcon className="-mt-[3px] h-6.5 w-auto fill-current text-foreground" />
                                 <div className="text-foreground">Koncat</div>
                             </Link>
                         </div>
@@ -85,9 +85,9 @@ export default function Welcome() {
                             {auth.user ? (
                                 <Link
                                     href={dashboardUrl}
-                                    className="inline-flex items-center gap-1 rounded-full bg-muted px-5 py-1.5 pr-3 text-sm leading-normal font-medium text-foreground"
+                                    className="inline-flex items-center gap-1 rounded-full bg-muted px-5 py-2 pr-3 text-base leading-normal font-medium tracking-tight text-foreground"
                                 >
-                                    Projects <ChevronRight className="size-4" />
+                                    My pages <ChevronRight className="size-4" />
                                 </Link>
                             ) : (
                                 <Link
