@@ -62,6 +62,14 @@ export type Project = {
         uniqueViewersTotal: number;
         viewsLast7Days: number;
         lastViewedAt?: string | null;
+        sharedUsers?: {
+            email: string;
+            name?: string | null;
+            permissionLabel: string;
+            pending: boolean;
+            viewsTotal: number;
+            lastViewedAt?: string | null;
+        }[];
     };
     canUpdate?: boolean;
     canDeploy?: boolean;

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Project;
 use App\Models\ProjectAnalyticsEvent;
+use App\Models\ProjectShare;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Carbon;
@@ -27,7 +28,7 @@ class ProjectAnalytics
 
     /**
      * @param  EloquentCollection<int, Project>|Collection<int, Project>  $projects
-     * @return array<string, array{viewsTotal: int, uniqueViewersTotal: int, viewsLast7Days: int, lastViewedAt: string|null}>
+     * @return array<string, array{viewsTotal: int, uniqueViewersTotal: int, viewsLast7Days: int, lastViewedAt: string|null, sharedUsers: array<int, array{email: string, name: string|null, permissionLabel: string, pending: bool, viewsTotal: int, lastViewedAt: string|null}>}>
      */
     public function viewSummaries(EloquentCollection|Collection $projects): array
     {
@@ -53,9 +54,10 @@ class ProjectAnalytics
             ->groupBy('project_id')
             ->get()
             ->keyBy('project_id');
+        $sharedUserSummaries = $this->sharedUserSummaries($projects);
 
         return $projectIds
-            ->mapWithKeys(function (string $projectId) use ($summaries) {
+            ->mapWithKeys(function (string $projectId) use ($summaries, $sharedUserSummaries) {
                 $summary = $summaries->get($projectId);
                 $lastViewedAt = $summary?->last_viewed_at
                     ? Carbon::parse($summary->last_viewed_at)->toISOString()
@@ -66,13 +68,14 @@ class ProjectAnalytics
                     'uniqueViewersTotal' => (int) ($summary?->unique_viewers_total ?? 0),
                     'viewsLast7Days' => (int) ($summary?->views_last_7_days ?? 0),
                     'lastViewedAt' => $lastViewedAt,
+                    'sharedUsers' => $sharedUserSummaries[$projectId] ?? [],
                 ]];
             })
             ->all();
     }
 
     /**
-     * @return array{viewsTotal: int, uniqueViewersTotal: int, viewsLast7Days: int, lastViewedAt: string|null}
+     * @return array{viewsTotal: int, uniqueViewersTotal: int, viewsLast7Days: int, lastViewedAt: string|null, sharedUsers: array<int, array{email: string, name: string|null, permissionLabel: string, pending: bool, viewsTotal: int, lastViewedAt: string|null}>}
      */
     public function emptySummary(): array
     {
@@ -81,6 +84,72 @@ class ProjectAnalytics
             'uniqueViewersTotal' => 0,
             'viewsLast7Days' => 0,
             'lastViewedAt' => null,
+            'sharedUsers' => [],
         ];
+    }
+
+    /**
+     * @param  EloquentCollection<int, Project>|Collection<int, Project>  $projects
+     * @return array<string, array<int, array{email: string, name: string|null, permissionLabel: string, pending: bool, viewsTotal: int, lastViewedAt: string|null}>>
+     */
+    protected function sharedUserSummaries(EloquentCollection|Collection $projects): array
+    {
+        $shares = $projects
+            ->flatMap(function (Project $project) {
+                return $project->relationLoaded('shares')
+                    ? $project->shares
+                    : collect();
+            });
+
+        if ($shares->isEmpty()) {
+            return [];
+        }
+
+        $userIds = $shares
+            ->pluck('user_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $viewCounts = $userIds->isEmpty()
+            ? collect()
+            : ProjectAnalyticsEvent::query()
+                ->whereIn('project_id', $projects->pluck('id')->filter()->values())
+                ->whereIn('user_id', $userIds)
+                ->where('event_type', self::EVENT_PROJECT_VIEW)
+                ->select(['project_id', 'user_id'])
+                ->selectRaw('COUNT(*) as views_total')
+                ->selectRaw('MAX(occurred_at) as last_viewed_at')
+                ->groupBy(['project_id', 'user_id'])
+                ->get()
+                ->keyBy(fn (ProjectAnalyticsEvent $event) => $event->project_id.':'.$event->user_id);
+
+        return $shares
+            ->groupBy('project_id')
+            ->map(fn (Collection $projectShares) => $projectShares
+                ->map(function (ProjectShare $share) use ($viewCounts) {
+                    $summary = $share->user_id
+                        ? $viewCounts->get($share->project_id.':'.$share->user_id)
+                        : null;
+                    $lastViewedAt = $summary?->last_viewed_at
+                        ? Carbon::parse($summary->last_viewed_at)->toISOString()
+                        : null;
+
+                    return [
+                        'email' => $share->email,
+                        'name' => $share->user?->name,
+                        'permissionLabel' => $share->permission->label(),
+                        'pending' => $share->user_id === null,
+                        'viewsTotal' => (int) ($summary?->views_total ?? 0),
+                        'lastViewedAt' => $lastViewedAt,
+                    ];
+                })
+                ->sortBy([
+                    ['viewsTotal', 'desc'],
+                    ['email', 'asc'],
+                ])
+                ->values()
+                ->all())
+            ->all();
     }
 }

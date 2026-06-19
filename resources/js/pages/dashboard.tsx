@@ -435,6 +435,7 @@ function ProjectCard({
     sharePermissions: ProjectSharePermissionOption[];
 }) {
     const [shareDialogOpen, setShareDialogOpen] = useState(false);
+    const [analyticsDialogOpen, setAnalyticsDialogOpen] = useState(false);
     const [moveDialogOpen, setMoveDialogOpen] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const deployedAt = project.currentDeployment?.deployedAt
@@ -453,6 +454,11 @@ function ProjectCard({
                 open={shareDialogOpen}
                 onOpenChange={setShareDialogOpen}
             />
+            <ProjectAnalyticsDialog
+                project={project}
+                open={analyticsDialogOpen}
+                onOpenChange={setAnalyticsDialogOpen}
+            />
             <MoveProjectDialog
                 key={projectMoveDialogKey(project)}
                 project={project}
@@ -466,7 +472,7 @@ function ProjectCard({
                 open={editDialogOpen}
                 onOpenChange={setEditDialogOpen}
             />
-            <article className="group flex overflow-hidden border bg-background transition">
+            <article className="group flex overflow-hidden border bg-card transition">
                 <div className="flex min-w-0 flex-1 flex-col">
                     <div className="relative">
                         <ProjectPreview project={project} />
@@ -511,6 +517,7 @@ function ProjectCard({
                             <ProjectCardMenu
                                 project={project}
                                 canMove={moveTargets.length > 0}
+                                onAnalytics={() => setAnalyticsDialogOpen(true)}
                                 onEdit={() => setEditDialogOpen(true)}
                                 onMove={() => setMoveDialogOpen(true)}
                                 onShare={() => setShareDialogOpen(true)}
@@ -570,12 +577,14 @@ function ProjectCard({
 function ProjectCardMenu({
     project,
     canMove,
+    onAnalytics,
     onEdit,
     onMove,
     onShare,
 }: {
     project: Project;
     canMove: boolean;
+    onAnalytics: () => void;
     onEdit: () => void;
     onMove: () => void;
     onShare: () => void;
@@ -617,6 +626,11 @@ function ProjectCardMenu({
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onSelect={onAnalytics}>
+                    <Eye className="h-4 w-4" />
+                    Analytics
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 {project.canUpdate ? (
                     <DropdownMenuItem onSelect={onEdit}>
                         <Pencil className="h-4 w-4" />
@@ -669,6 +683,128 @@ function ProjectCardMenu({
                 )}
             </DropdownMenuContent>
         </DropdownMenu>
+    );
+}
+
+function ProjectAnalyticsDialog({
+    project,
+    open,
+    onOpenChange,
+}: {
+    project: Project;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}) {
+    const analytics = project.analytics ?? {
+        viewsTotal: 0,
+        uniqueViewersTotal: 0,
+        viewsLast7Days: 0,
+        lastViewedAt: null,
+        sharedUsers: [],
+    };
+    const sharedUsers = analytics.sharedUsers ?? [];
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Analytics</DialogTitle>
+                </DialogHeader>
+
+                <div className="grid gap-5">
+                    <div className="grid gap-3 sm:grid-cols-4">
+                        <AnalyticsStat
+                            label="Views"
+                            value={formatNumber(analytics.viewsTotal)}
+                        />
+                        <AnalyticsStat
+                            label="Viewers"
+                            value={formatNumber(analytics.uniqueViewersTotal)}
+                        />
+                        <AnalyticsStat
+                            label="This week"
+                            value={formatNumber(analytics.viewsLast7Days)}
+                        />
+                        <AnalyticsStat
+                            label="Shared"
+                            value={formatNumber(project.sharesCount ?? 0)}
+                        />
+                    </div>
+
+                    <div className="grid gap-1 text-sm">
+                        <div className="font-medium">{project.name}</div>
+                        <div className="text-muted-foreground">
+                            {analytics.lastViewedAt
+                                ? `Last viewed ${formatDate(analytics.lastViewedAt)}`
+                                : 'No views yet'}
+                        </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="font-medium">
+                                People with access
+                            </div>
+                            <Badge variant="secondary">Sorted by views</Badge>
+                        </div>
+
+                        {sharedUsers.length > 0 ? (
+                            <div className="overflow-hidden rounded-md border">
+                                {sharedUsers.map((sharedUser) => (
+                                    <div
+                                        key={sharedUser.email}
+                                        className="grid gap-3 border-b p-3 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto]"
+                                    >
+                                        <div className="min-w-0">
+                                            <div className="truncate text-sm font-medium">
+                                                {sharedUser.name ??
+                                                    sharedUser.email}
+                                            </div>
+                                            <div className="truncate text-xs text-muted-foreground">
+                                                {sharedUser.email}
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                                            <Badge variant="outline">
+                                                {sharedUser.permissionLabel}
+                                            </Badge>
+                                            {sharedUser.pending ? (
+                                                <Badge variant="secondary">
+                                                    Pending
+                                                </Badge>
+                                            ) : null}
+                                            <div className="min-w-24 text-right text-sm">
+                                                <span className="font-medium">
+                                                    {formatNumber(
+                                                        sharedUser.viewsTotal,
+                                                    )}
+                                                </span>{' '}
+                                                {sharedUser.viewsTotal === 1
+                                                    ? 'view'
+                                                    : 'views'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                                No directly shared people to break down yet.
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function AnalyticsStat({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded-md border p-3">
+            <div className="text-xs text-muted-foreground">{label}</div>
+            <div className="mt-1 text-lg font-medium">{value}</div>
+        </div>
     );
 }
 

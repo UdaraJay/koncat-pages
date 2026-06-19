@@ -77,7 +77,7 @@ class WorkspaceController extends Controller
         $user = $request->user();
         $this->authorizeWorkspaceView($user, $current_team, $workspace);
         $projects = $workspace->projects()
-            ->with(['currentDeployment', 'hostingTeam'])
+            ->with(['currentDeployment', 'hostingTeam', 'shares.user'])
             ->withCount(['deployments', 'shares'])
             ->orderBy('name')
             ->get();
@@ -99,35 +99,43 @@ class WorkspaceController extends Controller
                 ];
             }),
             'projects' => $projects
-                ->map(fn ($project) => [
-                    'id' => $project->id,
-                    'name' => $project->name,
-                    'slug' => $project->slug,
-                    'description' => $project->description,
-                    'url' => $project->url(),
-                    'previewUrl' => $project->previewUrl(),
-                    'ownerType' => 'team',
-                    'ownerName' => $current_team->name,
-                    'team' => [
-                        'id' => $current_team->id,
-                        'name' => $current_team->name,
-                        'slug' => $current_team->slug,
-                    ],
-                    'workspace' => [
-                        'id' => $workspace->id,
-                        'name' => $workspace->name,
-                        'slug' => $workspace->slug,
-                    ],
-                    'deploymentsCount' => $project->deployments_count,
-                    'sharesCount' => $project->shares_count,
-                    'analytics' => $projectAnalytics[$project->id] ?? $analytics->emptySummary(),
-                    'currentDeployment' => $project->currentDeployment ? [
-                        'id' => $project->currentDeployment->id,
-                        'fileCount' => $project->currentDeployment->file_count,
-                        'totalBytes' => $project->currentDeployment->total_bytes,
-                        'deployedAt' => $project->currentDeployment->deployed_at->toISOString(),
-                    ] : null,
-                ]),
+                ->map(function ($project) use ($analytics, $current_team, $projectAnalytics, $user, $workspace) {
+                    $analyticsSummary = $projectAnalytics[$project->id] ?? $analytics->emptySummary();
+
+                    if (! $user->canManageProjectShares($project)) {
+                        $analyticsSummary['sharedUsers'] = [];
+                    }
+
+                    return [
+                        'id' => $project->id,
+                        'name' => $project->name,
+                        'slug' => $project->slug,
+                        'description' => $project->description,
+                        'url' => $project->url(),
+                        'previewUrl' => $project->previewUrl(),
+                        'ownerType' => 'team',
+                        'ownerName' => $current_team->name,
+                        'team' => [
+                            'id' => $current_team->id,
+                            'name' => $current_team->name,
+                            'slug' => $current_team->slug,
+                        ],
+                        'workspace' => [
+                            'id' => $workspace->id,
+                            'name' => $workspace->name,
+                            'slug' => $workspace->slug,
+                        ],
+                        'deploymentsCount' => $project->deployments_count,
+                        'sharesCount' => $project->shares_count,
+                        'analytics' => $analyticsSummary,
+                        'currentDeployment' => $project->currentDeployment ? [
+                            'id' => $project->currentDeployment->id,
+                            'fileCount' => $project->currentDeployment->file_count,
+                            'totalBytes' => $project->currentDeployment->total_bytes,
+                            'deployedAt' => $project->currentDeployment->deployed_at->toISOString(),
+                        ] : null,
+                    ];
+                }),
             'permissions' => $user->toWorkspacePermissions($workspace),
             'availableRoles' => WorkspaceRole::assignable(),
             'teamMembers' => $current_team->members()->orderBy('name')->get(['users.id', 'users.name', 'users.email']),

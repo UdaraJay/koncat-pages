@@ -188,9 +188,14 @@ class DashboardController extends Controller
     protected function projectPayload(Project $project, User $user, array $analytics): array
     {
         $team = $project->workspace?->team;
+        $canManageShares = $user->canManageProjectShares($project);
 
         if (! $team && $project->owner instanceof Team) {
             $team = $project->owner;
+        }
+
+        if (! $canManageShares) {
+            $analytics['sharedUsers'] = [];
         }
 
         return [
@@ -221,11 +226,11 @@ class DashboardController extends Controller
             'canArchive' => $user->canDeleteProject($project) && ! $project->trashed(),
             'canRestore' => $user->canDeleteProject($project) && $project->trashed(),
             'canMove' => $user->canDeleteProject($project) && ! $project->trashed(),
-            'canManageShares' => $user->canManageProjectShares($project),
+            'canManageShares' => $canManageShares,
             'sharePermission' => $this->shareForUser($project, $user)?->permission->value,
             'sharePermissionLabel' => $this->shareForUser($project, $user)?->permission->label(),
             'sharedByName' => $this->shareForUser($project, $user)?->sharer?->name,
-            'shares' => $user->canManageProjectShares($project)
+            'shares' => $canManageShares
                 ? $project->shares
                     ->sortBy(fn (ProjectShare $share) => strtolower($share->email))
                     ->map(fn (ProjectShare $share) => [

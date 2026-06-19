@@ -76,7 +76,8 @@ class DashboardTest extends TestCase
     public function test_dashboard_project_cards_include_project_view_analytics()
     {
         $owner = User::factory()->create();
-        $viewer = User::factory()->create();
+        $viewer = User::factory()->create(['email' => 'viewer@example.com']);
+        $quietViewer = User::factory()->create(['email' => 'quiet@example.com']);
         $owner->personalTeam()->update(['subdomain' => 'analytics-dashboard-team']);
         $project = Project::factory()->create([
             'owner_type' => User::class,
@@ -108,7 +109,11 @@ class DashboardTest extends TestCase
             'path' => '/reports',
             'occurred_at' => now(),
         ]);
-        ProjectShare::factory()->count(2)->create([
+        ProjectShare::factory()->forUser($viewer)->create([
+            'project_id' => $project->id,
+            'shared_by' => $owner->id,
+        ]);
+        ProjectShare::factory()->forUser($quietViewer)->create([
             'project_id' => $project->id,
             'shared_by' => $owner->id,
         ]);
@@ -123,7 +128,12 @@ class DashboardTest extends TestCase
             ->has('projects', 1)
             ->where('projects.0.name', 'Analytics App')
             ->where('projects.0.analytics.viewsTotal', 3)
-            ->where('projects.0.sharesCount', 2),
+            ->where('projects.0.sharesCount', 2)
+            ->where('projects.0.analytics.sharedUsers.0.email', 'viewer@example.com')
+            ->where('projects.0.analytics.sharedUsers.0.viewsTotal', 1)
+            ->where('projects.0.analytics.sharedUsers.0.pending', false)
+            ->where('projects.0.analytics.sharedUsers.1.email', 'quiet@example.com')
+            ->where('projects.0.analytics.sharedUsers.1.viewsTotal', 0),
         );
     }
 
