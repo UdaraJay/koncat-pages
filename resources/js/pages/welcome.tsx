@@ -4,6 +4,7 @@ import {
     ChevronRight,
     Globe2,
     GlobeLock,
+    Info,
     KeyRound,
     Landmark,
     Lock,
@@ -149,15 +150,15 @@ export default function Welcome() {
                                     If your agent can build it, you can share it
                                     with Koncat.
                                 </div>
-                                <div className="inline-flex items-center gap-2 rounded-full bg-red-100 px-3 py-1 font-medium tracking-tight text-red-600">
+                                <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 font-medium tracking-tight text-muted-foreground">
                                     Watch a video <Play className="size-4" />
                                 </div>
                             </div>
                             <BrochurePreviews />
                         </div>
 
-                        <div className="mt-3 flex gap-3">
-                            <div className="flex h-60 w-90 flex-col justify-between bg-muted p-4">
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            <div className="flex min-h-84 flex-col justify-between bg-muted p-4">
                                 <div>
                                     <div className="font-medium tracking-tight text-emerald-600">
                                         Dashboards & Reports
@@ -166,7 +167,102 @@ export default function Welcome() {
                                         Dashboards that live
                                     </div>
                                 </div>
-                                <div className="leading-tight text-muted-foreground">
+                                <div className="my-6 flex-1">
+                                    <div className="p-1 text-sm">
+                                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                            <div>Weekly revenue</div>
+                                            <div>Live</div>
+                                        </div>
+                                        <div className="mt-4 grid grid-cols-3 gap-2">
+                                            <div className="rounded-md bg-foreground/5 p-2">
+                                                <div className="text-lg leading-none font-medium tracking-tighter text-foreground">
+                                                    $42k
+                                                </div>
+                                                <div className="mt-1 h-1 rounded-full bg-emerald-600/30"></div>
+                                            </div>
+                                            <div className="rounded-md bg-foreground/5 p-2">
+                                                <div className="text-lg leading-none font-medium tracking-tighter text-foreground">
+                                                    18%
+                                                </div>
+                                                <div className="mt-1 h-1 rounded-full bg-emerald-600/40"></div>
+                                            </div>
+                                            <div className="rounded-md bg-foreground/5 p-2">
+                                                <div className="text-lg leading-none font-medium tracking-tighter text-foreground">
+                                                    9
+                                                </div>
+                                                <div className="mt-1 h-1 rounded-full bg-emerald-600/50"></div>
+                                            </div>
+                                        </div>
+                                        <div className="mt-4 h-22 rounded-md bg-foreground/5 p-2 text-emerald-600">
+                                            <svg
+                                                className="h-full w-full overflow-visible"
+                                                fill="none"
+                                                viewBox="0 0 240 88"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                            >
+                                                <defs>
+                                                    <linearGradient
+                                                        id="dashboardLineArea"
+                                                        x1="0"
+                                                        x2="0"
+                                                        y1="16"
+                                                        y2="88"
+                                                        gradientUnits="userSpaceOnUse"
+                                                    >
+                                                        <stop
+                                                            stopColor="currentColor"
+                                                            stopOpacity="0.28"
+                                                        />
+                                                        <stop
+                                                            offset="1"
+                                                            stopColor="currentColor"
+                                                            stopOpacity="0"
+                                                        />
+                                                    </linearGradient>
+                                                </defs>
+                                                <path
+                                                    d="M8 70H232"
+                                                    stroke="currentColor"
+                                                    strokeOpacity="0.12"
+                                                />
+                                                <path
+                                                    d="M8 46H232"
+                                                    stroke="currentColor"
+                                                    strokeOpacity="0.1"
+                                                />
+                                                <path
+                                                    d="M8 22H232"
+                                                    stroke="currentColor"
+                                                    strokeOpacity="0.08"
+                                                />
+                                                <path
+                                                    d="M10 62C29 58 36 46 54 48C75 50 80 66 101 58C123 50 124 28 146 26C169 24 174 48 194 40C213 32 216 20 232 16V88H10V62Z"
+                                                    fill="url(#dashboardLineArea)"
+                                                />
+                                                <path
+                                                    d="M10 62C29 58 36 46 54 48C75 50 80 66 101 58C123 50 124 28 146 26C169 24 174 48 194 40C213 32 216 20 232 16"
+                                                    stroke="currentColor"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth="3"
+                                                />
+                                                <circle
+                                                    cx="146"
+                                                    cy="26"
+                                                    fill="currentColor"
+                                                    r="4"
+                                                />
+                                                <circle
+                                                    cx="232"
+                                                    cy="16"
+                                                    fill="currentColor"
+                                                    r="4"
+                                                />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="text-sm text-muted-foreground">
                                     Your finance tracker or weekly report gets a
                                     real link instead of a folder. Push an
                                     update and it refreshes in place —
@@ -174,7 +270,7 @@ export default function Welcome() {
                                     numbers.
                                 </div>
                             </div>
-                            <div className="flex h-60 w-90 flex-col justify-between bg-muted p-4">
+                            <div className="flex min-h-84 flex-col justify-between bg-muted p-4">
                                 <div>
                                     <div className="font-medium tracking-tight text-pink-600">
                                         Shared pages
@@ -183,13 +279,63 @@ export default function Welcome() {
                                         Pages built for sending
                                     </div>
                                 </div>
-                                <div className="leading-tight text-muted-foreground">
+                                <div className="my-6 flex-1">
+                                    <div className="p-1 text-sm">
+                                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                            <div>launch-plan</div>
+                                            <Globe2 className="size-4" />
+                                        </div>
+                                        <div className="mt-3 rounded-md bg-foreground/5 p-3">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="size-2 rounded-full bg-pink-600/40"></div>
+                                                    <div className="size-2 rounded-full bg-pink-600/25"></div>
+                                                    <div className="size-2 rounded-full bg-pink-600/15"></div>
+                                                </div>
+                                                <div className="h-1.5 w-12 rounded-full bg-foreground/10"></div>
+                                            </div>
+                                            <div className="mt-4 space-y-2">
+                                                <div className="h-2 w-4/5 rounded-full bg-foreground/20"></div>
+                                                <div className="h-2 w-3/5 rounded-full bg-foreground/10"></div>
+                                            </div>
+                                            <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
+                                                <div className="rounded-md bg-background/40 p-2">
+                                                    <div className="h-2 rounded-full bg-foreground/15"></div>
+                                                    <div className="mt-2 h-2 w-2/3 rounded-full bg-foreground/10"></div>
+                                                </div>
+                                                <div className="flex w-12 items-center justify-center rounded-md bg-pink-600/15">
+                                                    <Share2 className="size-4 text-pink-600" />
+                                                </div>
+                                            </div>
+                                            <div className="mt-3 flex items-center gap-1.5">
+                                                <div className="h-5 rounded-full bg-pink-600/15 px-2 text-[10px] leading-5 text-pink-600">
+                                                    Team
+                                                </div>
+                                                <div className="h-5 rounded-full bg-pink-600/10 px-2 text-[10px] leading-5 text-pink-600">
+                                                    Client
+                                                </div>
+                                                <div className="h-5 rounded-full bg-foreground/10 px-2 text-[10px] leading-5 text-muted-foreground">
+                                                    +4
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 flex items-center gap-2">
+                                            <div className="flex-1 rounded-sm bg-foreground/5 px-2 py-1 text-xs text-muted-foreground">
+                                                koncat.co/launch
+                                            </div>
+                                            <div className="rounded-sm bg-pink-600 px-2 py-1 text-xs text-background">
+                                                Share
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="text-sm text-muted-foreground">
                                     Trip plans, team resources, a wedding site.
                                     Share one link, set who gets in, and never
                                     deal with "which version is this" again.
                                 </div>
                             </div>
-                            <div className="flex h-60 w-90 flex-col justify-between bg-muted p-4">
+                            <div className="flex min-h-84 flex-col justify-between bg-muted p-4">
                                 <div>
                                     <div className="font-medium tracking-tight text-amber-600">
                                         Forms & Surveys
@@ -198,7 +344,44 @@ export default function Welcome() {
                                         Collect, don't just show
                                     </div>
                                 </div>
-                                <div className="leading-tight text-muted-foreground">
+                                <div className="my-6 flex-1">
+                                    <div className="p-1 text-sm">
+                                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                            <div>RSVP form</div>
+                                            <div>36 answers</div>
+                                        </div>
+                                        <div className="mt-3 space-y-2">
+                                            <div className="rounded-md bg-foreground/5 p-2">
+                                                <div className="h-2 w-2/3 rounded-full bg-foreground/20"></div>
+                                                <div className="mt-2 grid grid-cols-2 gap-2">
+                                                    <div className="rounded-sm bg-background/50 px-2 py-1 text-xs text-muted-foreground">
+                                                        Yes
+                                                    </div>
+                                                    <div className="rounded-sm bg-amber-600 px-2 py-1 text-xs text-background">
+                                                        Maybe
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 rounded-md bg-foreground/5 p-2">
+                                                <div className="size-6 rounded-full bg-amber-600/20"></div>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="h-2 rounded-full bg-foreground/20"></div>
+                                                    <div className="mt-1.5 h-2 w-1/2 rounded-full bg-foreground/10"></div>
+                                                </div>
+                                                <div className="h-5 w-9 rounded-sm bg-background/50"></div>
+                                            </div>
+                                            <div className="flex items-center gap-2 rounded-md bg-foreground/5 p-2">
+                                                <div className="size-6 rounded-full bg-amber-600/30"></div>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="h-2 w-4/5 rounded-full bg-foreground/20"></div>
+                                                    <div className="mt-1.5 h-2 w-2/5 rounded-full bg-foreground/10"></div>
+                                                </div>
+                                                <div className="h-5 w-9 rounded-sm bg-background/50"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="text-sm text-muted-foreground">
                                     Pages that take input, not only display it —
                                     RSVPs, sign-ups, quick polls. Answers come
                                     back to you, no spreadsheet wrangling.
@@ -430,8 +613,8 @@ export default function Welcome() {
                                 from the same agents your team already uses.
                             </div>
 
-                            <div className="mt-10 grid min-h-110 gap-3 overflow-hidden sm:grid-cols-2 lg:grid-cols-3">
-                                <div className="flex flex-col justify-between bg-primary p-4 text-primary-foreground">
+                            <div className="mt-10 grid gap-3 overflow-hidden sm:grid-cols-2 lg:grid-cols-3">
+                                <div className="flex min-h-110 flex-col justify-between bg-primary p-4 text-primary-foreground">
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="font-medium tracking-tight">
                                             Permissions
@@ -455,14 +638,14 @@ export default function Welcome() {
                                                         Off
                                                     </span>
                                                 </div>
-                                                <div className="flex items-center justify-between gap-3 rounded-md bg-background px-3 py-2 text-foreground">
+                                                <div className="flex items-center justify-between gap-3 rounded-md bg-primary-foreground/20 px-3 py-2">
                                                     <div className="flex items-center gap-2">
                                                         <KeyRound className="size-4" />
                                                         <span>
                                                             Team workspace
                                                         </span>
                                                     </div>
-                                                    <span className="rounded-sm bg-foreground px-2 py-0.5 text-xs text-background">
+                                                    <span className="rounded-sm bg-primary-foreground px-2 py-0.5 text-xs text-primary">
                                                         On
                                                     </span>
                                                 </div>
@@ -492,7 +675,7 @@ export default function Welcome() {
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col justify-between bg-primary p-4 text-primary-foreground">
+                                <div className="flex min-h-110 flex-col justify-between bg-primary p-4 text-primary-foreground">
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="font-medium tracking-tight">
                                             Insights
@@ -501,36 +684,36 @@ export default function Welcome() {
                                     </div>
 
                                     <div className="my-6 flex-1 text-sm">
-                                        <div className="rounded-md bg-background p-3 text-foreground">
-                                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                        <div className="rounded-md bg-primary-foreground/10 p-3">
+                                            <div className="flex items-center justify-between text-xs text-primary-foreground/70">
                                                 <div>Team resources</div>
                                                 <div>7 days</div>
                                             </div>
                                             <div className="mt-4 grid grid-cols-2 gap-2">
-                                                <div className="rounded-md bg-muted p-2">
+                                                <div className="rounded-md bg-primary-foreground/10 p-2">
                                                     <div className="text-xl leading-none font-medium tracking-tighter">
                                                         284
                                                     </div>
-                                                    <div className="mt-1 text-xs text-muted-foreground">
+                                                    <div className="mt-1 text-xs text-primary-foreground/70">
                                                         Opens
                                                     </div>
                                                 </div>
-                                                <div className="rounded-md bg-muted p-2">
+                                                <div className="rounded-md bg-primary-foreground/10 p-2">
                                                     <div className="text-xl leading-none font-medium tracking-tighter">
                                                         61%
                                                     </div>
-                                                    <div className="mt-1 text-xs text-muted-foreground">
+                                                    <div className="mt-1 text-xs text-primary-foreground/70">
                                                         Return
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="mt-4 flex h-20 items-end gap-1.5">
-                                                <div className="h-8 flex-1 rounded-sm bg-primary/25"></div>
-                                                <div className="h-12 flex-1 rounded-sm bg-primary/35"></div>
-                                                <div className="h-7 flex-1 rounded-sm bg-primary/25"></div>
-                                                <div className="h-16 flex-1 rounded-sm bg-primary/50"></div>
-                                                <div className="h-11 flex-1 rounded-sm bg-primary/35"></div>
-                                                <div className="h-18 flex-1 rounded-sm bg-primary"></div>
+                                                <div className="h-8 flex-1 rounded-sm bg-primary-foreground/25"></div>
+                                                <div className="h-12 flex-1 rounded-sm bg-primary-foreground/35"></div>
+                                                <div className="h-7 flex-1 rounded-sm bg-primary-foreground/25"></div>
+                                                <div className="h-16 flex-1 rounded-sm bg-primary-foreground/50"></div>
+                                                <div className="h-11 flex-1 rounded-sm bg-primary-foreground/35"></div>
+                                                <div className="h-18 flex-1 rounded-sm bg-primary-foreground"></div>
                                             </div>
                                         </div>
                                     </div>
@@ -547,7 +730,7 @@ export default function Welcome() {
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col justify-between bg-primary p-4 text-primary-foreground">
+                                <div className="flex min-h-110 flex-col justify-between bg-primary p-4 text-primary-foreground">
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="font-medium tracking-tight">
                                             Lifecycle
@@ -561,25 +744,25 @@ export default function Welcome() {
                                                 <div>Workspace pages</div>
                                                 <RefreshCw className="size-4" />
                                             </div>
-                                            <div className="mt-3 rounded-md bg-background p-3 text-foreground">
+                                            <div className="mt-3 rounded-md bg-primary-foreground/10 p-3">
                                                 <div className="flex items-center justify-between gap-3">
                                                     <div>
                                                         <div className="font-medium tracking-tight">
                                                             Board metrics
                                                         </div>
-                                                        <div className="mt-1 text-xs text-muted-foreground">
+                                                        <div className="mt-1 text-xs text-primary-foreground/70">
                                                             Owner, version, and
                                                             status in one place
                                                         </div>
                                                     </div>
-                                                    <span className="rounded-sm bg-primary px-2 py-0.5 text-xs text-background">
+                                                    <span className="rounded-sm bg-primary-foreground px-2 py-0.5 text-xs text-primary">
                                                         Current
                                                     </span>
                                                 </div>
 
                                                 <div className="mt-4 space-y-3">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
+                                                        <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-foreground/15 text-xs font-medium">
                                                             v4
                                                         </div>
                                                         <div className="min-w-0 flex-1">
@@ -589,18 +772,18 @@ export default function Welcome() {
                                                                     revenue
                                                                     table
                                                                 </div>
-                                                                <div className="text-xs text-muted-foreground">
+                                                                <div className="text-xs text-primary-foreground/70">
                                                                     Now
                                                                 </div>
                                                             </div>
-                                                            <div className="mt-1 h-1.5 rounded-full bg-muted">
-                                                                <div className="h-full w-full rounded-full bg-primary"></div>
+                                                            <div className="mt-1 h-1.5 rounded-full bg-primary-foreground/15">
+                                                                <div className="h-full w-full rounded-full bg-primary-foreground"></div>
                                                             </div>
                                                         </div>
                                                     </div>
 
                                                     <div className="flex items-center gap-3">
-                                                        <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
+                                                        <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-foreground/15 text-xs font-medium">
                                                             v3
                                                         </div>
                                                         <div className="min-w-0 flex-1">
@@ -610,19 +793,19 @@ export default function Welcome() {
                                                                     forecast
                                                                     note
                                                                 </div>
-                                                                <div className="text-xs text-muted-foreground">
+                                                                <div className="text-xs text-primary-foreground/70">
                                                                     Tue
                                                                 </div>
                                                             </div>
-                                                            <div className="mt-1 h-1.5 rounded-full bg-muted">
-                                                                <div className="h-full w-3/5 rounded-full bg-primary/40"></div>
+                                                            <div className="mt-1 h-1.5 rounded-full bg-primary-foreground/15">
+                                                                <div className="h-full w-3/5 rounded-full bg-primary-foreground/50"></div>
                                                             </div>
                                                         </div>
                                                     </div>
 
-                                                    <div className="flex items-center justify-between rounded-md bg-muted px-2 py-1.5 text-xs text-muted-foreground">
+                                                    <div className="flex items-center justify-between rounded-md bg-primary-foreground/10 px-2 py-1.5 text-xs text-primary-foreground/70">
                                                         <div className="flex items-center gap-2">
-                                                            <div className="size-2 rounded-full bg-primary/60"></div>
+                                                            <div className="size-2 rounded-full bg-primary-foreground/60"></div>
                                                             Ready to roll back
                                                         </div>
                                                         <div>2 saved</div>
@@ -639,6 +822,192 @@ export default function Welcome() {
                                             Track owners, versions, updates,
                                             rollbacks, and page status from one
                                             shared workspace.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex min-h-110 flex-col justify-between bg-primary p-4 text-primary-foreground">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="font-medium tracking-tight">
+                                            Branding
+                                        </div>
+                                        <Globe2 className="size-5" />
+                                    </div>
+
+                                    <div className="my-6 flex-1 text-sm">
+                                        <div className="min-h-48 rounded-md bg-primary-foreground/10 p-3">
+                                            <div className="flex items-center justify-between text-xs text-primary-foreground/70">
+                                                <div>Company-ready link</div>
+                                                <ShieldCheck className="size-4" />
+                                            </div>
+                                            <div className="mt-4 rounded-sm bg-primary-foreground/10 p-2">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="size-1.5 rounded-full bg-primary-foreground/60"></span>
+                                                    <span className="size-1.5 rounded-full bg-primary-foreground/35"></span>
+                                                    <span className="size-1.5 rounded-full bg-primary-foreground/20"></span>
+                                                </div>
+                                                <div className="mt-3 flex items-center gap-2 rounded-sm bg-primary-foreground px-2 py-1.5 text-primary">
+                                                    <Globe2 className="size-3.5 shrink-0" />
+                                                    <div className="truncate text-xs font-medium">
+                                                        company.com/reports/q4-board-update
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="mt-3 flex items-center justify-between gap-2 text-xs">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="size-5 rounded-sm bg-primary-foreground"></div>
+                                                    <div>
+                                                        <div className="font-medium">
+                                                            Verified
+                                                        </div>
+                                                        <div className="text-primary-foreground/70">
+                                                            Brand footer on
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <span className="rounded-sm bg-primary-foreground/15 px-2 py-1">
+                                                    Domain
+                                                </span>
+                                            </div>
+                                            <div className="mt-5 flex items-center justify-between rounded-sm bg-primary-foreground/10 px-2 py-1.5 text-xs">
+                                                <div className="font-medium">
+                                                    ACME Workspace
+                                                </div>
+                                                <div className="text-primary-foreground/70">
+                                                    Footer on
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-medium tracking-tighter">
+                                            Company-ready links
+                                        </h3>
+                                        <div className="mt-1 max-w-sm text-sm leading-tight">
+                                            Custom domains, clean URLs,
+                                            workspace branding, and no random
+                                            file names — every page feels like
+                                            an official company resource.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex min-h-110 flex-col justify-between bg-primary p-4 text-primary-foreground">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="font-medium tracking-tight">
+                                            Safety
+                                        </div>
+                                        <ShieldCheck className="size-5" />
+                                    </div>
+
+                                    <div className="my-6 flex-1 text-sm">
+                                        <div className="rounded-md bg-primary-foreground/10 p-3">
+                                            <div className="flex items-center justify-between text-xs text-primary-foreground/70">
+                                                <div>Code review</div>
+                                                <Lock className="size-4" />
+                                            </div>
+                                            <div className="mt-4 flex items-center justify-between rounded-sm bg-primary-foreground px-2 py-1.5 text-primary">
+                                                <div className="flex items-center gap-2">
+                                                    <ShieldCheck className="size-3.5" />
+                                                    Cleared
+                                                </div>
+                                                <span className="text-xs font-medium">
+                                                    Safe
+                                                </span>
+                                            </div>
+                                            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                                                <div className="rounded-sm bg-primary-foreground/10 px-2 py-1.5">
+                                                    <div className="font-medium">
+                                                        2
+                                                    </div>
+                                                    <div className="mt-1 text-primary-foreground/70">
+                                                        External calls
+                                                    </div>
+                                                </div>
+                                                <div className="rounded-sm bg-primary-foreground/10 px-2 py-1.5">
+                                                    <div className="font-medium">
+                                                        0
+                                                    </div>
+                                                    <div className="mt-1 text-primary-foreground/70">
+                                                        Risky scripts
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-medium tracking-tighter">
+                                            Check before sharing
+                                        </h3>
+                                        <div className="mt-1 max-w-sm text-sm leading-tight">
+                                            Review code for suspicious scripts,
+                                            risky outbound calls, injected code,
+                                            and unsafe changes before they go
+                                            live.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex min-h-110 flex-col justify-between bg-primary p-4 text-primary-foreground">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="font-medium tracking-tight">
+                                            Collaboration
+                                        </div>
+                                        <UserRound className="size-5" />
+                                    </div>
+
+                                    <div className="my-6 flex-1 text-sm">
+                                        <div className="min-h-40 rounded-md bg-primary-foreground/10 p-3">
+                                            <div className="flex items-center justify-between text-xs text-primary-foreground/70">
+                                                <div>Board metrics</div>
+                                                <Share2 className="size-4" />
+                                            </div>
+                                            <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
+                                                <div className="rounded-sm bg-primary-foreground px-2 py-2 text-primary">
+                                                    <div className="flex size-6 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+                                                        M
+                                                    </div>
+                                                    <div className="mt-3 font-medium">
+                                                        Owner
+                                                    </div>
+                                                </div>
+                                                <div className="rounded-sm bg-primary-foreground/10 px-2 py-2">
+                                                    <div className="text-lg leading-none font-medium tracking-tighter">
+                                                        4
+                                                    </div>
+                                                    <div className="mt-3 text-primary-foreground/70">
+                                                        Editors
+                                                    </div>
+                                                </div>
+                                                <div className="rounded-sm bg-primary-foreground/10 px-2 py-2">
+                                                    <div className="text-lg leading-none font-medium tracking-tighter">
+                                                        1
+                                                    </div>
+                                                    <div className="mt-3 text-primary-foreground/70">
+                                                        Review
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="mt-3 flex items-center justify-between rounded-sm bg-primary-foreground/10 px-2 py-1.5">
+                                                <span className="text-primary-foreground/70">
+                                                    Ready to publish
+                                                </span>
+                                                <span className="rounded-sm bg-primary-foreground px-2 py-0.5 text-xs text-primary">
+                                                    Ready
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-medium tracking-tighter">
+                                            Keep pages moving without
+                                            bottlenecks
+                                        </h3>
+                                        <div className="mt-1 max-w-sm text-sm leading-tight">
+                                            Assign owners, editors, and
+                                            reviewers so the right teammates can
+                                            update pages without waiting on the
+                                            original creator.
                                         </div>
                                     </div>
                                 </div>
@@ -707,6 +1076,10 @@ export default function Welcome() {
                         </section>
 
                         <div className="mt-20">
+                            <div className="mb-4 flex items-center gap-1.5 text-foreground">
+                                <Info className="size-5" />
+                                Get started today
+                            </div>
                             <MCPSetupPanel mcpUrl="https://koncat.co/mcp" />
                         </div>
 

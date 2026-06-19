@@ -7,6 +7,7 @@ import { MCPSetupPanel } from './dashboard/mcp-setup-panel';
 import { ProjectSection } from './dashboard/project-section';
 import { SharedProjectsSection } from './dashboard/shared-projects-section';
 import type { DashboardProps, ProjectFilters } from './dashboard/types';
+import { Info } from 'lucide-react';
 
 export default function Dashboard({
     pendingInvitations = [],
@@ -58,7 +59,15 @@ export default function Dashboard({
             />
 
             <main className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-                {!hasPushedProject ? <MCPSetupPanel mcpUrl={mcpUrl} /> : null}
+                {!hasPushedProject ? (
+                    <div>
+                        <div className="mb-4 flex items-center gap-1.5 font-medium tracking-tight">
+                            <Info className="inline size-5" />
+                            Publish your first page
+                        </div>
+                        <MCPSetupPanel mcpUrl={mcpUrl} />
+                    </div>
+                ) : null}
 
                 <ProjectSection
                     projects={projects}

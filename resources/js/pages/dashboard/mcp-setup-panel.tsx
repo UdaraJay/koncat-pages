@@ -47,7 +47,7 @@ export function MCPSetupPanel({ mcpUrl }: { mcpUrl: string }) {
                         </div>
                         <div className="space-y-1">
                             <h2 className="mt-0.25 font-medium tracking-tight">
-                                Use this dashboard to manage access
+                                Use Koncat to manage
                             </h2>
                             <p className="max-w-2xl text-sm text-muted-foreground">
                                 Share with specific people, create teams and
