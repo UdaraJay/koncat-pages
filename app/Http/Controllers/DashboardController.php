@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ProjectSharePermission;
+use App\Http\Controllers\Concerns\BuildsProjectMoveTargets;
 use App\Models\Project;
 use App\Models\ProjectShare;
 use App\Models\Team;
@@ -16,6 +17,8 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
+    use BuildsProjectMoveTargets;
+
     public function __invoke(Request $request): Response
     {
         $user = $request->user();
@@ -101,6 +104,7 @@ class DashboardController extends Controller
             'createOptions' => [
                 'owners' => $this->ownerOptions($currentTeam, $user),
             ],
+            'moveTargets' => $this->projectMoveTargets($user),
         ]);
     }
 
@@ -208,6 +212,7 @@ class DashboardController extends Controller
             'canUnpublish' => $project->current_deployment_id !== null && $user->canDeployProject($project) && ! $project->trashed(),
             'canArchive' => $user->canDeleteProject($project) && ! $project->trashed(),
             'canRestore' => $user->canDeleteProject($project) && $project->trashed(),
+            'canMove' => $user->canDeleteProject($project) && ! $project->trashed(),
             'canManageShares' => $user->canManageProjectShares($project),
             'sharePermission' => $this->shareForUser($project, $user)?->permission->value,
             'sharePermissionLabel' => $this->shareForUser($project, $user)?->permission->label(),

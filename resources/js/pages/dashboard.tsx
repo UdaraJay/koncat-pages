@@ -8,8 +8,8 @@ import {
     Folder,
     HardDrive,
     MoreHorizontal,
+    MoveRight,
     RotateCcw,
-    Rocket,
     Share2,
     SlidersHorizontal,
     Trash2,
@@ -19,6 +19,7 @@ import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { toast } from 'sonner';
 import InputError from '@/components/input-error';
+import MoveProjectDialog from '@/components/move-project-dialog';
 import PendingInvitationsModal from '@/components/pending-invitations-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,7 @@ import { dashboard } from '@/routes';
 import type {
     DashboardInvitation,
     Project,
+    ProjectMoveTarget,
     ProjectSharePermission,
     ProjectSharePermissionOption,
     Team,
@@ -76,6 +78,7 @@ type Props = {
         sort: ProjectSort;
     };
     homeScope?: HomeScope;
+    moveTargets?: ProjectMoveTarget[];
 };
 
 export default function Dashboard({
@@ -88,6 +91,7 @@ export default function Dashboard({
     ],
     projectFilters = { status: 'active', sort: 'updated_desc' },
     homeScope,
+    moveTargets = [],
 }: Props) {
     const [showInvitations, setShowInvitations] = useState(
         pendingInvitations.length > 0,
@@ -208,6 +212,7 @@ export default function Dashboard({
                                 <ProjectCard
                                     key={project.id}
                                     project={project}
+                                    moveTargets={moveTargets}
                                     sharePermissions={projectSharePermissions}
                                 />
                             ))}
@@ -253,6 +258,7 @@ export default function Dashboard({
                                 <ProjectCard
                                     key={project.id}
                                     project={project}
+                                    moveTargets={moveTargets}
                                     sharePermissions={projectSharePermissions}
                                 />
                             ))}
@@ -399,12 +405,15 @@ function MCPSetupPanel({ mcpUrl }: { mcpUrl: string }) {
 
 function ProjectCard({
     project,
+    moveTargets,
     sharePermissions,
 }: {
     project: Project;
+    moveTargets: ProjectMoveTarget[];
     sharePermissions: ProjectSharePermissionOption[];
 }) {
     const [shareDialogOpen, setShareDialogOpen] = useState(false);
+    const [moveDialogOpen, setMoveDialogOpen] = useState(false);
     const deployedAt = project.currentDeployment?.deployedAt
         ? formatDate(project.currentDeployment.deployedAt)
         : null;
@@ -420,6 +429,13 @@ function ProjectCard({
                 permissions={sharePermissions}
                 open={shareDialogOpen}
                 onOpenChange={setShareDialogOpen}
+            />
+            <MoveProjectDialog
+                key={projectMoveDialogKey(project)}
+                project={project}
+                targets={moveTargets}
+                open={moveDialogOpen}
+                onOpenChange={setMoveDialogOpen}
             />
             <article className="group flex overflow-hidden border bg-background transition">
                 <div className="flex min-w-0 flex-1 flex-col">
@@ -462,6 +478,8 @@ function ProjectCard({
                         <div className="absolute top-3 right-3">
                             <ProjectCardMenu
                                 project={project}
+                                canMove={moveTargets.length > 0}
+                                onMove={() => setMoveDialogOpen(true)}
                                 onShare={() => setShareDialogOpen(true)}
                             />
                         </div>
@@ -521,9 +539,13 @@ function ProjectCard({
 
 function ProjectCardMenu({
     project,
+    canMove,
+    onMove,
     onShare,
 }: {
     project: Project;
+    canMove: boolean;
+    onMove: () => void;
     onShare: () => void;
 }) {
     const archiveProject = () => {
@@ -569,8 +591,16 @@ function ProjectCardMenu({
                             <Share2 className="h-4 w-4" />
                             Share
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
                     </>
+                ) : null}
+                {project.canMove ? (
+                    <DropdownMenuItem disabled={!canMove} onSelect={onMove}>
+                        <MoveRight className="h-4 w-4" />
+                        Move
+                    </DropdownMenuItem>
+                ) : null}
+                {project.canManageShares || project.canMove ? (
+                    <DropdownMenuSeparator />
                 ) : null}
                 {project.canRestore ? (
                     <DropdownMenuItem onSelect={restoreProject}>
@@ -813,6 +843,16 @@ function projectActionUrl(
     const url = `/projects/${project.id}`;
 
     return action ? `${url}/${action}` : url;
+}
+
+function projectMoveDialogKey(project: Project) {
+    return [
+        project.id,
+        project.ownerType,
+        project.team?.id,
+        project.workspace?.id,
+        project.slug,
+    ].join(':');
 }
 
 function projectShareUrl(project: Project, share?: string) {

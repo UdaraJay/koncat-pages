@@ -60,6 +60,7 @@ export type Project = {
     canUnpublish?: boolean;
     canArchive?: boolean;
     canRestore?: boolean;
+    canMove?: boolean;
     canManageShares?: boolean;
     sharePermission?: ProjectSharePermission | null;
     sharePermissionLabel?: string | null;
@@ -74,6 +75,20 @@ export type Project = {
         totalBytes: number;
         deployedAt: string;
     } | null;
+};
+
+export type ProjectMoveTarget = {
+    type: 'user' | 'team';
+    id: string;
+    teamId: string;
+    name: string;
+    label: string;
+    isPersonal: boolean;
+    canCreateProject: boolean;
+    workspaces: {
+        id: string;
+        name: string;
+    }[];
 };
 
 export type ProjectSharePermission = 'read' | 'write';

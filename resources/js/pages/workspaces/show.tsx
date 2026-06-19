@@ -3,6 +3,7 @@ import {
     ArrowUpRight,
     FileArchive,
     FolderPlus,
+    MoveRight,
     Rocket,
     Settings2,
     Trash2,
@@ -12,6 +13,7 @@ import {
 import { useId, useState } from 'react';
 import type { FormEvent } from 'react';
 import InputError from '@/components/input-error';
+import MoveProjectDialog from '@/components/move-project-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type {
     Project,
+    ProjectMoveTarget,
     TeamMember,
     Workspace,
     WorkspaceMember,
@@ -40,6 +43,7 @@ type Props = {
     permissions: WorkspacePermissions;
     availableRoles: WorkspaceRoleOption[];
     teamMembers: Pick<TeamMember, 'id' | 'name' | 'email'>[];
+    moveTargets: ProjectMoveTarget[];
     quota: {
         projects: number;
         maxProjects: number;
@@ -72,6 +76,7 @@ export default function WorkspaceShow({
     permissions,
     availableRoles,
     teamMembers,
+    moveTargets,
     quota,
 }: Props) {
     const { currentTeam } = usePage<PageProps>().props;
@@ -139,6 +144,8 @@ export default function WorkspaceShow({
                                     key={project.id}
                                     project={project}
                                     canDeploy={permissions.canDeployProject}
+                                    canMove={permissions.canDeleteProject}
+                                    moveTargets={moveTargets}
                                     onDeploy={deployProject}
                                 />
                             ))}
@@ -307,9 +314,7 @@ function CreateProjectDialog({
                             <InputError message={form.errors.name} />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor={`${id}-project-slug`}>
-                                Path
-                            </Label>
+                            <Label htmlFor={`${id}-project-slug`}>Path</Label>
                             <Input
                                 id={`${id}-project-slug`}
                                 value={form.data.slug}
@@ -517,87 +522,127 @@ function EditWorkspaceDialog({
 function ProjectTile({
     project,
     canDeploy,
+    canMove,
+    moveTargets,
     onDeploy,
 }: {
     project: Project;
     canDeploy: boolean;
+    canMove: boolean;
+    moveTargets: ProjectMoveTarget[];
     onDeploy: (project: Project, file?: File) => void;
 }) {
+    const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+
     return (
-        <article
-            id={`project-${project.slug}`}
-            className="overflow-hidden rounded-lg border bg-background"
-        >
-            <div className="relative aspect-video bg-gradient-to-br from-zinc-900 via-sky-600 to-emerald-300">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_25%,rgba(255,255,255,.28),transparent_28%),linear-gradient(rgba(255,255,255,.18)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.18)_1px,transparent_1px)] bg-[size:100%_100%,24px_24px,24px_24px]" />
-                <div className="absolute right-4 bottom-4 left-4 rounded-md border border-white/25 bg-background/90 p-3 shadow-sm">
-                    <div className="h-2 w-2/3 rounded-full bg-foreground/25" />
-                    <div className="mt-2 h-2 w-1/2 rounded-full bg-foreground/15" />
-                </div>
-            </div>
-
-            <div className="grid gap-4 p-4">
-                <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                            <h3 className="truncate font-medium">
-                                {project.name}
-                            </h3>
-                            <p className="truncate text-sm text-muted-foreground">
-                                {project.slug}
-                            </p>
-                        </div>
-                        <Badge
-                            variant={
-                                project.currentDeployment
-                                    ? 'default'
-                                    : 'secondary'
-                            }
-                        >
-                            {project.currentDeployment ? 'Live' : 'Draft'}
-                        </Badge>
+        <>
+            <MoveProjectDialog
+                key={projectMoveDialogKey(project)}
+                project={project}
+                targets={moveTargets}
+                open={moveDialogOpen}
+                onOpenChange={setMoveDialogOpen}
+            />
+            <article
+                id={`project-${project.slug}`}
+                className="overflow-hidden rounded-lg border bg-background"
+            >
+                <div className="relative aspect-video bg-gradient-to-br from-zinc-900 via-sky-600 to-emerald-300">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_25%,rgba(255,255,255,.28),transparent_28%),linear-gradient(rgba(255,255,255,.18)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.18)_1px,transparent_1px)] bg-[size:100%_100%,24px_24px,24px_24px]" />
+                    <div className="absolute right-4 bottom-4 left-4 rounded-md border border-white/25 bg-background/90 p-3 shadow-sm">
+                        <div className="h-2 w-2/3 rounded-full bg-foreground/25" />
+                        <div className="mt-2 h-2 w-1/2 rounded-full bg-foreground/15" />
                     </div>
-                    {project.description ? (
-                        <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
-                            {project.description}
-                        </p>
-                    ) : null}
                 </div>
 
-                <div className="text-xs text-muted-foreground">
-                    {project.currentDeployment
-                        ? `${project.currentDeployment.fileCount} files · ${project.currentDeployment.totalBytes} bytes`
-                        : 'Not deployed'}
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" asChild>
-                        <a href={project.url} target="_blank" rel="noreferrer">
-                            <ArrowUpRight /> Open
-                        </a>
-                    </Button>
-                    {canDeploy ? (
-                        <label className="inline-flex h-8 cursor-pointer items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground transition hover:bg-primary/90">
-                            <Rocket className="h-4 w-4" />
-                            Deploy
-                            <input
-                                type="file"
-                                accept=".zip,application/zip"
-                                className="sr-only"
-                                onChange={(event) =>
-                                    onDeploy(
-                                        project,
-                                        event.currentTarget.files?.[0],
-                                    )
+                <div className="grid gap-4 p-4">
+                    <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                                <h3 className="truncate font-medium">
+                                    {project.name}
+                                </h3>
+                                <p className="truncate text-sm text-muted-foreground">
+                                    {project.slug}
+                                </p>
+                            </div>
+                            <Badge
+                                variant={
+                                    project.currentDeployment
+                                        ? 'default'
+                                        : 'secondary'
                                 }
-                            />
-                        </label>
-                    ) : null}
-                    <FileArchive className="ml-auto h-4 w-4 text-muted-foreground" />
+                            >
+                                {project.currentDeployment ? 'Live' : 'Draft'}
+                            </Badge>
+                        </div>
+                        {project.description ? (
+                            <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
+                                {project.description}
+                            </p>
+                        ) : null}
+                    </div>
+
+                    <div className="text-xs text-muted-foreground">
+                        {project.currentDeployment
+                            ? `${project.currentDeployment.fileCount} files · ${project.currentDeployment.totalBytes} bytes`
+                            : 'Not deployed'}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                            <a
+                                href={project.url}
+                                target="_blank"
+                                rel="noreferrer"
+                            >
+                                <ArrowUpRight /> Open
+                            </a>
+                        </Button>
+                        {canMove ? (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={moveTargets.length === 0}
+                                onClick={() => setMoveDialogOpen(true)}
+                            >
+                                <MoveRight /> Move
+                            </Button>
+                        ) : null}
+                        {canDeploy ? (
+                            <label className="inline-flex h-8 cursor-pointer items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground transition hover:bg-primary/90">
+                                <Rocket className="h-4 w-4" />
+                                Deploy
+                                <input
+                                    type="file"
+                                    accept=".zip,application/zip"
+                                    className="sr-only"
+                                    onChange={(event) =>
+                                        onDeploy(
+                                            project,
+                                            event.currentTarget.files?.[0],
+                                        )
+                                    }
+                                />
+                            </label>
+                        ) : null}
+                        <FileArchive className="ml-auto h-4 w-4 text-muted-foreground" />
+                    </div>
                 </div>
-            </div>
-        </article>
+            </article>
+        </>
     );
+}
+
+function projectMoveDialogKey(project: Project) {
+    return [
+        project.id,
+        project.ownerType,
+        project.team?.id,
+        project.workspace?.id,
+        project.slug,
+    ].join(':');
 }
 
 WorkspaceShow.layout = (props: PageProps & { workspace?: Workspace }) => ({

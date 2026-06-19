@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Workspaces;
 
 use App\Enums\WorkspacePermission;
 use App\Enums\WorkspaceRole;
+use App\Http\Controllers\Concerns\BuildsProjectMoveTargets;
 use App\Http\Controllers\Controller;
 use App\Models\Team;
 use App\Models\User;
@@ -19,6 +20,8 @@ use Inertia\Response;
 
 class WorkspaceController extends Controller
 {
+    use BuildsProjectMoveTargets;
+
     public function index(Request $request, Team $current_team): Response
     {
         $user = $request->user();
@@ -99,6 +102,18 @@ class WorkspaceController extends Controller
                     'description' => $project->description,
                     'url' => $project->url(),
                     'previewUrl' => $project->previewUrl(),
+                    'ownerType' => 'team',
+                    'ownerName' => $current_team->name,
+                    'team' => [
+                        'id' => $current_team->id,
+                        'name' => $current_team->name,
+                        'slug' => $current_team->slug,
+                    ],
+                    'workspace' => [
+                        'id' => $workspace->id,
+                        'name' => $workspace->name,
+                        'slug' => $workspace->slug,
+                    ],
                     'deploymentsCount' => $project->deployments_count,
                     'currentDeployment' => $project->currentDeployment ? [
                         'id' => $project->currentDeployment->id,
@@ -110,6 +125,7 @@ class WorkspaceController extends Controller
             'permissions' => $user->toWorkspacePermissions($workspace),
             'availableRoles' => WorkspaceRole::assignable(),
             'teamMembers' => $current_team->members()->orderBy('name')->get(['users.id', 'users.name', 'users.email']),
+            'moveTargets' => $this->projectMoveTargets($user),
             'quota' => [
                 'projects' => $workspace->projects()->count(),
                 'maxProjects' => config('matterpipe.quotas.workspace_projects'),

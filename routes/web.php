@@ -47,6 +47,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('projects/{project}/shares', [ProjectShareController::class, 'store'])->name('projects.shares.store');
     Route::patch('projects/{project}/shares/{share}', [ProjectShareController::class, 'update'])->name('projects.shares.update');
     Route::delete('projects/{project}/shares/{share}', [ProjectShareController::class, 'destroy'])->name('projects.shares.destroy');
+    Route::patch('projects/{project}/move', [ProjectController::class, 'move'])->name('projects.move');
     Route::post('projects/{project}/unpublish', [ProjectController::class, 'unpublish'])->name('projects.unpublish');
     Route::delete('projects/{project}', [ProjectController::class, 'archive'])->name('projects.archive');
     Route::post('projects/{project}/restore', [ProjectController::class, 'restore'])->withTrashed()->name('projects.restore');

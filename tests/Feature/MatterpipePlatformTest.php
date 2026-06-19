@@ -216,6 +216,119 @@ class MatterpipePlatformTest extends TestCase
         ]);
     }
 
+    public function test_project_owner_can_move_project_between_personal_and_team_workspace(): void
+    {
+        $user = User::factory()->create();
+        $team = Team::factory()->create();
+        $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+        $workspace = Workspace::factory()->create(['team_id' => $team->id]);
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'hosting_team_id' => $user->personalTeam()->id,
+            'created_by' => $user->id,
+            'name' => 'Portable App',
+            'slug' => 'portable-app',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->patch(route('projects.move', $project), [
+                'owner_type' => 'team',
+                'team_id' => $team->id,
+                'workspace_id' => $workspace->id,
+                'slug' => 'portable-app',
+            ])
+            ->assertRedirect();
+
+        $project->refresh();
+
+        $this->assertSame(Team::class, $project->owner_type);
+        $this->assertSame($team->id, $project->owner_id);
+        $this->assertSame($workspace->id, $project->workspace_id);
+        $this->assertSame($team->id, $project->hosting_team_id);
+
+        $this
+            ->actingAs($user)
+            ->patch(route('projects.move', $project), [
+                'owner_type' => 'user',
+                'slug' => 'portable-app',
+            ])
+            ->assertRedirect();
+
+        $project->refresh();
+
+        $this->assertSame(User::class, $project->owner_type);
+        $this->assertSame($user->id, $project->owner_id);
+        $this->assertNull($project->workspace_id);
+        $this->assertSame($user->personalTeam()->id, $project->hosting_team_id);
+    }
+
+    public function test_project_move_rejects_duplicate_path_in_destination_team(): void
+    {
+        $user = User::factory()->create();
+        $team = Team::factory()->create();
+        $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+
+        Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'hosting_team_id' => $user->personalTeam()->id,
+            'slug' => 'taken',
+        ]);
+
+        $project = Project::factory()->create([
+            'owner_type' => Team::class,
+            'owner_id' => $team->id,
+            'hosting_team_id' => $team->id,
+            'slug' => 'portable-app',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->patch(route('projects.move', $project), [
+                'owner_type' => 'user',
+                'slug' => 'taken',
+            ])
+            ->assertSessionHasErrors('slug');
+
+        $project->refresh();
+
+        $this->assertSame(Team::class, $project->owner_type);
+        $this->assertSame($team->id, $project->hosting_team_id);
+        $this->assertSame('portable-app', $project->slug);
+    }
+
+    public function test_workspace_member_without_delete_permission_cannot_move_project_out(): void
+    {
+        $user = User::factory()->create();
+        $team = Team::factory()->create();
+        $team->members()->attach($user, ['role' => TeamRole::Member->value]);
+        $workspace = Workspace::factory()->create(['team_id' => $team->id]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Member->value]);
+        $project = Project::factory()->create([
+            'owner_type' => Team::class,
+            'owner_id' => $team->id,
+            'workspace_id' => $workspace->id,
+            'hosting_team_id' => $team->id,
+            'slug' => 'team-app',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->patch(route('projects.move', $project), [
+                'owner_type' => 'user',
+                'slug' => 'team-app',
+            ])
+            ->assertForbidden();
+
+        $project->refresh();
+
+        $this->assertSame(Team::class, $project->owner_type);
+        $this->assertSame($workspace->id, $project->workspace_id);
+        $this->assertSame($team->id, $project->hosting_team_id);
+    }
+
     public function test_project_owner_can_archive_and_restore_a_personal_project(): void
     {
         $user = User::factory()->create();
