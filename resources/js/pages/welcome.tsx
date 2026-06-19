@@ -113,14 +113,14 @@ export default function Welcome() {
                                     mcpUrl={MCP_URL}
                                     title="Give your agent our MCP and let it publish."
                                     description="Add the MCP to your agent with the url and authenticate with your email to publish."
-                                    className="min-w-0 p-4 md:flex-1"
+                                    className="min-w-0 p-4 md:flex-3"
                                     titleClassName="mb-2 px-2"
                                     inputWrapperClassName="min-w-0"
                                     inputClassName="min-w-0 w-full text-sm sm:text-base"
                                     actionsClassName="mt-2"
                                     descriptionClassName="mt-3 px-2"
                                 />
-                                <div className="flex min-w-0 flex-col justify-between p-4 md:flex-1">
+                                <div className="flex min-w-0 flex-col justify-between p-4 md:flex-2">
                                     <div>
                                         <div className="mb-2 px-2 text-sm font-medium">
                                             Manage your pages, teams and access.
@@ -1035,7 +1035,7 @@ export default function Welcome() {
                             </div>
                         </div> */}
 
-                        <section className="mt-14 border-t border-border pt-10 sm:mt-20">
+                        <section className="mt-14 pt-10 sm:mt-20">
                             <div className="">
                                 <div>
                                     <div className="inline-block rounded-full bg-muted px-3 py-1 font-medium tracking-tight text-muted-foreground">
@@ -1094,7 +1094,7 @@ export default function Welcome() {
                                 href="/"
                                 className="flex items-center gap-2 font-[Koulen] text-2xl leading-none tracking-tight text-foreground"
                             >
-                                <AppLogoIcon className="-mt-[1px] h-6 w-auto fill-current" />
+                                <AppLogoIcon className="-mt-[3px] h-5.5 w-auto fill-current" />
                                 <span>Koncat</span>
                             </Link>
 
@@ -1115,7 +1115,6 @@ export default function Welcome() {
                         </footer>
                     </main>
                 </div>
-                <div className="hidden h-14.5 lg:block"></div>
             </div>
         </>
     );
