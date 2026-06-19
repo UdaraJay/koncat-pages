@@ -1,43 +1,38 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
-    Check,
+    ChevronDown,
     ChevronRight,
-    Copy,
     Globe2,
+    GlobeLock,
     KeyRound,
     Landmark,
     Lock,
     Mail,
     Play,
+    RefreshCw,
+    Share2,
     ShieldCheck,
     Sparkles,
     UserRound,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import AppLogoIcon from '@/components/app-logo-icon';
 import BrochurePreviews from '@/components/brochure-previews';
-import { Button } from '@/components/ui/button';
-import { useClipboard } from '@/hooks/use-clipboard';
-import { ClaudeIcon, CursorIcon, VSCodeIcon } from '@/icons';
+import { MCPConnectionPanel } from '@/components/mcp-connection-panel';
+import { LogoIcon } from '@/icons';
 import { dashboard, login } from '@/routes';
+import { MCPSetupPanel } from './dashboard/mcp-setup-panel';
 
 const MCP_URL = 'https://koncat.co/mcp';
 
 const accessOptions = [
     {
         description:
-            'Anyone with the link can see it. Good for a blog or a homepage you want found.',
-        icon: Globe2,
-        label: 'Open',
-        title: 'Public',
+            'Private to your account. A personal home for things only you need to reach.',
+        icon: UserRound,
+        label: 'You',
+        title: 'Just you',
     },
-    {
-        description:
-            'One shared password to get in — the way a wedding site works.',
-        icon: KeyRound,
-        label: 'Key',
-        title: 'Password',
-    },
+
     {
         description:
             'Bound to specific email addresses. People sign in with a link sent to their inbox.',
@@ -47,28 +42,16 @@ const accessOptions = [
     },
     {
         description:
-            'Private to your account. A personal home for things only you need to reach.',
-        icon: UserRound,
-        label: 'You',
-        title: 'Just you',
+            'Give access to just those in your team with managed workspaces.',
+        icon: KeyRound,
+        label: 'Team',
+        title: 'Workspaces',
     },
 ];
 
 export default function Welcome() {
     const { auth } = usePage().props;
     const dashboardUrl = dashboard();
-    const [copiedText, copy] = useClipboard();
-    const mcpUrlCopied = copiedText === MCP_URL;
-
-    const copyMcpUrl = async () => {
-        const copied = await copy(MCP_URL);
-
-        if (copied) {
-            toast.success('MCP URL copied');
-        } else {
-            toast.error('Could not copy MCP URL');
-        }
-    };
 
     return (
         <>
@@ -125,62 +108,15 @@ export default function Welcome() {
 
                         <div className="mt-8">
                             <div className="flex max-w-4xl divide-x bg-muted">
-                                <div className="p-4">
-                                    <div className="mb-2 px-2 text-sm font-medium">
-                                        Give your agent our MCP and let it
-                                        publish.
-                                    </div>
-
-                                    <div className="flex gap-1">
-                                        <input
-                                            className="flex-1 rounded-full border bg-background px-4 py-2 font-medium"
-                                            value={MCP_URL}
-                                            readOnly
-                                        />
-                                    </div>
-
-                                    <div className="mt-2 flex flex-wrap gap-1">
-                                        <a href="https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=Koncat&connectorUrl=https%3A%2F%2Fkoncat.co%2Fmcp">
-                                            <Button variant="outline" size="sm">
-                                                <ClaudeIcon className="size-4" />
-                                                Connect to Claude
-                                            </Button>
-                                        </a>
-                                        <a href="https://cursor.com/install-mcp?name=Koncat&config=eyJ1cmwiOiJodHRwczovL2tvbmNhdC5jby9tY3AifQ%3D%3D">
-                                            <Button variant="outline" size="sm">
-                                                <CursorIcon className="size-4" />
-                                                Install in Cursor
-                                            </Button>
-                                        </a>
-                                        <a href="vscode:mcp/install?%7B%22name%22%3A%22koncat%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fkoncat.co%2Fmcp%22%7D">
-                                            <Button variant="outline" size="sm">
-                                                <VSCodeIcon className="size-4" />
-                                                Install in VS Code
-                                            </Button>
-                                        </a>
-
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={copyMcpUrl}
-                                        >
-                                            {mcpUrlCopied ? (
-                                                <Check className="size-4" />
-                                            ) : (
-                                                <Copy className="size-4" />
-                                            )}
-                                            {mcpUrlCopied
-                                                ? 'Copied'
-                                                : 'Copy MCP URL'}
-                                        </Button>
-                                    </div>
-
-                                    <div className="mt-3 max-w-md px-2 text-sm text-muted-foreground">
-                                        Add the MCP to your agent with the url
-                                        and authenticate with your email to
-                                        publish.
-                                    </div>
-                                </div>
+                                <MCPConnectionPanel
+                                    mcpUrl={MCP_URL}
+                                    title="Give your agent our MCP and let it publish."
+                                    description="Add the MCP to your agent with the url and authenticate with your email to publish."
+                                    className="p-4"
+                                    titleClassName="mb-2 px-2"
+                                    actionsClassName="mt-2"
+                                    descriptionClassName="mt-3 px-2"
+                                />
                                 <div className="flex flex-col justify-between p-4">
                                     <div>
                                         <div className="mb-2 px-2 text-sm font-medium">
@@ -272,84 +208,284 @@ export default function Welcome() {
 
                         <div className="mt-20">
                             <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 font-medium tracking-tight text-muted-foreground">
-                                Ready for teams
+                                How it works
                             </div>
                             <div className="mt-5 text-5xl leading-14 font-medium tracking-tighter">
-                                The home for your team's
-                                <br /> living pages.
+                                Publish. Share. Update.
+                            </div>
+                            <div className="mt-4 max-w-lg text-xl leading-tight font-medium tracking-tight text-muted-foreground">
+                                It runs right inside the agent you already use —
+                                and there's a page of your own to manage
+                                everything you've put up.
+                            </div>
+
+                            <div className="mt-10 grid min-h-90 gap-3 overflow-hidden select-none sm:grid-cols-2 lg:grid-cols-3">
+                                <div className="flex flex-col justify-between bg-muted p-4">
+                                    <div className="flex items-start justify-between gap-4 text-muted-foreground">
+                                        <div className="font-mono font-medium tracking-tight">
+                                            01
+                                        </div>
+                                        <GlobeLock className="size-5" />
+                                    </div>
+                                    <div className="my-3 mt-10 flex-1">
+                                        <div className="flex justify-end gap-2 text-right text-sm leading-tight text-muted-foreground">
+                                            <div className="max-w-3/5">
+                                                Publish the quarterly report we
+                                                made.
+                                            </div>
+                                            <div className="size-5 rounded-full bg-muted-foreground/50"></div>
+                                        </div>
+                                        <div className="mt-4 flex gap-2 text-sm">
+                                            <div className="size-5 shrink-0 rounded-full bg-secondary"></div>
+                                            <div>
+                                                <div className="animate-pulse font-medium tracking-tight">
+                                                    Thinking{' '}
+                                                    <ChevronDown className="inline size-4" />
+                                                </div>
+
+                                                <div className="mt-1 text-xs text-muted-foreground">
+                                                    I am going to take the
+                                                    report we created yesterday
+                                                    and publish it using Koncat.
+                                                </div>
+
+                                                <div className="mt-3 rounded-md bg-foreground/10 p-3">
+                                                    <div>
+                                                        Do you want to use the
+                                                        Koncat tool to publish
+                                                        this report?
+                                                    </div>
+
+                                                    <div className="mt-4 flex justify-end gap-1">
+                                                        <div className="rounded-sm bg-foreground/10 px-2 py-1">
+                                                            Cancel
+                                                        </div>
+                                                        <div className="rounded-sm bg-background px-2 py-1">
+                                                            Allow
+                                                        </div>
+                                                        <div className="rounded-sm bg-background px-2 py-1">
+                                                            Always Allow
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="mt-32 text-2xl leading-7 font-medium tracking-tighter text-foreground">
+                                            Publish
+                                        </h3>
+                                        <div className="mt-1 max-w-sm text-sm leading-tight text-muted-foreground">
+                                            Ask your agent to publish. The file
+                                            leaves your laptop and comes back as
+                                            a live link.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col justify-between bg-muted p-4">
+                                    <div className="flex items-start justify-between gap-4 text-muted-foreground">
+                                        <div className="font-mono font-medium tracking-tight">
+                                            02
+                                        </div>
+                                        <Share2 className="size-5" />
+                                    </div>
+
+                                    <div className="my-3 mt-10 flex-1">
+                                        <div className="flex gap-2 text-sm leading-tight text-muted-foreground">
+                                            <div className="size-5 rounded-full bg-white"></div>
+                                            <div className="mt-0.25 max-w-3/5">
+                                                <div className="text-foreground">
+                                                    I published the report.
+                                                </div>
+                                                <div className="mt-1">
+                                                    You can share this link with
+                                                    the team or manage it in
+                                                    your dashboard.
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="mt-4 flex gap-2 text-sm">
+                                            <div className="size-5 shrink-0 rounded-full bg-transparent"></div>
+                                            <div className="w-full">
+                                                <div className="w-full rounded-md bg-foreground/10 p-3">
+                                                    <div className="text-xs">
+                                                        ACME Corp quarterly
+                                                        report
+                                                    </div>
+
+                                                    <div className="mt-2 flex h-25 items-center justify-center rounded-md bg-background">
+                                                        <LogoIcon className="size-5 opacity-20" />
+                                                    </div>
+
+                                                    <div className="mt-4 flex justify-end gap-1">
+                                                        <div className="rounded-sm bg-foreground/10 px-2 py-1">
+                                                            Delete
+                                                        </div>
+                                                        <div className="rounded-sm bg-background px-2 py-1">
+                                                            Copy link
+                                                        </div>
+                                                        <div className="rounded-sm bg-background px-2 py-1">
+                                                            Share
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="text-2xl leading-7 font-medium tracking-tighter text-foreground">
+                                            Share
+                                        </h3>
+                                        <div className="mt-1 max-w-sm text-sm leading-tight text-muted-foreground">
+                                            Send the link. It opens on any phone
+                                            or laptop, looking exactly how you
+                                            built it .
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col justify-between bg-muted p-4">
+                                    <div className="flex items-start justify-between gap-4 text-muted-foreground">
+                                        <div className="font-mono font-medium tracking-tight">
+                                            03
+                                        </div>
+                                        <RefreshCw className="size-5" />
+                                    </div>
+                                    <div className="my-3 mt-10 flex-1">
+                                        <div className="flex justify-end gap-2 text-right text-sm leading-tight text-muted-foreground">
+                                            <div className="max-w-4/5">
+                                                Can you update the report at{' '}
+                                                <span className="border-b text-primary">
+                                                    acme.koncat.co/q4-report
+                                                </span>{' '}
+                                                with the new numbers we just got
+                                                in?
+                                            </div>
+                                            <div className="size-5 rounded-full bg-muted-foreground/50"></div>
+                                        </div>
+                                        <div className="mt-4 flex gap-2 text-sm">
+                                            <div className="size-5 shrink-0 rounded-full bg-secondary"></div>
+                                            <div>
+                                                <div className="animate-pulse font-medium tracking-tight">
+                                                    Thinking{' '}
+                                                    <ChevronDown className="inline size-4" />
+                                                </div>
+
+                                                <div className="mt-1 text-xs text-muted-foreground">
+                                                    I am going to fetch the
+                                                    report using Koncat and
+                                                    update it with the new
+                                                    numbers we just got in.
+                                                </div>
+
+                                                <div className="mt-3 rounded-md bg-foreground/10 p-3">
+                                                    <div>
+                                                        Do you want to use the
+                                                        Koncat tool to publish
+                                                        this report?
+                                                    </div>
+
+                                                    <div className="mt-4 flex justify-end gap-1">
+                                                        <div className="rounded-sm bg-foreground/10 px-2 py-1">
+                                                            Cancel
+                                                        </div>
+                                                        <div className="rounded-sm bg-background px-2 py-1">
+                                                            Allow
+                                                        </div>
+                                                        <div className="rounded-sm bg-background px-2 py-1">
+                                                            Always Allow
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="text-2xl leading-7 font-medium tracking-tighter text-foreground">
+                                            Update
+                                        </h3>
+                                        <div className="mt-1 max-w-sm text-sm leading-tight text-muted-foreground">
+                                            Changed something? Push again and
+                                            the link updates in place. The
+                                            address never moves.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-20">
+                            <div className="inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1 font-medium tracking-tight text-primary-foreground">
+                                Made for teams
+                            </div>
+                            <div className="mt-5 text-5xl leading-14 font-medium tracking-tighter text-primary">
+                                Close the gap between AI creation
+                                <br /> and business use.
                             </div>
                             <div className="mt-4 max-w-lg text-xl leading-tight font-medium tracking-tight text-muted-foreground">
                                 Keep AI-generated dashboards, reports, and
                                 resources live, current, and controlled — all
-                                from the same agents your team already uses
+                                from the same agents your team already uses.
                             </div>
 
-                            <div className="mt-10 grid gap-3 overflow-hidden sm:grid-cols-2 lg:grid-cols-4">
-                                <div className="bg-muted p-5">
-                                    <div className="flex items-start justify-between gap-4 text-muted-foreground">
+                            <div className="mt-10 grid min-h-80 gap-3 overflow-hidden sm:grid-cols-2 lg:grid-cols-3">
+                                <div className="flex flex-col justify-between bg-primary p-4 text-primary-foreground">
+                                    <div className="flex items-start justify-between gap-4">
                                         <div className="font-medium tracking-tight">
                                             Permissions
                                         </div>
                                         <Lock className="size-5" />
                                     </div>
-                                    <h3 className="mt-32 text-2xl leading-7 font-medium tracking-tighter text-foreground">
-                                        Control who gets in
-                                    </h3>
-                                    <div className="mt-1 max-w-sm text-sm leading-tight text-muted-foreground">
-                                        Set each page to public, private,
-                                        password-protected, team-only, or
-                                        approved-email access.
+                                    <div>
+                                        <h3 className="text-xl leading-7 font-medium tracking-tighter">
+                                            Control who has access
+                                        </h3>
+                                        <div className="mt-1 max-w-sm text-sm leading-tight">
+                                            Set each page to public, private,
+                                            password-protected, team-only, or
+                                            approved-email access.
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-muted p-5">
-                                    <div className="flex items-start justify-between gap-4 text-muted-foreground">
+                                <div className="flex flex-col justify-between bg-primary p-4 text-primary-foreground">
+                                    <div className="flex items-start justify-between gap-4">
                                         <div className="font-medium tracking-tight">
                                             Insights
                                         </div>
                                         <Sparkles className="size-5" />
                                     </div>
-                                    <h3 className="mt-32 text-2xl font-medium tracking-tighter text-foreground">
-                                        Know what gets read
-                                    </h3>
-                                    <div className="mt-1 max-w-sm text-sm leading-tight text-muted-foreground">
-                                        See opens, return visits, and engagement
-                                        across the reports, dashboards, and
-                                        resources your team publishes.
-                                    </div>
-                                </div>
-
-                                <div className="bg-muted p-5">
-                                    <div className="flex items-start justify-between gap-4 text-muted-foreground">
-                                        <div className="font-medium tracking-tight">
-                                            Safety
+                                    <div>
+                                        <h3 className="text-xl font-medium tracking-tighter">
+                                            Know what gets read
+                                        </h3>
+                                        <div className="mt-1 max-w-sm text-sm leading-tight">
+                                            See opens, return visits, and
+                                            engagement across the reports,
+                                            dashboards, and resources your team
+                                            publishes.
                                         </div>
-                                        <ShieldCheck className="size-5" />
-                                    </div>
-                                    <h3 className="mt-32 text-2xl font-medium tracking-tighter text-foreground">
-                                        Publish with checks
-                                    </h3>
-                                    <div className="mt-1 max-w-sm text-sm leading-tight text-muted-foreground">
-                                        Detect suspicious scripts, external
-                                        calls, injected code, and risky updates
-                                        before they reach your team.
                                     </div>
                                 </div>
 
-                                <div className="bg-muted p-5">
-                                    <div className="flex items-start justify-between gap-4 text-muted-foreground">
+                                <div className="flex flex-col justify-between bg-primary p-4 text-primary-foreground">
+                                    <div className="flex items-start justify-between gap-4">
                                         <div className="font-medium tracking-tight">
                                             Lifecycle
                                         </div>
                                         <Landmark className="size-5" />
                                     </div>
-                                    <h3 className="mt-32 text-2xl font-medium tracking-tighter text-foreground">
-                                        Manage every live page
-                                    </h3>
-                                    <div className="mt-1 max-w-sm text-sm leading-tight text-muted-foreground">
-                                        Track owners, versions, updates,
-                                        rollbacks, and page status from one
-                                        shared workspace.
+                                    <div>
+                                        <h3 className="text-xl font-medium tracking-tighter">
+                                            Manage every live page
+                                        </h3>
+                                        <div className="mt-1 max-w-sm text-sm leading-tight">
+                                            Track owners, versions, updates,
+                                            rollbacks, and page status from one
+                                            shared workspace.
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -416,7 +552,11 @@ export default function Welcome() {
                             </div>
                         </section>
 
-                        <footer className="mt-20 flex flex-col gap-5 border-t border-border py-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+                        <div className="mt-20">
+                            <MCPSetupPanel mcpUrl="https://koncat.co/mcp" />
+                        </div>
+
+                        <footer className="mt-3 flex flex-col gap-5 py-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
                             <Link
                                 href="/"
                                 className="flex items-center gap-2 font-[Koulen] text-2xl leading-none tracking-tight text-foreground"
