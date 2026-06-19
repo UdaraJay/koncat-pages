@@ -6,7 +6,9 @@ use App\Enums\TeamRole;
 use App\Enums\WorkspaceRole;
 use App\Models\Deployment;
 use App\Models\Project;
+use App\Models\ProjectAnalyticsEvent;
 use App\Models\ProjectFile;
+use App\Models\ProjectShare;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\UserApiToken;
@@ -76,6 +78,55 @@ class MatterpipePlatformTest extends TestCase
             ->actingAs($outsider)
             ->get(route('workspaces.show', [$team, $workspace]))
             ->assertForbidden();
+    }
+
+    public function test_workspace_project_payload_includes_project_view_analytics(): void
+    {
+        $user = User::factory()->create();
+        $viewer = User::factory()->create();
+        $team = $user->currentTeam;
+        $workspace = Workspace::factory()->create(['team_id' => $team->id]);
+        $workspace->members()->attach($user, ['role' => WorkspaceRole::Member->value]);
+        $project = Project::factory()->create([
+            'owner_type' => Team::class,
+            'owner_id' => $team->id,
+            'workspace_id' => $workspace->id,
+            'hosting_team_id' => $team->id,
+            'name' => 'Workspace Analytics App',
+            'slug' => 'workspace-analytics-app',
+        ]);
+
+        ProjectAnalyticsEvent::query()->create([
+            'project_id' => $project->id,
+            'user_id' => $user->id,
+            'event_type' => 'project.view',
+            'path' => '/',
+            'occurred_at' => now()->subDays(10),
+        ]);
+        ProjectAnalyticsEvent::query()->create([
+            'project_id' => $project->id,
+            'user_id' => $viewer->id,
+            'event_type' => 'project.view',
+            'path' => '/status',
+            'occurred_at' => now()->subDays(2),
+        ]);
+        ProjectShare::factory()->count(3)->create([
+            'project_id' => $project->id,
+            'shared_by' => $user->id,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('workspaces.show', [$team, $workspace]));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('workspaces/show')
+            ->has('projects', 1)
+            ->where('projects.0.name', 'Workspace Analytics App')
+            ->where('projects.0.analytics.viewsTotal', 2)
+            ->where('projects.0.sharesCount', 3),
+        );
     }
 
     public function test_workspace_member_can_create_project_with_team_scoped_path(): void
@@ -545,6 +596,98 @@ class MatterpipePlatformTest extends TestCase
             ->actingAs($outsider)
             ->get('http://private-team.localhost/private-app/')
             ->assertForbidden();
+    }
+
+    public function test_top_level_hosted_project_visit_records_project_view_event(): void
+    {
+        $owner = User::factory()->create();
+        $hostingDomain = config('matterpipe.hosting_domain');
+        $owner->personalTeam()->update(['subdomain' => 'analytics-team']);
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'created_by' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+            'slug' => 'analytics-app',
+        ]);
+        $deployment = $project->deployments()->create([
+            'user_id' => $owner->id,
+            'disk' => 'local',
+            'path' => 'deployments/analytics-app',
+            'file_count' => 1,
+            'total_bytes' => 12,
+            'deployed_at' => now(),
+        ]);
+        $project->update(['current_deployment_id' => $deployment->id]);
+
+        $this
+            ->actingAs($owner)
+            ->get("http://analytics-team.{$hostingDomain}/analytics-app/reports?range=week")
+            ->assertOk();
+
+        $this->assertDatabaseHas('project_analytics_events', [
+            'project_id' => $project->id,
+            'user_id' => $owner->id,
+            'deployment_id' => $deployment->id,
+            'event_type' => 'project.view',
+            'path' => '/reports',
+        ]);
+    }
+
+    public function test_raw_hosted_render_requests_do_not_record_project_view_events(): void
+    {
+        Storage::fake('local');
+
+        $owner = User::factory()->create();
+        $hostingDomain = config('matterpipe.hosting_domain');
+        $owner->personalTeam()->update(['subdomain' => 'raw-analytics-team']);
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'created_by' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+            'slug' => 'raw-analytics-app',
+        ]);
+        Storage::disk('local')->put('deployments/raw-analytics-app/index.html', 'raw');
+        $deployment = $project->deployments()->create([
+            'user_id' => $owner->id,
+            'disk' => 'local',
+            'path' => 'deployments/raw-analytics-app',
+            'file_count' => 1,
+            'total_bytes' => 3,
+            'deployed_at' => now(),
+        ]);
+        $project->update(['current_deployment_id' => $deployment->id]);
+
+        $response = $this
+            ->actingAs($owner)
+            ->get("http://raw-analytics-team.{$hostingDomain}/raw-analytics-app/__matterpipe/render/index.html")
+            ->assertOk();
+
+        $this->assertSame('raw', $response->streamedContent());
+        $this->assertDatabaseCount('project_analytics_events', 0);
+    }
+
+    public function test_unauthorized_hosted_project_access_does_not_record_project_view_event(): void
+    {
+        $owner = User::factory()->create();
+        $outsider = User::factory()->create();
+        $hostingDomain = config('matterpipe.hosting_domain');
+        $owner->personalTeam()->update(['subdomain' => 'private-analytics-team']);
+        Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'created_by' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+            'slug' => 'private-analytics-app',
+        ]);
+
+        $this
+            ->actingAs($outsider)
+            ->get("http://private-analytics-team.{$hostingDomain}/private-analytics-app/")
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('project_analytics_events', 0);
     }
 
     public function test_hosted_project_guests_are_redirected_to_primary_domain_login(): void

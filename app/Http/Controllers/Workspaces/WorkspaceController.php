@@ -12,6 +12,7 @@ use App\Models\Workspace;
 use App\Models\WorkspaceMembership;
 use App\Services\MatterpipeLimitResolver;
 use App\Services\MatterpipeQuota;
+use App\Services\ProjectAnalytics;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -71,10 +72,16 @@ class WorkspaceController extends Controller
         return to_route('workspaces.show', [$current_team, $workspace]);
     }
 
-    public function show(Request $request, Team $current_team, Workspace $workspace, MatterpipeLimitResolver $limits): Response
+    public function show(Request $request, Team $current_team, Workspace $workspace, MatterpipeLimitResolver $limits, ProjectAnalytics $analytics): Response
     {
         $user = $request->user();
         $this->authorizeWorkspaceView($user, $current_team, $workspace);
+        $projects = $workspace->projects()
+            ->with(['currentDeployment', 'hostingTeam'])
+            ->withCount(['deployments', 'shares'])
+            ->orderBy('name')
+            ->get();
+        $projectAnalytics = $analytics->viewSummaries($projects);
 
         return Inertia::render('workspaces/show', [
             'workspace' => $this->workspacePayload($workspace, $user),
@@ -91,11 +98,7 @@ class WorkspaceController extends Controller
                     'role_label' => $membership->role->label(),
                 ];
             }),
-            'projects' => $workspace->projects()
-                ->with(['currentDeployment', 'hostingTeam'])
-                ->withCount('deployments')
-                ->orderBy('name')
-                ->get()
+            'projects' => $projects
                 ->map(fn ($project) => [
                     'id' => $project->id,
                     'name' => $project->name,
@@ -116,6 +119,8 @@ class WorkspaceController extends Controller
                         'slug' => $workspace->slug,
                     ],
                     'deploymentsCount' => $project->deployments_count,
+                    'sharesCount' => $project->shares_count,
+                    'analytics' => $projectAnalytics[$project->id] ?? $analytics->emptySummary(),
                     'currentDeployment' => $project->currentDeployment ? [
                         'id' => $project->currentDeployment->id,
                         'fileCount' => $project->currentDeployment->file_count,

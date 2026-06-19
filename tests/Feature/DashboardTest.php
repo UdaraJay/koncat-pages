@@ -6,6 +6,7 @@ use App\Enums\ProjectSharePermission;
 use App\Enums\TeamRole;
 use App\Enums\WorkspaceRole;
 use App\Models\Project;
+use App\Models\ProjectAnalyticsEvent;
 use App\Models\ProjectShare;
 use App\Models\Team;
 use App\Models\TeamInvitation;
@@ -69,6 +70,60 @@ class DashboardTest extends TestCase
             ->where('projects.0.name', 'Preview App')
             ->where('projects.0.url', 'http://preview-team.localhost/preview-app')
             ->where('projects.0.previewUrl', 'http://preview-team.localhost/preview-app/__matterpipe/render/index.html'),
+        );
+    }
+
+    public function test_dashboard_project_cards_include_project_view_analytics()
+    {
+        $owner = User::factory()->create();
+        $viewer = User::factory()->create();
+        $owner->personalTeam()->update(['subdomain' => 'analytics-dashboard-team']);
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'created_by' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+            'name' => 'Analytics App',
+            'slug' => 'analytics-dashboard-app',
+        ]);
+
+        ProjectAnalyticsEvent::query()->create([
+            'project_id' => $project->id,
+            'user_id' => $owner->id,
+            'event_type' => 'project.view',
+            'path' => '/',
+            'occurred_at' => now()->subDays(8),
+        ]);
+        ProjectAnalyticsEvent::query()->create([
+            'project_id' => $project->id,
+            'user_id' => $owner->id,
+            'event_type' => 'project.view',
+            'path' => '/reports',
+            'occurred_at' => now()->subDay(),
+        ]);
+        ProjectAnalyticsEvent::query()->create([
+            'project_id' => $project->id,
+            'user_id' => $viewer->id,
+            'event_type' => 'project.view',
+            'path' => '/reports',
+            'occurred_at' => now(),
+        ]);
+        ProjectShare::factory()->count(2)->create([
+            'project_id' => $project->id,
+            'shared_by' => $owner->id,
+        ]);
+
+        $response = $this
+            ->actingAs($owner)
+            ->get(route('dashboard'));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->has('projects', 1)
+            ->where('projects.0.name', 'Analytics App')
+            ->where('projects.0.analytics.viewsTotal', 3)
+            ->where('projects.0.sharesCount', 2),
         );
     }
 

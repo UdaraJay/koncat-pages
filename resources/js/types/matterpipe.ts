@@ -56,6 +56,13 @@ export type Project = {
         slug?: string;
     } | null;
     deploymentsCount: number;
+    sharesCount?: number;
+    analytics?: {
+        viewsTotal: number;
+        uniqueViewersTotal: number;
+        viewsLast7Days: number;
+        lastViewedAt?: string | null;
+    };
     canUpdate?: boolean;
     canDeploy?: boolean;
     canUnpublish?: boolean;

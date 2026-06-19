@@ -1,6 +1,7 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import {
     ArrowUpRight,
+    Eye,
     FileArchive,
     FolderPlus,
     MoreHorizontal,
@@ -635,6 +636,8 @@ function ProjectTile({
                             : 'Not deployed'}
                     </div>
 
+                    <ProjectCardStats project={project} />
+
                     <div className="flex flex-wrap items-center gap-2">
                         <Button variant="outline" size="sm" asChild>
                             <a
@@ -650,6 +653,29 @@ function ProjectTile({
                 </div>
             </article>
         </>
+    );
+}
+
+function ProjectCardStats({ project }: { project: Project }) {
+    const viewsTotal = project.analytics?.viewsTotal ?? 0;
+
+    return (
+        <div className="grid gap-1 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+                <Eye className="h-3.5 w-3.5" />
+                <span>
+                    {viewsTotal.toLocaleString()}{' '}
+                    {viewsTotal === 1 ? 'view' : 'views'}
+                </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5" />
+                <span>
+                    Shared with {(project.sharesCount ?? 0).toLocaleString()}{' '}
+                    {(project.sharesCount ?? 0) === 1 ? 'person' : 'people'}
+                </span>
+            </div>
+        </div>
     );
 }
 

@@ -36,6 +36,7 @@ use LogicException;
  * @property-read Deployment|null $currentDeployment
  * @property-read Collection<int, Deployment> $deployments
  * @property-read Collection<int, ProjectShare> $shares
+ * @property-read Collection<int, ProjectAnalyticsEvent> $analyticsEvents
  */
 #[Fillable(['owner_type', 'owner_id', 'workspace_id', 'hosting_team_id', 'created_by', 'current_deployment_id', 'name', 'slug', 'description'])]
 class Project extends Model
@@ -156,6 +157,14 @@ class Project extends Model
     public function shares(): HasMany
     {
         return $this->hasMany(ProjectShare::class);
+    }
+
+    /**
+     * @return HasMany<ProjectAnalyticsEvent, $this>
+     */
+    public function analyticsEvents(): HasMany
+    {
+        return $this->hasMany(ProjectAnalyticsEvent::class);
     }
 
     /**

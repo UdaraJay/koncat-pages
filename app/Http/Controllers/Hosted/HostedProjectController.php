@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Hosted;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Services\ProjectAnalytics;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -11,7 +12,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class HostedProjectController extends Controller
 {
-    public function __invoke(Request $request, string $team, string $project, ?string $path = null): View
+    public function __invoke(Request $request, ProjectAnalytics $analytics, string $team, string $project, ?string $path = null): View
     {
         $hostedProject = $this->resolveProject($request, $team, $project);
 
@@ -38,6 +39,10 @@ class HostedProjectController extends Controller
             config('matterpipe.hosting_domain'),
         ), '/');
         $user = $request->user();
+
+        if ($user) {
+            $analytics->recordProjectView($hostedProject, $user, $path === '' ? '/' : '/'.$path);
+        }
 
         return view('hosted.frame', [
             'dashboardUrl' => "{$mainAppUrl}/home",

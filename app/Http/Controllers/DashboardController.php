@@ -10,6 +10,7 @@ use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Services\ProjectAnalytics;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -19,7 +20,7 @@ class DashboardController extends Controller
 {
     use BuildsProjectMoveTargets;
 
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request, ProjectAnalytics $analytics): Response
     {
         $user = $request->user();
         $currentTeam = $user->currentTeam;
@@ -54,9 +55,9 @@ class DashboardController extends Controller
                 ])
             : collect();
 
-        $projects = Project::query()
+        $projectModels = Project::query()
             ->with(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment', 'shares.user', 'shares.sharer'])
-            ->withCount('deployments')
+            ->withCount(['deployments', 'shares'])
             ->when($currentTeam->is_personal, function ($query) use ($user) {
                 $query
                     ->where('owner_type', User::class)
@@ -74,13 +75,15 @@ class DashboardController extends Controller
                     });
             })
             ->tap(fn ($query) => $this->applyProjectFilters($query, $status, $sort))
-            ->get()
-            ->map(fn (Project $project) => $this->projectPayload($project, $user));
+            ->get();
+        $projectAnalytics = $analytics->viewSummaries($projectModels);
+        $projects = $projectModels
+            ->map(fn (Project $project) => $this->projectPayload($project, $user, $projectAnalytics[$project->id] ?? $analytics->emptySummary()));
 
-        $sharedProjects = $currentTeam->is_personal
+        $sharedProjectModels = $currentTeam->is_personal
             ? Project::query()
                 ->with(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment', 'shares.user', 'shares.sharer'])
-                ->withCount('deployments')
+                ->withCount(['deployments', 'shares'])
                 ->whereHas('shares', fn ($shares) => $shares
                     ->where(fn ($query) => $query
                         ->where('user_id', $user->id)
@@ -88,8 +91,10 @@ class DashboardController extends Controller
                 ->tap(fn ($query) => $this->applyProjectFilters($query, $status, $sort))
                 ->get()
                 ->reject(fn (Project $project) => $user->canAccessProjectInherited($project))
-                ->map(fn (Project $project) => $this->projectPayload($project, $user))
             : collect();
+        $sharedProjectAnalytics = $analytics->viewSummaries($sharedProjectModels);
+        $sharedProjects = $sharedProjectModels
+            ->map(fn (Project $project) => $this->projectPayload($project, $user, $sharedProjectAnalytics[$project->id] ?? $analytics->emptySummary()));
 
         return Inertia::render('dashboard', [
             'pendingInvitations' => $pendingInvitations,
@@ -180,7 +185,7 @@ class DashboardController extends Controller
     /**
      * @return array<string, mixed>
      */
-    protected function projectPayload(Project $project, User $user): array
+    protected function projectPayload(Project $project, User $user, array $analytics): array
     {
         $team = $project->workspace?->team;
 
@@ -208,6 +213,8 @@ class DashboardController extends Controller
                 'slug' => $project->workspace->slug,
             ] : null,
             'deploymentsCount' => $project->deployments_count,
+            'sharesCount' => $project->shares_count,
+            'analytics' => $analytics,
             'canUpdate' => $user->canUpdateProject($project) && ! $project->trashed(),
             'canDeploy' => $user->canDeployProject($project),
             'canUnpublish' => $project->current_deployment_id !== null && $user->canDeployProject($project) && ! $project->trashed(),
