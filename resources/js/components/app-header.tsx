@@ -28,7 +28,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     return (
         <>
             <div className="bg-yellow-100 p-2 px-6 text-sm text-yellow-800">
-                Koncat is in early-access. Do not use in production.
+                Koncat is in early-access. Some features may be limited.
             </div>
             <header className="sticky top-0 z-40 flex h-14 w-full items-center bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
                 <div className="flex min-w-0 flex-1 items-center gap-2">

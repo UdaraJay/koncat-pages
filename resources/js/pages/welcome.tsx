@@ -79,12 +79,21 @@ export default function Welcome() {
                                     <ChevronRight className="size-5" />
                                 </Link>
                             ) : (
-                                <Link
-                                    href={login()}
-                                    className="inline-flex items-center gap-1 rounded-full bg-muted px-4 py-2 text-sm leading-normal font-semibold tracking-tight text-foreground sm:px-5 sm:text-base"
-                                >
-                                    Log in
-                                </Link>
+                                <div className="flex gap-1">
+                                    <Link
+                                        href={login()}
+                                        className="inline-flex items-center gap-1 rounded-full px-4 py-2 text-sm leading-normal font-semibold tracking-tight text-foreground hover:bg-muted sm:px-5 sm:text-base"
+                                    >
+                                        Log in
+                                    </Link>
+                                    <Link
+                                        href={login()}
+                                        className="inline-flex items-center gap-1 rounded-full bg-muted px-4 py-2 text-sm leading-normal font-semibold tracking-tight text-foreground sm:px-5 sm:text-base"
+                                    >
+                                        Start for free{' '}
+                                        <ChevronRight className="size-5" />
+                                    </Link>
+                                </div>
                             )}
                         </div>
                     </nav>

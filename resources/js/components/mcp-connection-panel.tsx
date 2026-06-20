@@ -1,8 +1,18 @@
 import { Check, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { useClipboard } from '@/hooks/use-clipboard';
-import { ClaudeIcon, CursorIcon, VSCodeIcon } from '@/icons';
+import { ChatGPTIcon, ClaudeIcon, CursorIcon, VSCodeIcon } from '@/icons';
 import { cn } from '@/lib/utils';
 
 export function MCPConnectionPanel({
@@ -85,6 +95,60 @@ export function MCPConnectionPanel({
                             Connect to Claude
                         </a>
                     </Button>
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="max-w-full whitespace-normal"
+                            >
+                                <ChatGPTIcon className="size-4" />
+                                Connect to ChatGPT
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>
+                                    Connect Koncat to ChatGPT
+                                </DialogTitle>
+                                <DialogDescription>
+                                    ChatGPT does not support one-click MCP
+                                    installation yet. Enable developer mode in
+                                    ChatGPT's Apps settings, then add this MCP
+                                    URL and log in to connect.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <div className="space-y-3">
+                                <div className="rounded-md border bg-muted/40 p-3 font-mono text-sm break-all">
+                                    {mcpUrl}
+                                </div>
+
+                                <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+                                    <li>Open ChatGPT settings.</li>
+                                    <li>Under Apps, enable developer mode.</li>
+                                    <li>
+                                        Add the MCP URL above, then log in when
+                                        prompted.
+                                    </li>
+                                </ol>
+                            </div>
+
+                            <DialogFooter className="gap-2">
+                                <DialogClose asChild>
+                                    <Button variant="outline">Close</Button>
+                                </DialogClose>
+                                <Button onClick={copyMcpUrl}>
+                                    {mcpUrlCopied ? (
+                                        <Check className="size-4" />
+                                    ) : (
+                                        <Copy className="size-4" />
+                                    )}
+                                    {mcpUrlCopied ? 'Copied' : 'Copy MCP URL'}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                     <Button
                         asChild
                         variant="outline"

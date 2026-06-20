@@ -50,3 +50,4 @@ export * from './img/LogoAnimated';
 export * from './img/ClaudeIcon';
 export * from './img/CursorIcon';
 export * from './img/VSCodeIcon';
+export * from './img/ChatGPTIcon';

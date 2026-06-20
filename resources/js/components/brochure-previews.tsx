@@ -626,72 +626,57 @@ function FormPreview() {
 
 function WeddingPreview() {
     return (
-        <div className="absolute inset-0 overflow-hidden bg-background text-foreground">
-            <div className="grid h-full grid-cols-[0.98fr_1.02fr] bg-muted p-6 pb-18 sm:p-8 sm:pb-18">
-                <main className="flex min-w-0 flex-col justify-between pr-6">
-                    <nav className="flex items-center justify-between gap-5 text-sm font-medium text-muted-foreground">
+        <div className="absolute inset-0 overflow-hidden bg-[#f7f1ec] text-[#2d2421]">
+            <div className="grid h-full grid-cols-[0.92fr_1.08fr] p-7 pb-18 sm:p-9 sm:pb-18">
+                <main className="flex min-w-0 flex-col justify-between pr-8">
+                    <nav className="flex items-center justify-between gap-5 text-xs font-medium tracking-[0.22em] text-[#9a716b] uppercase">
                         <span>Maya & Theo</span>
-                        <div className="flex gap-4">
-                            <span>Story</span>
-                            <span>Weekend</span>
-                            <span>RSVP</span>
-                        </div>
+                        <span>Hudson Valley</span>
                     </nav>
 
                     <section>
-                        <div className="font-medium tracking-tight text-pink-600">
+                        <div className="font-[Porpora] text-xl text-[#a85f68] italic">
                             September 21, 2026
                         </div>
-                        <h2 className="mt-3 max-w-md text-6xl leading-[0.86] font-medium tracking-tight">
-                            Maya & Theo
+                        <h2 className="mt-5 max-w-md font-[Porpora] text-7xl leading-[0.82] font-normal tracking-tight">
+                            Maya
+                            <br />& Theo
                         </h2>
-                        <div className="mt-5 max-w-sm text-lg leading-snug font-medium tracking-tight text-foreground">
+                        <div className="mt-6 max-w-sm text-lg leading-snug font-medium tracking-tight">
                             Willow House, Hudson Valley
                         </div>
-                        <div className="mt-3 max-w-sm text-sm leading-snug font-medium text-muted-foreground">
+                        <div className="mt-3 max-w-sm text-sm leading-snug font-medium text-[#7b625c]">
                             Dinner under the trees, late-summer music, and buses
                             back after the last dance.
                         </div>
                     </section>
 
                     <div>
-                        <div className="mb-3 flex items-center justify-between text-xs font-medium text-muted-foreground">
-                            <span>Weekend schedule</span>
-                            <span>koncat.co/maya-theo</span>
+                        <div className="mb-3 flex items-center justify-between border-b border-[#d9c9c0] pb-2 text-xs font-medium tracking-[0.18em] text-[#9a716b] uppercase">
+                            <span>Weekend</span>
+                            <span>RSVP by August 20</span>
                         </div>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-0">
                             {[
                                 ['Fri', 'Welcome drinks', '7:00 PM'],
                                 ['Sat', 'Ceremony', '5:30 PM'],
                                 ['Sun', 'Farewell brunch', '10:30 AM'],
                             ].map(([day, title, time], index) => (
                                 <div
-                                    className={`rounded-md p-3 ${
+                                    className={`grid grid-cols-[2.5rem_1fr_auto] items-baseline gap-4 border-b border-[#e5d8d0] py-3 ${
                                         index === 1
-                                            ? 'bg-pink-600 text-background'
-                                            : 'bg-background/80'
+                                            ? 'text-[#a85f68]'
+                                            : 'text-[#2d2421]'
                                     }`}
                                     key={day}
                                 >
-                                    <div
-                                        className={`text-xs font-medium ${
-                                            index === 1
-                                                ? 'text-background/80'
-                                                : 'text-pink-600'
-                                        }`}
-                                    >
+                                    <div className="text-xs font-medium tracking-[0.16em] uppercase">
                                         {day}
                                     </div>
-                                    <div className="mt-1 text-sm leading-tight font-medium">
+                                    <div className="font-[Porpora] text-lg leading-tight">
                                         {title}
                                     </div>
-                                    <div
-                                        className={`mt-2 text-xs ${
-                                            index === 1
-                                                ? 'text-background/75'
-                                                : 'text-muted-foreground'
-                                        }`}
-                                    >
+                                    <div className="text-xs font-medium text-[#7b625c]">
                                         {time}
                                     </div>
                                 </div>
@@ -700,43 +685,40 @@ function WeddingPreview() {
                     </div>
                 </main>
 
-                <aside className="relative min-w-0 overflow-hidden rounded-md bg-background">
-                    <img
-                        className="h-full w-full object-cover"
-                        src="/assets/wedding.png"
-                        alt=""
-                        aria-hidden="true"
-                    />
-                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-foreground/55 to-transparent" />
+                <aside className="relative min-w-0 bg-[#fffaf6] p-3 shadow-sm shadow-[#7b625c]/10">
+                    <div className="relative h-full overflow-hidden">
+                        <img
+                            className="h-full w-full object-cover"
+                            src="/assets/wedding.png"
+                            alt=""
+                            aria-hidden="true"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#2d2421]/55 to-transparent" />
 
-                    <div className="absolute top-4 right-4 rounded-md bg-background/90 p-3 backdrop-blur-sm">
-                        <div className="flex items-center justify-between gap-4">
-                            <div>
-                                <div className="text-sm font-medium">
-                                    Your RSVP
-                                </div>
-                                <div className="mt-1 text-xs text-muted-foreground">
-                                    2 attending
-                                </div>
+                        <div className="absolute top-4 left-4 bg-[#fffaf6]/92 px-4 py-3 text-[#2d2421] backdrop-blur-sm">
+                            <div className="font-[Porpora] text-lg leading-none">
+                                Willow House
                             </div>
-                            <div className="grid size-8 place-items-center rounded-full bg-pink-600/20 text-xs font-medium text-pink-600">
-                                2
+                            <div className="mt-1 text-xs font-medium text-[#7b625c]">
+                                Garden ceremony at 5:30 PM
                             </div>
                         </div>
-                    </div>
 
-                    <div className="absolute right-4 bottom-4 left-4 rounded-md bg-background/92 p-4 backdrop-blur-sm">
-                        <div className="flex items-end justify-between gap-4">
-                            <div>
-                                <div className="text-sm font-medium">
-                                    Willow House
+                        <div className="absolute right-4 bottom-4 left-4 bg-[#fffaf6]/92 p-4 backdrop-blur-sm">
+                            <div className="flex items-end justify-between gap-4">
+                                <div>
+                                    <div className="text-xs font-medium tracking-[0.16em] text-[#9a716b] uppercase">
+                                        Your reply
+                                    </div>
+                                    <div className="mt-1 font-[Porpora] text-xl leading-tight">
+                                        Two seats saved
+                                    </div>
                                 </div>
-                                <div className="mt-1 text-xs text-muted-foreground">
-                                    Shuttle pickup at Beacon Grand, 4:45 PM
+                                <div className="text-right text-xs leading-tight font-medium text-[#7b625c]">
+                                    chicken
+                                    <br />
+                                    vegetarian
                                 </div>
-                            </div>
-                            <div className="rounded-sm bg-pink-600 px-3 py-1.5 text-xs font-medium text-background">
-                                Update reply
                             </div>
                         </div>
                     </div>
