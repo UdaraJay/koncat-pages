@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Deployment;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\DeploymentSecurity\DeploymentScanFile;
+use App\Services\DeploymentSecurity\DeploymentSecurityScanService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -14,8 +16,10 @@ use ZipArchive;
 
 class DeploymentPublisher
 {
-    public function __construct(protected MatterpipeQuota $quota)
-    {
+    public function __construct(
+        protected MatterpipeQuota $quota,
+        protected DeploymentSecurityScanService $securityScans,
+    ) {
         //
     }
 
@@ -65,25 +69,30 @@ class DeploymentPublisher
             throw ValidationException::withMessages(['archive' => 'The deployment archive could not be opened.']);
         }
 
-        [$manifest, $totalBytes, $fileCount, $hasIndex] = $this->inspect($zip);
+        try {
+            [$manifest, $totalBytes, $fileCount, $hasIndex] = $this->inspect($zip);
 
-        if (! $hasIndex) {
+            if (! $hasIndex) {
+                throw ValidationException::withMessages(['archive' => 'The deployment archive must include an index.html file.']);
+            }
+
+            foreach ($manifest as $file) {
+                $this->quota->ensureDeploymentFileWithinLimit($project, $file['size']);
+            }
+
+            $this->quota->ensureDeploymentWithinLimits($project, $totalBytes, $fileCount);
+            $deploymentFiles = $this->deploymentFiles($zip, $manifest);
+        } finally {
             $zip->close();
-
-            throw ValidationException::withMessages(['archive' => 'The deployment archive must include an index.html file.']);
         }
 
-        foreach ($manifest as $file) {
-            $this->quota->ensureDeploymentFileWithinLimit($project, $file['size']);
-        }
-
-        $this->quota->ensureDeploymentWithinLimits($project, $totalBytes, $fileCount);
+        $scan = $this->securityScans->scanOrFail($project, $deploymentFiles, $user);
 
         $disk = (string) config('matterpipe.storage_disk');
 
         $projectScope = $project->workspace_id ?? $project->owner_id;
 
-        return DB::transaction(function () use ($project, $archive, $user, $zip, $manifest, $totalBytes, $fileCount, $disk, $projectScope) {
+        return DB::transaction(function () use ($project, $archive, $user, $manifest, $totalBytes, $fileCount, $disk, $projectScope, $deploymentFiles, $scan) {
             $deployment = Deployment::create([
                 'project_id' => $project->id,
                 'user_id' => $user?->id,
@@ -99,22 +108,15 @@ class DeploymentPublisher
             $deploymentPath = "deployments/{$projectScope}/{$project->id}/{$deployment->id}";
             $storage = Storage::disk($disk);
 
-            foreach ($manifest as $file) {
-                $contents = $zip->getFromName($file['path']);
-
-                if ($contents === false) {
-                    throw ValidationException::withMessages(['archive' => "Unable to read {$file['path']} from the archive."]);
-                }
-
-                $storage->put("{$deploymentPath}/{$file['path']}", $contents);
+            foreach ($deploymentFiles as $file) {
+                $storage->put("{$deploymentPath}/{$file->path}", $file->contents);
             }
 
-            $zip->close();
-
             $deployment->update(['path' => $deploymentPath]);
+            $this->securityScans->attachDeployment($scan, $deployment);
             $project->update(['current_deployment_id' => $deployment->id]);
 
-            return $deployment;
+            return $deployment->load('securityScan');
         });
     }
 
@@ -165,6 +167,31 @@ class DeploymentPublisher
         }
 
         return [$manifest, $totalBytes, count($manifest), $hasIndex];
+    }
+
+    /**
+     * @param  array<int, array{path: string, size: int}>  $manifest
+     * @return array<int, DeploymentScanFile>
+     */
+    protected function deploymentFiles(ZipArchive $zip, array $manifest): array
+    {
+        $files = [];
+
+        foreach ($manifest as $file) {
+            $contents = $zip->getFromName($file['path']);
+
+            if ($contents === false) {
+                throw ValidationException::withMessages(['archive' => "Unable to read {$file['path']} from the archive."]);
+            }
+
+            $files[] = new DeploymentScanFile(
+                path: $file['path'],
+                contents: $contents,
+                size: $file['size'],
+            );
+        }
+
+        return $files;
     }
 
     protected function isUnsafePath(string $path, string $normalized): bool

@@ -78,7 +78,7 @@ class WorkspaceController extends Controller
         $user = $request->user();
         $this->authorizeWorkspaceView($user, $current_team, $workspace);
         $projects = $workspace->projects()
-            ->with(['currentDeployment', 'hostingTeam', 'shares.user'])
+            ->with(['currentDeployment.securityScan', 'hostingTeam', 'shares.user'])
             ->withCount(['deployments', 'shares'])
             ->orderBy('name')
             ->get();
@@ -134,6 +134,7 @@ class WorkspaceController extends Controller
                             'fileCount' => $project->currentDeployment->file_count,
                             'totalBytes' => $project->currentDeployment->total_bytes,
                             'deployedAt' => $project->currentDeployment->deployed_at->toISOString(),
+                            'securityScan' => $project->currentDeployment->securityScanSummary(),
                         ] : null,
                     ];
                 }),

@@ -56,7 +56,7 @@ class DashboardController extends Controller
             : collect();
 
         $projectModels = Project::query()
-            ->with(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment', 'shares.user', 'shares.sharer'])
+            ->with(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment.securityScan', 'shares.user', 'shares.sharer'])
             ->withCount(['deployments', 'shares'])
             ->when($currentTeam->is_personal, function ($query) use ($user) {
                 $query
@@ -82,7 +82,7 @@ class DashboardController extends Controller
 
         $sharedProjectModels = $currentTeam->is_personal
             ? Project::query()
-                ->with(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment', 'shares.user', 'shares.sharer'])
+                ->with(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment.securityScan', 'shares.user', 'shares.sharer'])
                 ->withCount(['deployments', 'shares'])
                 ->whereHas('shares', fn ($shares) => $shares
                     ->where(fn ($query) => $query
@@ -113,6 +113,9 @@ class DashboardController extends Controller
         ]);
     }
 
+    /**
+     * @param  Builder<Project>  $query
+     */
     protected function applyProjectFilters(Builder $query, string $status, string $sort): void
     {
         $query
@@ -123,6 +126,9 @@ class DashboardController extends Controller
             ->when($sort === 'name_asc', fn ($query) => $query->orderByRaw('LOWER(name)'));
     }
 
+    /**
+     * @return array<int, string>
+     */
     protected function accessibleWorkspaceIds(Team $team, User $user): array
     {
         return Workspace::query()

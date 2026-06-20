@@ -22,8 +22,8 @@ use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsIdempotent;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
-#[Name('fetch-project')]
-#[Title('Fetch Project')]
+#[Name('fetch')]
+#[Title('Fetch')]
 #[Description('Fetch a hosted project by URL and return its current deployment files for inspection or updates.')]
 #[IsReadOnly]
 #[IsIdempotent]
@@ -48,7 +48,7 @@ class FetchProjectTool extends Tool
         [$team, $slug] = HostedProjectUrl::parse($validated['url']);
 
         $project = Project::query()
-            ->with(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment'])
+            ->with(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment.securityScan'])
             ->whereHas('hostingTeam', fn ($query) => $query->where('subdomain', $team))
             ->where('slug', $slug)
             ->first();
@@ -84,6 +84,7 @@ class FetchProjectTool extends Tool
                 'fileCount' => $deployment->file_count,
                 'totalBytes' => $deployment->total_bytes,
                 'deployedAt' => $deployment->deployed_at->toISOString(),
+                'securityScan' => $deployment->securityScanSummary(),
             ],
             'files' => $this->deploymentFiles($deployment),
         ]);
@@ -98,7 +99,7 @@ class FetchProjectTool extends Tool
     {
         return [
             'url' => $schema->string()
-                ->description('Hosted project URL. Missing schemes are accepted, such as team.example.com/project.')
+                ->description('Hosted or render project URL. Missing schemes are accepted, such as team.example.com/project.')
                 ->max(2048)
                 ->required(),
         ];
@@ -124,6 +125,13 @@ class FetchProjectTool extends Tool
                 'fileCount' => $schema->integer()->required(),
                 'totalBytes' => $schema->integer()->required(),
                 'deployedAt' => $schema->string()->required(),
+                'securityScan' => $schema->object([
+                    'status' => $schema->string()->required(),
+                    'highestSeverity' => $schema->string(),
+                    'riskScore' => $schema->integer()->required(),
+                    'findingsCount' => $schema->integer()->required(),
+                    'scannedAt' => $schema->string(),
+                ]),
             ])->required(),
             'files' => $schema->array()
                 ->items($schema->object([

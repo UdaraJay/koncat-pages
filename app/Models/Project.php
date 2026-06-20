@@ -35,6 +35,7 @@ use LogicException;
  * @property-read User|null $creator
  * @property-read Deployment|null $currentDeployment
  * @property-read Collection<int, Deployment> $deployments
+ * @property-read Collection<int, DeploymentSecurityScan> $securityScans
  * @property-read Collection<int, ProjectShare> $shares
  * @property-read Collection<int, ProjectAnalyticsEvent> $analyticsEvents
  */
@@ -149,6 +150,14 @@ class Project extends Model
     public function deployments(): HasMany
     {
         return $this->hasMany(Deployment::class);
+    }
+
+    /**
+     * @return HasMany<DeploymentSecurityScan, $this>
+     */
+    public function securityScans(): HasMany
+    {
+        return $this->hasMany(DeploymentSecurityScan::class);
     }
 
     /**

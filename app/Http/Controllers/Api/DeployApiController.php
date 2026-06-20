@@ -42,6 +42,7 @@ class DeployApiController extends Controller
                 'fileCount' => $deployment->file_count,
                 'totalBytes' => $deployment->total_bytes,
                 'deployedAt' => $deployment->deployed_at->toISOString(),
+                'securityScan' => $deployment->securityScanSummary(),
             ],
             'project' => [
                 'id' => $project->id,

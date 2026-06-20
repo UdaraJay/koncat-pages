@@ -39,11 +39,14 @@ class HostedProjectUrl
 
         $domain = collect([$hostingDomain, $renderDomain])
             ->filter()
+            ->sortByDesc(fn (string $domain): int => strlen($domain))
             ->first(fn (string $domain): bool => str_ends_with($host, '.'.$domain));
 
         if (! is_string($domain)) {
             throw ValidationException::withMessages([
-                'url' => "The hosted project URL must use the {$hostingDomain} domain.",
+                'url' => $renderDomain !== '' && $renderDomain !== $hostingDomain
+                    ? "The hosted project URL must use the {$hostingDomain} or {$renderDomain} domain."
+                    : "The hosted project URL must use the {$hostingDomain} domain.",
             ]);
         }
 

@@ -11,7 +11,7 @@ use Laravel\Mcp\Server\Attributes\Version;
 
 #[Name('MCP Server')]
 #[Version('0.1.0')]
-#[Instructions('Use fetch-project to read an existing hosted project by URL before making changes. Use deploy-project without a url to create and publish a new personal static project. Use deploy-project with an existing hosted project url to update that project by publishing a full replacement file set.')]
+#[Instructions('Use fetch to read an existing hosted project by URL before making changes. Use publish without a url to create and publish a new personal static project. Use publish with an existing hosted or render project url to update that project by publishing a full replacement file set.')]
 class MCPServer extends Server
 {
     protected array $tools = [

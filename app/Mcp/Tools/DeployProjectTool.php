@@ -10,7 +10,6 @@ use App\Services\MatterpipeQuota;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -22,8 +21,8 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Attributes\Title;
 use Laravel\Mcp\Server\Tool;
 
-#[Name('deploy-project')]
-#[Title('Deploy Project')]
+#[Name('publish')]
+#[Title('Publish')]
 #[Description('Create a new hosted static project or update an existing hosted project by URL, publish the provided files, and return the hosted URL.')]
 class DeployProjectTool extends Tool
 {
@@ -52,13 +51,9 @@ class DeployProjectTool extends Tool
         $validated = $this->validate($request->all(), $user);
         $files = $this->normalizeFiles($validated['files']);
 
-        $result = DB::transaction(function () use ($user, $validated, $files): array {
-            if (! empty($validated['url'])) {
-                return $this->updateProject($user, $validated, $files);
-            }
-
-            return $this->createProject($user, $validated, $files);
-        });
+        $result = ! empty($validated['url'])
+            ? $this->updateProject($user, $validated, $files)
+            : $this->createProject($user, $validated, $files);
 
         return Response::structured($result);
     }
@@ -72,7 +67,7 @@ class DeployProjectTool extends Tool
     {
         return [
             'url' => $schema->string()
-                ->description('Existing hosted project URL to update. Missing schemes, ports, query strings, fragments, and hosted render paths are accepted. Omit this to create a new personal project.')
+                ->description('Existing hosted or render project URL to update. Missing schemes, ports, query strings, fragments, and asset paths are accepted. Omit this to create a new personal project.')
                 ->max(2048),
             'name' => $schema->string()
                 ->description('The project name. Required when creating a new project. Optional when updating; when provided, the project name is updated.')
@@ -118,6 +113,13 @@ class DeployProjectTool extends Tool
                 'fileCount' => $schema->integer()->required(),
                 'totalBytes' => $schema->integer()->required(),
                 'deployedAt' => $schema->string()->required(),
+                'securityScan' => $schema->object([
+                    'status' => $schema->string()->required(),
+                    'highestSeverity' => $schema->string(),
+                    'riskScore' => $schema->integer()->required(),
+                    'findingsCount' => $schema->integer()->required(),
+                    'scannedAt' => $schema->string(),
+                ]),
             ])->required(),
         ];
     }
@@ -133,6 +135,16 @@ class DeployProjectTool extends Tool
         $hostingTeamId = $user->personalTeam()?->id;
         $deploymentFileLimit = $this->deploymentLimit('deployment_file_bytes');
         $deploymentFilesLimit = $this->deploymentLimit('deployment_files');
+        $filesRules = ['required', 'array', 'min:1'];
+        $contentRules = ['nullable', 'string'];
+
+        if ($deploymentFilesLimit > 0) {
+            $filesRules[] = 'max:'.$deploymentFilesLimit;
+        }
+
+        if ($deploymentFileLimit > 0) {
+            $contentRules[] = 'max:'.$deploymentFileLimit;
+        }
 
         $validator = Validator::make($arguments, [
             'url' => ['nullable', 'string', 'max:2048'],
@@ -145,10 +157,10 @@ class DeployProjectTool extends Tool
                 Rule::unique('projects', 'slug')->where('hosting_team_id', $hostingTeamId),
             ],
             'description' => ['nullable', 'string', 'max:2000'],
-            'files' => array_values(array_filter(['required', 'array', 'min:1', $deploymentFilesLimit > 0 ? 'max:'.$deploymentFilesLimit : null])),
+            'files' => $filesRules,
             'files.*' => ['required', 'array'],
             'files.*.path' => ['required', 'string', 'max:512'],
-            'files.*.content' => array_values(array_filter(['nullable', 'string', $deploymentFileLimit > 0 ? 'max:'.$deploymentFileLimit : null])),
+            'files.*.content' => $contentRules,
             'files.*.base64' => ['nullable', 'string'],
         ], [
             'files.required' => 'Provide at least one file to deploy.',
@@ -248,17 +260,31 @@ class DeployProjectTool extends Tool
     {
         $this->quota->ensureUserCanCreateProject($user);
         $hostingTeamId = $user->personalTeam()?->id;
+        $name = $validated['name'] ?? null;
+
         abort_unless($hostingTeamId !== null, 422);
+
+        if (! is_string($name) || $name === '') {
+            throw ValidationException::withMessages(['name' => 'The project name is required when creating a project.']);
+        }
 
         $project = $user->projects()->create([
             'hosting_team_id' => $hostingTeamId,
             'created_by' => $user->id,
-            'name' => $validated['name'],
+            'name' => $name,
             'description' => $validated['description'] ?? null,
             'slug' => $validated['slug'] ?? null,
         ]);
 
-        $deployment = $this->publisher->publishFiles($project, $files, $user);
+        try {
+            $deployment = $this->publisher->publishFiles($project, $files, $user);
+        } catch (ValidationException $exception) {
+            if (! $this->hasSecurityError($exception)) {
+                $project->forceDelete();
+            }
+
+            throw $exception;
+        }
 
         return [
             'action' => 'created',
@@ -272,6 +298,7 @@ class DeployProjectTool extends Tool
                 'fileCount' => $deployment->file_count,
                 'totalBytes' => $deployment->total_bytes,
                 'deployedAt' => $deployment->deployed_at->toISOString(),
+                'securityScan' => $deployment->securityScanSummary(),
             ],
         ];
     }
@@ -286,7 +313,13 @@ class DeployProjectTool extends Tool
      */
     protected function updateProject(User $user, array $validated, array $files): array
     {
-        [$team, $slug] = HostedProjectUrl::parse((string) $validated['url']);
+        $url = $validated['url'] ?? null;
+
+        if (! is_string($url) || $url === '') {
+            throw ValidationException::withMessages(['url' => 'The hosted project URL is required when updating a project.']);
+        }
+
+        [$team, $slug] = HostedProjectUrl::parse($url);
 
         $project = Project::query()
             ->with(['owner', 'workspace.team', 'hostingTeam'])
@@ -314,11 +347,11 @@ class DeployProjectTool extends Tool
             $updates['description'] = $validated['description'];
         }
 
+        $deployment = $this->publisher->publishFiles($project, $files, $user);
+
         if ($updates !== []) {
             $project->update($updates);
         }
-
-        $deployment = $this->publisher->publishFiles($project, $files, $user);
 
         return [
             'action' => 'updated',
@@ -332,6 +365,7 @@ class DeployProjectTool extends Tool
                 'fileCount' => $deployment->file_count,
                 'totalBytes' => $deployment->total_bytes,
                 'deployedAt' => $deployment->deployed_at->toISOString(),
+                'securityScan' => $deployment->securityScanSummary(),
             ],
         ];
     }
@@ -367,6 +401,11 @@ class DeployProjectTool extends Tool
     protected function deploymentLimit(string $key): int
     {
         return (int) config("matterpipe.quotas.{$key}", 0);
+    }
+
+    protected function hasSecurityError(ValidationException $exception): bool
+    {
+        return array_key_exists('security', $exception->errors());
     }
 
     protected function estimatedBase64DecodedBytes(string $encoded): ?int

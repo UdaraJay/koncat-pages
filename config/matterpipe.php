@@ -9,6 +9,13 @@ return [
     'runtime_token_ttl' => (int) env('MATTERPIPE_RUNTIME_TOKEN_TTL', 10 * 60),
     'render_cookie_ttl' => (int) env('MATTERPIPE_RENDER_COOKIE_TTL', 5 * 60),
 
+    'security_scanning' => [
+        'enabled' => env('MATTERPIPE_SECURITY_SCANNING_ENABLED', true),
+        'scanner' => env('MATTERPIPE_SECURITY_SCANNER', 'builtin'),
+        'block_severities' => ['critical', 'high'],
+        'scanner_version' => '1',
+    ],
+
     'quotas' => [
         'user_projects' => (int) env('MATTERPIPE_USER_PROJECTS_LIMIT', 25),
         'team_projects' => (int) env('MATTERPIPE_TEAM_PROJECTS_LIMIT', 100),

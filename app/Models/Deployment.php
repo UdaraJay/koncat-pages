@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -21,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon $deployed_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read DeploymentSecurityScan|null $securityScan
  */
 #[Fillable(['project_id', 'user_id', 'disk', 'path', 'original_filename', 'manifest', 'file_count', 'total_bytes', 'deployed_at'])]
 class Deployment extends Model
@@ -41,6 +43,34 @@ class Deployment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @return HasOne<DeploymentSecurityScan, $this>
+     */
+    public function securityScan(): HasOne
+    {
+        return $this->hasOne(DeploymentSecurityScan::class);
+    }
+
+    /**
+     * @return array<string, int|string|null>|null
+     */
+    public function securityScanSummary(): ?array
+    {
+        $scan = $this->securityScan;
+
+        if (! $scan instanceof DeploymentSecurityScan) {
+            return null;
+        }
+
+        return [
+            'status' => $scan->status,
+            'highestSeverity' => $scan->highest_severity,
+            'riskScore' => $scan->risk_score,
+            'findingsCount' => count($scan->findings ?? []),
+            'scannedAt' => $scan->finished_at?->toISOString(),
+        ];
     }
 
     /**

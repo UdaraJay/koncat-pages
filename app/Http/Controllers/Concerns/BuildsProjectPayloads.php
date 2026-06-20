@@ -11,6 +11,7 @@ use App\Services\MatterpipeRuntimeTokens;
 trait BuildsProjectPayloads
 {
     /**
+     * @param  array<string, mixed>  $analytics
      * @return array<string, mixed>
      */
     protected function projectPayload(Project $project, User $user, array $analytics): array
@@ -80,6 +81,7 @@ trait BuildsProjectPayloads
                 'fileCount' => $project->currentDeployment->file_count,
                 'totalBytes' => $project->currentDeployment->total_bytes,
                 'deployedAt' => $project->currentDeployment->deployed_at->toISOString(),
+                'securityScan' => $project->currentDeployment->securityScanSummary(),
             ] : null,
         ];
     }

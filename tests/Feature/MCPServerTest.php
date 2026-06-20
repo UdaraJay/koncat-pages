@@ -33,6 +33,8 @@ class MCPServerTest extends TestCase
             'matterpipe.storage_disk' => 'local',
             'matterpipe.hosting_domain' => 'localhost',
             'matterpipe.hosting_scheme' => 'http',
+            'matterpipe.render_domain' => 'render.localhost',
+            'matterpipe.render_scheme' => 'http',
         ]);
 
         $user = User::factory()->create();
@@ -50,13 +52,15 @@ class MCPServerTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertName('deploy-project')
+            ->assertName('publish')
             ->assertStructuredContent(fn ($json) => $json
                 ->where('action', 'created')
                 ->where('project.slug', 'agent-app')
                 ->where('project.url', 'http://agent-team.localhost/agent-app')
                 ->where('deployment.fileCount', 2)
                 ->where('deployment.totalBytes', strlen('<h1>Hello agent</h1>') + strlen("binary\0content"))
+                ->where('deployment.securityScan.status', 'passed')
+                ->where('deployment.securityScan.riskScore', 0)
                 ->has('project.id')
                 ->has('deployment.id')
                 ->has('deployment.deployedAt')
@@ -189,6 +193,8 @@ class MCPServerTest extends TestCase
             'matterpipe.storage_disk' => 'local',
             'matterpipe.hosting_domain' => 'localhost',
             'matterpipe.hosting_scheme' => 'http',
+            'matterpipe.render_domain' => 'render.localhost',
+            'matterpipe.render_scheme' => 'http',
         ]);
 
         $user = User::factory()->create();
@@ -215,6 +221,29 @@ class MCPServerTest extends TestCase
         ]);
     }
 
+    public function test_mcp_route_advertises_publish_and_fetch_tools(): void
+    {
+        $user = User::factory()->create();
+
+        Passport::actingAs($user, ['mcp:use']);
+
+        $response = $this->postJson('/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/list',
+        ]);
+
+        $response->assertOk();
+
+        $toolNames = collect($response->json('result.tools'))
+            ->pluck('name')
+            ->all();
+
+        $this->assertSame(['publish', 'fetch'], $toolNames);
+        $this->assertNotContains('deploy-project', $toolNames);
+        $this->assertNotContains('fetch-project', $toolNames);
+    }
+
     public function test_fetch_project_tool_returns_current_deployment_files_from_flexible_url(): void
     {
         $this->skipWithoutZip();
@@ -223,6 +252,8 @@ class MCPServerTest extends TestCase
             'matterpipe.storage_disk' => 'local',
             'matterpipe.hosting_domain' => 'localhost',
             'matterpipe.hosting_scheme' => 'http',
+            'matterpipe.render_domain' => 'render.localhost',
+            'matterpipe.render_scheme' => 'http',
         ]);
 
         $user = User::factory()->create();
@@ -239,10 +270,10 @@ class MCPServerTest extends TestCase
         ])->assertOk();
 
         MCPServer::actingAs($user)->tool(FetchProjectTool::class, [
-            'url' => 'agent-team.localhost:8000/agent-app/__matterpipe/render/assets/app.bin?cache=1#preview',
+            'url' => 'agent-team.render.localhost:8000/agent-app/assets/app.bin?cache=1#preview',
         ])
             ->assertOk()
-            ->assertName('fetch-project')
+            ->assertName('fetch')
             ->assertStructuredContent(fn ($json) => $json
                 ->where('project.name', 'Agent App')
                 ->where('project.slug', 'agent-app')
@@ -273,6 +304,8 @@ class MCPServerTest extends TestCase
             'matterpipe.storage_disk' => 'local',
             'matterpipe.hosting_domain' => 'localhost',
             'matterpipe.hosting_scheme' => 'http',
+            'matterpipe.render_domain' => 'render.localhost',
+            'matterpipe.render_scheme' => 'http',
         ]);
 
         $user = User::factory()->create();
@@ -290,7 +323,7 @@ class MCPServerTest extends TestCase
         $originalDeploymentId = $project->current_deployment_id;
 
         MCPServer::actingAs($user)->tool(DeployProjectTool::class, [
-            'url' => 'agent-team.localhost:8000/agent-app/__matterpipe/render',
+            'url' => 'agent-team.render.localhost:8000/agent-app/index.html',
             'name' => 'Updated Agent App',
             'description' => 'Updated by an agent.',
             'files' => [
@@ -330,6 +363,51 @@ class MCPServerTest extends TestCase
             );
     }
 
+    public function test_deploy_project_tool_blocks_high_risk_security_findings_when_updating(): void
+    {
+        $this->skipWithoutZip();
+        Storage::fake('local');
+        config([
+            'matterpipe.storage_disk' => 'local',
+            'matterpipe.hosting_domain' => 'localhost',
+            'matterpipe.hosting_scheme' => 'http',
+        ]);
+
+        $user = User::factory()->create();
+        $user->personalTeam()->update(['subdomain' => 'secure-team']);
+
+        MCPServer::actingAs($user)->tool(DeployProjectTool::class, [
+            'name' => 'Secure App',
+            'slug' => 'secure-app',
+            'files' => [
+                ['path' => 'index.html', 'content' => 'safe'],
+            ],
+        ])->assertOk();
+
+        $project = Project::firstWhere('slug', 'secure-app');
+        $originalDeploymentId = $project->current_deployment_id;
+
+        MCPServer::actingAs($user)->tool(DeployProjectTool::class, [
+            'url' => 'secure-team.localhost/secure-app',
+            'name' => 'Should Not Persist',
+            'files' => [
+                ['path' => 'index.html', 'content' => '<script>eval("bad")</script>'],
+            ],
+        ])->assertHasErrors(['Deployment blocked by security scan: no-eval at index.html#inline-script:1:1.']);
+
+        $project->refresh();
+
+        $this->assertSame('Secure App', $project->name);
+        $this->assertSame($originalDeploymentId, $project->current_deployment_id);
+        $this->assertDatabaseHas('deployment_security_scans', [
+            'project_id' => $project->id,
+            'deployment_id' => null,
+            'user_id' => $user->id,
+            'status' => 'blocked',
+            'highest_severity' => 'high',
+        ]);
+    }
+
     public function test_deploy_project_tool_requires_deploy_access_when_updating(): void
     {
         $this->skipWithoutZip();
@@ -362,7 +440,10 @@ class MCPServerTest extends TestCase
 
     public function test_fetch_project_tool_rejects_invalid_urls(): void
     {
-        config(['matterpipe.hosting_domain' => 'localhost']);
+        config([
+            'matterpipe.hosting_domain' => 'localhost',
+            'matterpipe.render_domain' => 'localhost',
+        ]);
 
         $user = User::factory()->create();
 
@@ -504,7 +585,7 @@ class MCPServerTest extends TestCase
             'id' => 1,
             'method' => 'tools/call',
             'params' => [
-                'name' => 'deploy-project',
+                'name' => 'publish',
                 'arguments' => $arguments ?: [
                     'name' => 'Agent App',
                     'files' => [

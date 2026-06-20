@@ -39,6 +39,7 @@ use Laravel\Passport\HasApiTokens;
  * @property-read Collection<int, Team> $teams
  * @property-read Collection<int, Workspace> $workspaces
  * @property-read Collection<int, Project> $projects
+ * @property-read Collection<int, DeploymentSecurityScan> $deploymentSecurityScans
  * @property-read Collection<int, ProjectShare> $projectShares
  * @property-read Collection<int, UserApiToken> $apiTokens
  */
@@ -87,6 +88,14 @@ class User extends Authenticatable implements OAuthenticatable
     public function projects(): MorphMany
     {
         return $this->morphMany(Project::class, 'owner');
+    }
+
+    /**
+     * @return HasMany<DeploymentSecurityScan, $this>
+     */
+    public function deploymentSecurityScans(): HasMany
+    {
+        return $this->hasMany(DeploymentSecurityScan::class);
     }
 
     /**

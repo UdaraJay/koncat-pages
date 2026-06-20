@@ -36,6 +36,20 @@ export type WorkspaceRoleOption = {
     label: string;
 };
 
+export type ProjectDeployment = {
+    id: string;
+    fileCount: number;
+    totalBytes: number;
+    deployedAt: string;
+    securityScan?: {
+        status: string;
+        highestSeverity?: string | null;
+        riskScore: number;
+        findingsCount: number;
+        scannedAt?: string | null;
+    } | null;
+};
+
 export type Project = {
     id: string;
     name: string;
@@ -85,12 +99,7 @@ export type Project = {
     createdAt?: string | null;
     updatedAt?: string | null;
     deletedAt?: string | null;
-    currentDeployment?: {
-        id: string;
-        fileCount: number;
-        totalBytes: number;
-        deployedAt: string;
-    } | null;
+    currentDeployment?: ProjectDeployment | null;
 };
 
 export type ProjectMoveTarget = {

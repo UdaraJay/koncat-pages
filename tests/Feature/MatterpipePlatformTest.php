@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\TeamRole;
 use App\Enums\WorkspaceRole;
 use App\Models\Deployment;
+use App\Models\DeploymentSecurityScan;
 use App\Models\Project;
 use App\Models\ProjectAnalyticsEvent;
 use App\Models\ProjectFile;
@@ -13,9 +14,11 @@ use App\Models\Team;
 use App\Models\User;
 use App\Models\UserApiToken;
 use App\Models\Workspace;
+use App\Services\DeploymentPublisher;
 use App\Services\MatterpipeRuntimeTokens;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -31,6 +34,7 @@ class MatterpipePlatformTest extends TestCase
 
         $this->withoutVite();
         config([
+            'matterpipe.hosting_domain' => 'localhost',
             'matterpipe.render_domain' => 'render.localhost',
             'matterpipe.render_scheme' => 'http',
         ]);
@@ -575,6 +579,204 @@ class MatterpipePlatformTest extends TestCase
         $this->assertStringContainsString('Hello', $rawResponse->streamedContent());
     }
 
+    public function test_zip_deployment_creates_passed_security_scan(): void
+    {
+        $this->skipWithoutZip();
+        Storage::fake('local');
+        config(['matterpipe.storage_disk' => 'local']);
+
+        $owner = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'created_by' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+            'slug' => 'safe-app',
+        ]);
+
+        $this
+            ->actingAs($owner)
+            ->post(route('projects.deployments.store', $project), [
+                'archive' => $this->zipUpload([
+                    'index.html' => '<h1>Safe</h1>',
+                    'app.js' => 'console.log("safe")',
+                ]),
+            ])
+            ->assertRedirect();
+
+        $deployment = $project->fresh()->currentDeployment;
+
+        $this->assertNotNull($deployment);
+        $this->assertDatabaseHas('deployment_security_scans', [
+            'project_id' => $project->id,
+            'deployment_id' => $deployment->id,
+            'user_id' => $owner->id,
+            'status' => 'passed',
+            'highest_severity' => null,
+            'risk_score' => 0,
+            'scanner' => 'builtin',
+            'scanner_version' => '1',
+        ]);
+
+        $this->assertSame([
+            'status' => 'passed',
+            'highestSeverity' => null,
+            'riskScore' => 0,
+            'findingsCount' => 0,
+            'scannedAt' => DeploymentSecurityScan::first()->finished_at->toISOString(),
+        ], $deployment->securityScanSummary());
+    }
+
+    public function test_project_details_include_recent_deployments_for_rollback(): void
+    {
+        $this->skipWithoutZip();
+        Storage::fake('local');
+        config(['matterpipe.storage_disk' => 'local']);
+
+        $owner = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'created_by' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+            'slug' => 'history-app',
+        ]);
+
+        Carbon::setTestNow('2026-06-20 10:00:00');
+        $first = app(DeploymentPublisher::class)->publishFiles($project, [
+            ['path' => 'index.html', 'contents' => 'first'],
+        ], $owner);
+
+        Carbon::setTestNow('2026-06-20 11:00:00');
+        $second = app(DeploymentPublisher::class)->publishFiles($project, [
+            ['path' => 'index.html', 'contents' => 'second'],
+        ], $owner);
+        Carbon::setTestNow();
+
+        $this
+            ->actingAs($owner)
+            ->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('projects/show')
+                ->where('project.currentDeployment.id', $second->id)
+                ->where('deployments.0.id', $second->id)
+                ->where('deployments.0.securityScan.status', 'passed')
+                ->where('deployments.1.id', $first->id)
+                ->where('deployments.1.securityScan.status', 'passed')
+            );
+    }
+
+    public function test_project_owner_can_rollback_to_a_previous_deployment(): void
+    {
+        $this->skipWithoutZip();
+        Storage::fake('local');
+        config(['matterpipe.storage_disk' => 'local']);
+
+        $owner = User::factory()->create();
+        $owner->personalTeam()->update(['subdomain' => 'rollback-team']);
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'created_by' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+            'slug' => 'rollback-app',
+        ]);
+
+        $first = app(DeploymentPublisher::class)->publishFiles($project, [
+            ['path' => 'index.html', 'contents' => 'first'],
+        ], $owner);
+        $second = app(DeploymentPublisher::class)->publishFiles($project, [
+            ['path' => 'index.html', 'contents' => 'second'],
+        ], $owner);
+
+        $this->assertSame($second->id, $project->fresh()->current_deployment_id);
+
+        $this
+            ->actingAs($owner)
+            ->post(route('projects.deployments.activate', [$project, $first]))
+            ->assertRedirect();
+
+        $this->assertSame($first->id, $project->fresh()->current_deployment_id);
+
+        $rawResponse = $this
+            ->withUnencryptedCookie(MatterpipeRuntimeTokens::RENDER_COOKIE, $this->renderToken($project->fresh(), $owner))
+            ->get('http://rollback-team.render.localhost/rollback-app/index.html')
+            ->assertOk();
+
+        $this->assertSame('first', $rawResponse->streamedContent());
+    }
+
+    public function test_project_rollback_rejects_deployments_from_other_projects(): void
+    {
+        $this->skipWithoutZip();
+        Storage::fake('local');
+        config(['matterpipe.storage_disk' => 'local']);
+
+        $owner = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'created_by' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+            'slug' => 'primary-app',
+        ]);
+        $otherProject = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'created_by' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+            'slug' => 'other-app',
+        ]);
+
+        $deployment = app(DeploymentPublisher::class)->publishFiles($otherProject, [
+            ['path' => 'index.html', 'contents' => 'other'],
+        ], $owner);
+
+        $this
+            ->actingAs($owner)
+            ->post(route('projects.deployments.activate', [$project, $deployment]))
+            ->assertNotFound();
+    }
+
+    public function test_zip_deployment_blocks_high_risk_security_findings(): void
+    {
+        $this->skipWithoutZip();
+        Storage::fake('local');
+        config(['matterpipe.storage_disk' => 'local']);
+
+        $owner = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'created_by' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+            'slug' => 'blocked-app',
+        ]);
+
+        $this
+            ->actingAs($owner)
+            ->post(route('projects.deployments.store', $project), [
+                'archive' => $this->zipUpload([
+                    'index.html' => '<script>eval("alert(1)")</script>',
+                ]),
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors('security');
+
+        $this->assertNull($project->fresh()->current_deployment_id);
+        $this->assertDatabaseCount('deployments', 0);
+        $this->assertDatabaseHas('deployment_security_scans', [
+            'project_id' => $project->id,
+            'deployment_id' => null,
+            'user_id' => $owner->id,
+            'status' => 'blocked',
+            'highest_severity' => 'high',
+            'risk_score' => 60,
+        ]);
+        $this->assertSame([], Storage::disk('local')->allFiles());
+    }
+
     public function test_hosted_apps_require_workspace_membership(): void
     {
         $this->skipWithoutZip();
@@ -752,6 +954,10 @@ class MatterpipePlatformTest extends TestCase
             ->get('http://frame-team.render.localhost/frame-app/index.html')
             ->assertOk();
 
+        $rawResponse->assertHeader(
+            'Content-Security-Policy',
+            "frame-ancestors 'self' http://localhost http://frame-team.localhost; object-src 'none'; base-uri 'none'",
+        );
         $this->assertSame('frameable', $rawResponse->streamedContent());
     }
 
@@ -1066,9 +1272,49 @@ class MatterpipePlatformTest extends TestCase
                 'archive' => $this->zipUpload(['index.html' => 'agent']),
             ])
             ->assertCreated()
-            ->assertJsonPath('project.slug', 'agent-app');
+            ->assertJsonPath('project.slug', 'agent-app')
+            ->assertJsonPath('deployment.securityScan.status', 'passed')
+            ->assertJsonPath('deployment.securityScan.riskScore', 0);
 
         $this->assertNotNull($project->fresh()->current_deployment_id);
+    }
+
+    public function test_user_api_token_deployment_blocks_high_risk_security_findings(): void
+    {
+        $this->skipWithoutZip();
+        Storage::fake('local');
+        config(['matterpipe.storage_disk' => 'local']);
+
+        $user = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'created_by' => $user->id,
+            'hosting_team_id' => $user->personalTeam()->id,
+            'slug' => 'api-blocked-app',
+        ]);
+        $plainTextToken = UserApiToken::makePlainTextToken();
+
+        $user->apiTokens()->create([
+            'name' => 'Agent',
+            'token_hash' => UserApiToken::hashToken($plainTextToken),
+        ]);
+
+        $this
+            ->withToken($plainTextToken)
+            ->post(route('api.projects.deployments.store', $project), [
+                'archive' => $this->zipUpload(['index.html' => '<script>document.cookie</script>']),
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('security');
+
+        $this->assertNull($project->fresh()->current_deployment_id);
+        $this->assertDatabaseHas('deployment_security_scans', [
+            'project_id' => $project->id,
+            'deployment_id' => null,
+            'status' => 'blocked',
+            'highest_severity' => 'high',
+        ]);
     }
 
     protected function zipUpload(array $files): UploadedFile

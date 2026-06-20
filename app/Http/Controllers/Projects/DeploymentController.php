@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Projects;
 
 use App\Http\Controllers\Controller;
+use App\Models\Deployment;
 use App\Models\Project;
 use App\Models\Team;
 use App\Models\Workspace;
@@ -34,6 +35,19 @@ class DeploymentController extends Controller
         $this->publishFromRequest($request, $project, $publisher, $limits);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Project deployed.')]);
+
+        return back();
+    }
+
+    public function activate(Request $request, Project $project, Deployment $deployment): RedirectResponse
+    {
+        abort_unless(! $project->trashed(), 404);
+        abort_unless($deployment->project_id === $project->id, 404);
+        abort_unless($request->user()->canDeployProject($project), 403);
+
+        $project->update(['current_deployment_id' => $deployment->id]);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Deployment restored.')]);
 
         return back();
     }

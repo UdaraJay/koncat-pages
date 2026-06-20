@@ -62,7 +62,33 @@ class HostedProjectRenderController extends Controller
 
         abort_unless($disk->exists($assetPath), 404);
 
-        return $disk->response($assetPath);
+        $response = $disk->response($assetPath);
+        $response->headers->set('Content-Security-Policy', $this->contentSecurityPolicy($project));
+
+        return $response;
+    }
+
+    protected function contentSecurityPolicy(Project $project): string
+    {
+        $hostingTeam = $project->hostingTeam;
+        $scheme = config('matterpipe.hosting_scheme') === 'http' ? 'http' : 'https';
+        $domain = trim((string) config('matterpipe.hosting_domain'));
+        $domain = rtrim(preg_replace('#^[a-z][a-z0-9+\-.]*://#i', '', $domain) ?? $domain, '/.');
+
+        $frameAncestors = ["'self'"];
+
+        if ($domain !== '') {
+            $frameAncestors[] = sprintf('%s://%s', $scheme, $domain);
+        }
+
+        if ($hostingTeam !== null && $domain !== '') {
+            $frameAncestors[] = sprintf('%s://%s.%s', $scheme, $hostingTeam->subdomain, $domain);
+        }
+
+        return sprintf(
+            "frame-ancestors %s; object-src 'none'; base-uri 'none'",
+            implode(' ', $frameAncestors),
+        );
     }
 
     protected function renderCookie(MatterpipeRuntimeTokens $tokens, string $value, string $project): \Symfony\Component\HttpFoundation\Cookie

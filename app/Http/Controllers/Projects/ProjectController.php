@@ -7,6 +7,7 @@ use App\Enums\WorkspacePermission;
 use App\Http\Controllers\Concerns\BuildsProjectMoveTargets;
 use App\Http\Controllers\Concerns\BuildsProjectPayloads;
 use App\Http\Controllers\Controller;
+use App\Models\Deployment;
 use App\Models\Project;
 use App\Models\Team;
 use App\Models\User;
@@ -30,15 +31,30 @@ class ProjectController extends Controller
         $user = $request->user();
 
         $project
-            ->load(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment', 'shares.user', 'shares.sharer'])
+            ->load(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment.securityScan', 'shares.user', 'shares.sharer'])
             ->loadCount(['deployments', 'shares']);
 
         abort_unless($user->canAccessProject($project), 403);
 
         $projectAnalytics = $analytics->viewSummaries(collect([$project]));
+        $deployments = $project->deployments()
+            ->with('securityScan')
+            ->latest('deployed_at')
+            ->limit(10)
+            ->get();
+
+        if (
+            $project->currentDeployment instanceof Deployment
+            && ! $deployments->contains('id', $project->currentDeployment->id)
+        ) {
+            $deployments->push($project->currentDeployment);
+        }
 
         return Inertia::render('projects/show', [
             'project' => $this->projectPayload($project, $user, $projectAnalytics[$project->id] ?? $analytics->emptySummary()),
+            'deployments' => $deployments
+                ->map(fn (Deployment $deployment) => $this->deploymentPayload($deployment))
+                ->all(),
             'projectSharePermissions' => ProjectSharePermission::options(),
             'moveTargets' => $this->projectMoveTargets($user),
         ]);
@@ -251,6 +267,20 @@ class ProjectController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Project deleted.')]);
 
         return back();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function deploymentPayload(Deployment $deployment): array
+    {
+        return [
+            'id' => $deployment->id,
+            'fileCount' => $deployment->file_count,
+            'totalBytes' => $deployment->total_bytes,
+            'deployedAt' => $deployment->deployed_at->toISOString(),
+            'securityScan' => $deployment->securityScanSummary(),
+        ];
     }
 
     protected function authorizeRequest(User $user, Team $team, Workspace $workspace, WorkspacePermission $permission): void
