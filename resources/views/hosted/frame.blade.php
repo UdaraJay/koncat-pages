@@ -186,6 +186,88 @@
 </head>
 
 <body>
+    <script>
+        (() => {
+            const renderOrigin = @json($renderOrigin);
+            const runtimeToken = @json($runtimeToken);
+            const matterpipeBase = @json('/' . $project->slug . '/__matterpipe');
+            const allowed = (method, path) => {
+                if (typeof method !== 'string' || typeof path !== 'string' || !path.startsWith('/')) {
+                    return false;
+                }
+
+                const upperMethod = method.toUpperCase();
+
+                if (upperMethod === 'GET' && path === '/identity') {
+                    return true;
+                }
+
+                if (path.startsWith('/db/')) {
+                    return ['GET', 'POST', 'PATCH', 'DELETE'].includes(upperMethod);
+                }
+
+                if (path === '/files') {
+                    return upperMethod === 'POST';
+                }
+
+                return path.startsWith('/files/') && ['GET', 'DELETE'].includes(upperMethod);
+            };
+
+            window.addEventListener('message', async (event) => {
+                if (event.origin !== renderOrigin || !event.data || event.data.type !== 'matterpipe:request') {
+                    return;
+                }
+
+                const id = event.data.id;
+                const method = String(event.data.method || 'GET').toUpperCase();
+                const path = String(event.data.path || '');
+
+                try {
+                    if (!allowed(method, path)) {
+                        throw Object.assign(new Error('Matterpipe request is not allowed'), { status: 403, body: 'Forbidden' });
+                    }
+
+                    const headers = {
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${runtimeToken}`,
+                    };
+                    const init = {
+                        method,
+                        credentials: 'same-origin',
+                        headers,
+                    };
+
+                    if (event.data.file) {
+                        const form = new FormData();
+                        form.append('file', event.data.file);
+                        init.body = form;
+                    } else if (Object.prototype.hasOwnProperty.call(event.data, 'json')) {
+                        headers['Content-Type'] = 'application/json';
+                        init.body = JSON.stringify(event.data.json);
+                    }
+
+                    const response = await fetch(matterpipeBase + path, init);
+                    const body = await response.text();
+
+                    event.source?.postMessage({
+                        type: 'matterpipe:response',
+                        id,
+                        ok: response.ok,
+                        status: response.status,
+                        body,
+                    }, event.origin);
+                } catch (error) {
+                    event.source?.postMessage({
+                        type: 'matterpipe:response',
+                        id,
+                        ok: false,
+                        status: error.status || 500,
+                        body: error.body || error.message || 'Matterpipe request failed',
+                    }, event.origin);
+                }
+            });
+        })();
+    </script>
     <header class="koncat-frame-bar">
 
         <div class="koncat-frame-project" title="{{ $project->name }}">
@@ -203,7 +285,8 @@
         </a>
     </header>
     <iframe class="koncat-frame-app" src="{{ $renderUrl }}" title="{{ $project->name }}"
-        referrerpolicy="same-origin"></iframe>
+        sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-modals allow-popups"
+        referrerpolicy="no-referrer"></iframe>
     <footer class="koncat-frame-footer">
         <div>
             <a class="koncat-frame-brand" href="{{ $homeUrl }}" aria-label="Koncat home" target="_top">

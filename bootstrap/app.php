@@ -3,6 +3,7 @@
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetTeamUrlDefaults;
+use App\Services\MatterpipeRuntimeTokens;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,8 +17,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
-        $middleware->validateCsrfTokens(except: ['api/*', '__matterpipe/*']);
+        $middleware->encryptCookies(except: ['appearance', 'sidebar_state', MatterpipeRuntimeTokens::RENDER_COOKIE]);
+        $middleware->validateCsrfTokens(except: ['api/*', '*/__matterpipe/*']);
         $middleware->redirectGuestsTo(function (Request $request): string {
             $hostingDomain = rtrim(strtolower((string) config('matterpipe.hosting_domain')), '.');
             $host = rtrim(strtolower($request->getHost()), '.');

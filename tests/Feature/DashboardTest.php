@@ -137,11 +137,13 @@ class DashboardTest extends TestCase
             ->where('project.canRestore', true));
     }
 
-    public function test_dashboard_project_cards_include_a_raw_preview_url()
+    public function test_dashboard_project_cards_include_a_preview_url()
     {
         config([
             'matterpipe.hosting_domain' => 'localhost',
             'matterpipe.hosting_scheme' => 'http',
+            'matterpipe.render_domain' => 'render.localhost',
+            'matterpipe.render_scheme' => 'http',
         ]);
 
         $user = User::factory()->create();
@@ -165,7 +167,10 @@ class DashboardTest extends TestCase
             ->has('projects', 1)
             ->where('projects.0.name', 'Preview App')
             ->where('projects.0.url', 'http://preview-team.localhost/preview-app')
-            ->where('projects.0.previewUrl', 'http://preview-team.localhost/preview-app/__matterpipe/render/index.html'),
+            ->where('projects.0.previewUrl', fn (string $value): bool => str_starts_with(
+                $value,
+                'http://preview-team.render.localhost/preview-app/index.html?__matterpipe_render_token=',
+            )),
         );
     }
 

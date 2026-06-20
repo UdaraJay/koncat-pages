@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Project;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\MatterpipeRuntimeTokens;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -120,7 +121,7 @@ class HandleInertiaRequests extends Middleware
                 'slug' => $project->slug,
                 'description' => $project->description,
                 'url' => $project->url(),
-                'previewUrl' => $project->previewUrl(),
+                'previewUrl' => app(MatterpipeRuntimeTokens::class)->renderUrl($project, $user),
                 'ownerType' => $team->is_personal ? 'user' : 'team',
                 'ownerName' => $team->is_personal ? __('Personal') : $team->name,
                 'team' => $team->is_personal ? null : [

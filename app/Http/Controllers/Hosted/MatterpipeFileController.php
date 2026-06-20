@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Hosted;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Hosted\Concerns\ResolvesHostedProject;
+use App\Models\Project;
 use App\Models\ProjectFile;
 use App\Services\MatterpipeLimitResolver;
 use App\Services\MatterpipeQuota;
+use App\Services\MatterpipeRuntimeContext;
+use App\Services\MatterpipeRuntimeTokens;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -16,10 +19,10 @@ class MatterpipeFileController extends Controller
 {
     use ResolvesHostedProject;
 
-    public function store(Request $request, string $team, string $project, MatterpipeQuota $quota, MatterpipeLimitResolver $limits): JsonResponse
+    public function store(Request $request, string $team, string $project, MatterpipeQuota $quota, MatterpipeLimitResolver $limits, MatterpipeRuntimeTokens $tokens): JsonResponse
     {
         $hostedProject = $this->hostedProject($request, $team, $project);
-        abort_unless($request->user()?->canWriteProjectContent($hostedProject), 403);
+        $runtime = $this->writeRuntime($request, $hostedProject, $tokens);
 
         $fileRules = ['required', 'file'];
         $maxUploadBytes = $limits->projectFileUploadBytes($hostedProject);
@@ -39,7 +42,7 @@ class MatterpipeFileController extends Controller
 
         $disk = (string) config('matterpipe.storage_disk');
         $record = $hostedProject->files()->create([
-            'uploaded_by' => $request->user()->id,
+            'uploaded_by' => $runtime->user->id,
             'disk' => $disk,
             'path' => '',
             'original_name' => $file->getClientOriginalName(),
@@ -66,16 +69,25 @@ class MatterpipeFileController extends Controller
         return Storage::disk($file->disk)->download($file->path, $file->original_name);
     }
 
-    public function destroy(Request $request, string $team, string $project, ProjectFile $file): JsonResponse
+    public function destroy(Request $request, string $team, string $project, ProjectFile $file, MatterpipeRuntimeTokens $tokens): JsonResponse
     {
         $hostedProject = $this->hostedProject($request, $team, $project);
-        abort_unless($request->user()?->canWriteProjectContent($hostedProject), 403);
+        $this->writeRuntime($request, $hostedProject, $tokens);
         abort_unless($file->project_id === $hostedProject->id, 404);
 
         Storage::disk($file->disk)->delete($file->path);
         $file->delete();
 
         return response()->json(null, 204);
+    }
+
+    protected function writeRuntime(Request $request, Project $project, MatterpipeRuntimeTokens $tokens): MatterpipeRuntimeContext
+    {
+        $context = $tokens->contextFromBearer($request, $project);
+
+        abort_unless($context?->canWrite === true, 403);
+
+        return $context;
     }
 
     /**

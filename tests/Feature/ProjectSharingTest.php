@@ -11,6 +11,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Notifications\Auth\MagicLoginNotification;
 use App\Notifications\Projects\ProjectShared;
+use App\Services\MatterpipeRuntimeTokens;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -183,6 +184,7 @@ class ProjectSharingTest extends TestCase
 
         $this
             ->actingAs($writer)
+            ->withToken(app(MatterpipeRuntimeTokens::class)->makeRuntimeToken($project, $writer))
             ->postJson("http://share-team.{$hostingDomain}/share-app/__matterpipe/db/posts", [
                 'data' => ['title' => 'Draft'],
             ])

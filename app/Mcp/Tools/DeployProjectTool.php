@@ -131,6 +131,8 @@ class DeployProjectTool extends Tool
     protected function validate(array $arguments, User $user): array
     {
         $hostingTeamId = $user->personalTeam()?->id;
+        $deploymentFileLimit = $this->deploymentLimit('deployment_file_bytes');
+        $deploymentFilesLimit = $this->deploymentLimit('deployment_files');
 
         $validator = Validator::make($arguments, [
             'url' => ['nullable', 'string', 'max:2048'],
@@ -143,19 +145,25 @@ class DeployProjectTool extends Tool
                 Rule::unique('projects', 'slug')->where('hosting_team_id', $hostingTeamId),
             ],
             'description' => ['nullable', 'string', 'max:2000'],
-            'files' => ['required', 'array', 'min:1'],
+            'files' => array_values(array_filter(['required', 'array', 'min:1', $deploymentFilesLimit > 0 ? 'max:'.$deploymentFilesLimit : null])),
             'files.*' => ['required', 'array'],
-            'files.*.path' => ['required', 'string'],
-            'files.*.content' => ['nullable', 'string'],
+            'files.*.path' => ['required', 'string', 'max:512'],
+            'files.*.content' => array_values(array_filter(['nullable', 'string', $deploymentFileLimit > 0 ? 'max:'.$deploymentFileLimit : null])),
             'files.*.base64' => ['nullable', 'string'],
         ], [
             'files.required' => 'Provide at least one file to deploy.',
+            'files.max' => 'This deployment has too many files.',
             'files.*.path.required' => 'Every file must include a relative path.',
+            'files.*.path.max' => 'File paths may not be longer than 512 characters.',
+            'files.*.content.max' => 'This deployment contains a file that is too large.',
         ]);
 
         $validator->after(function ($validator): void {
             $data = $validator->getData();
             $isUpdate = ! empty($data['url']);
+            $totalBytes = 0;
+            $deploymentBytesLimit = $this->deploymentLimit('deployment_bytes');
+            $deploymentFileLimit = $this->deploymentLimit('deployment_file_bytes');
 
             if (! $isUpdate && empty($data['name'])) {
                 $validator->errors()->add('name', 'The project name is required when creating a project.');
@@ -180,10 +188,44 @@ class DeployProjectTool extends Tool
                     );
                 }
 
-                if ($hasBase64 && base64_decode((string) $file['base64'], true) === false) {
+                if ($hasContent) {
+                    $contentBytes = strlen((string) $file['content']);
+
+                    if ($deploymentFileLimit > 0 && $contentBytes > $deploymentFileLimit) {
+                        $validator->errors()->add(
+                            "files.{$index}.content",
+                            'This deployment contains a file that is too large.',
+                        );
+                    }
+
+                    $totalBytes += $contentBytes;
+                }
+
+                if ($hasBase64) {
+                    $encoded = (string) $file['base64'];
+                    $decodedBytes = $this->estimatedBase64DecodedBytes($encoded);
+
+                    if ($decodedBytes === null) {
+                        $validator->errors()->add(
+                            "files.{$index}.base64",
+                            'The base64 file content must be valid base64.',
+                        );
+                    } else {
+                        if ($deploymentFileLimit > 0 && $decodedBytes > $deploymentFileLimit) {
+                            $validator->errors()->add(
+                                "files.{$index}.base64",
+                                'This deployment contains a file that is too large.',
+                            );
+                        }
+
+                        $totalBytes += $decodedBytes;
+                    }
+                }
+
+                if ($deploymentBytesLimit > 0 && $totalBytes > $deploymentBytesLimit) {
                     $validator->errors()->add(
-                        "files.{$index}.base64",
-                        'The base64 file content must be valid base64.',
+                        'files',
+                        'This deployment is too large.',
                     );
                 }
             }
@@ -320,5 +362,25 @@ class DeployProjectTool extends Tool
                 'contents' => $contents,
             ];
         }, $files);
+    }
+
+    protected function deploymentLimit(string $key): int
+    {
+        return (int) config("matterpipe.quotas.{$key}", 0);
+    }
+
+    protected function estimatedBase64DecodedBytes(string $encoded): ?int
+    {
+        if ($encoded === '') {
+            return 0;
+        }
+
+        if (strlen($encoded) % 4 !== 0 || preg_match('/^[A-Za-z0-9+\/]*={0,2}$/', $encoded) !== 1) {
+            return null;
+        }
+
+        $padding = substr_count(substr($encoded, -2), '=');
+
+        return intdiv(strlen($encoded), 4) * 3 - $padding;
     }
 }

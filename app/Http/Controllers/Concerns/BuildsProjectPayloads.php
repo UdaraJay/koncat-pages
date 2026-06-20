@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\ProjectShare;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\MatterpipeRuntimeTokens;
 
 trait BuildsProjectPayloads
 {
@@ -31,7 +32,7 @@ trait BuildsProjectPayloads
             'slug' => $project->slug,
             'description' => $project->description,
             'url' => $project->url(),
-            'previewUrl' => $project->previewUrl(),
+            'previewUrl' => app(MatterpipeRuntimeTokens::class)->renderUrl($project, $user),
             'ownerType' => $project->owner_type === User::class ? 'user' : 'team',
             'ownerName' => $project->owner_type === User::class ? __('Personal') : $team?->name,
             'team' => $team ? [

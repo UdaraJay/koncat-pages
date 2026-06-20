@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\DeployApiController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Hosted\HostedProjectController;
+use App\Http\Controllers\Hosted\HostedProjectRenderController;
 use App\Http\Controllers\Hosted\MatterpipeDocumentController;
 use App\Http\Controllers\Hosted\MatterpipeFileController;
 use App\Http\Controllers\Hosted\MatterpipeIdentityController;
@@ -23,11 +24,15 @@ Route::get('terms', [LegalPageController::class, 'terms'])->name('legal.terms');
 Route::redirect('tos', '/terms')->name('legal.tos');
 Route::get('privacy', [LegalPageController::class, 'privacy'])->name('legal.privacy');
 
+Route::domain('{team}.'.config('matterpipe.render_domain'))
+    ->group(function () {
+        Route::get('/{project}/__matterpipe/sdk.js', MatterpipeSdkController::class)->name('matterpipe.sdk');
+        Route::get('/{project}/{path?}', HostedProjectRenderController::class)->where('path', '.*')->name('hosted.project.render');
+    });
+
 Route::domain('{team}.'.config('matterpipe.hosting_domain'))
     ->middleware(['auth', 'verified', AllowHostedProjectFrames::class])
     ->group(function () {
-        Route::get('/{project}/__matterpipe/sdk.js', MatterpipeSdkController::class)->name('matterpipe.sdk');
-        Route::get('/{project}/__matterpipe/render/{path?}', [HostedProjectController::class, 'render'])->where('path', '.*')->name('hosted.project.render');
         Route::get('/{project}/__matterpipe/identity', MatterpipeIdentityController::class)->name('matterpipe.identity');
         Route::get('/{project}/__matterpipe/db/{collection}', [MatterpipeDocumentController::class, 'index'])->name('matterpipe.db.index');
         Route::post('/{project}/__matterpipe/db/{collection}', [MatterpipeDocumentController::class, 'store'])->name('matterpipe.db.store');

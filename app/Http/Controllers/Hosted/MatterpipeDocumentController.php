@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Hosted;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Hosted\Concerns\ResolvesHostedProject;
+use App\Models\Project;
 use App\Models\ProjectDocument;
 use App\Services\MatterpipeQuota;
+use App\Services\MatterpipeRuntimeContext;
+use App\Services\MatterpipeRuntimeTokens;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -28,10 +31,10 @@ class MatterpipeDocumentController extends Controller
         return response()->json(['data' => $documents]);
     }
 
-    public function store(Request $request, string $team, string $project, string $collection, MatterpipeQuota $quota): JsonResponse
+    public function store(Request $request, string $team, string $project, string $collection, MatterpipeQuota $quota, MatterpipeRuntimeTokens $tokens): JsonResponse
     {
         $hostedProject = $this->hostedProject($request, $team, $project);
-        abort_unless($request->user()?->canWriteProjectContent($hostedProject), 403);
+        $runtime = $this->writeRuntime($request, $hostedProject, $tokens);
 
         $validated = $request->validate([
             'data' => ['required', 'array'],
@@ -42,8 +45,8 @@ class MatterpipeDocumentController extends Controller
         $document = $hostedProject->documents()->create([
             'collection' => $collection,
             'data' => $validated['data'],
-            'created_by' => $request->user()->id,
-            'updated_by' => $request->user()->id,
+            'created_by' => $runtime->user->id,
+            'updated_by' => $runtime->user->id,
         ]);
 
         return response()->json($this->documentPayload($document), 201);
@@ -57,10 +60,10 @@ class MatterpipeDocumentController extends Controller
         return response()->json($this->documentPayload($document));
     }
 
-    public function update(Request $request, string $team, string $project, string $collection, ProjectDocument $document): JsonResponse
+    public function update(Request $request, string $team, string $project, string $collection, ProjectDocument $document, MatterpipeRuntimeTokens $tokens): JsonResponse
     {
         $hostedProject = $this->hostedProject($request, $team, $project);
-        abort_unless($request->user()?->canWriteProjectContent($hostedProject), 403);
+        $runtime = $this->writeRuntime($request, $hostedProject, $tokens);
         $this->authorizeDocument($hostedProject->id, $collection, $document);
 
         $validated = $request->validate([
@@ -69,21 +72,30 @@ class MatterpipeDocumentController extends Controller
 
         $document->update([
             'data' => array_replace_recursive($document->data, $validated['data']),
-            'updated_by' => $request->user()->id,
+            'updated_by' => $runtime->user->id,
         ]);
 
         return response()->json($this->documentPayload($document));
     }
 
-    public function destroy(Request $request, string $team, string $project, string $collection, ProjectDocument $document): JsonResponse
+    public function destroy(Request $request, string $team, string $project, string $collection, ProjectDocument $document, MatterpipeRuntimeTokens $tokens): JsonResponse
     {
         $hostedProject = $this->hostedProject($request, $team, $project);
-        abort_unless($request->user()?->canWriteProjectContent($hostedProject), 403);
+        $this->writeRuntime($request, $hostedProject, $tokens);
         $this->authorizeDocument($hostedProject->id, $collection, $document);
 
         $document->delete();
 
         return response()->json(null, 204);
+    }
+
+    protected function writeRuntime(Request $request, Project $project, MatterpipeRuntimeTokens $tokens): MatterpipeRuntimeContext
+    {
+        $context = $tokens->contextFromBearer($request, $project);
+
+        abort_unless($context?->canWrite === true, 403);
+
+        return $context;
     }
 
     protected function authorizeDocument(string $projectId, string $collection, ProjectDocument $document): void

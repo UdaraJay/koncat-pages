@@ -13,6 +13,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Models\UserApiToken;
 use App\Models\Workspace;
+use App\Services\MatterpipeRuntimeTokens;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -29,6 +30,10 @@ class MatterpipePlatformTest extends TestCase
         parent::setUp();
 
         $this->withoutVite();
+        config([
+            'matterpipe.render_domain' => 'render.localhost',
+            'matterpipe.render_scheme' => 'http',
+        ]);
     }
 
     public function test_team_owner_can_create_a_workspace_with_ulid_primary_key(): void
@@ -556,11 +561,15 @@ class MatterpipePlatformTest extends TestCase
             ->assertSee('href="https://localhost/"', false)
             ->assertSee('href="https://localhost/home"', false)
             ->assertSee($user->name)
-            ->assertSee('/team-app/__matterpipe/render/index.html', false);
+            ->assertSee('sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-modals allow-popups"', false)
+            ->assertSee('referrerpolicy="no-referrer"', false)
+            ->assertSee('http://design-team.render.localhost/team-app/index.html?__matterpipe_render_token=', false);
+
+        $project->refresh();
 
         $rawResponse = $this
-            ->actingAs($user)
-            ->get('http://design-team.localhost/team-app/__matterpipe/render/index.html')
+            ->withUnencryptedCookie(MatterpipeRuntimeTokens::RENDER_COOKIE, $this->renderToken($project, $user))
+            ->get('http://design-team.render.localhost/team-app/index.html')
             ->assertOk();
 
         $this->assertStringContainsString('Hello', $rawResponse->streamedContent());
@@ -661,7 +670,8 @@ class MatterpipePlatformTest extends TestCase
 
         $response = $this
             ->actingAs($owner)
-            ->get("http://raw-analytics-team.{$hostingDomain}/raw-analytics-app/__matterpipe/render/index.html")
+            ->withUnencryptedCookie(MatterpipeRuntimeTokens::RENDER_COOKIE, $this->renderToken($project, $owner))
+            ->get('http://raw-analytics-team.render.localhost/raw-analytics-app/index.html')
             ->assertOk();
 
         $this->assertSame('raw', $response->streamedContent());
@@ -735,12 +745,12 @@ class MatterpipePlatformTest extends TestCase
             ->assertHeader('Content-Security-Policy', $policy)
             ->assertHeaderMissing('X-Frame-Options');
 
+        $project->refresh();
+
         $rawResponse = $this
-            ->actingAs($owner)
-            ->get("http://frame-team.{$hostingDomain}/frame-app/__matterpipe/render/index.html")
-            ->assertOk()
-            ->assertHeader('Content-Security-Policy', $policy)
-            ->assertHeaderMissing('X-Frame-Options');
+            ->withUnencryptedCookie(MatterpipeRuntimeTokens::RENDER_COOKIE, $this->renderToken($project, $owner))
+            ->get('http://frame-team.render.localhost/frame-app/index.html')
+            ->assertOk();
 
         $this->assertSame('frameable', $rawResponse->streamedContent());
     }
@@ -831,11 +841,13 @@ class MatterpipePlatformTest extends TestCase
             ->actingAs($owner)
             ->get('http://asset-team.localhost/asset-app/')
             ->assertOk()
-            ->assertSee('/asset-app/__matterpipe/render/index.html"', false);
+            ->assertSee('http://asset-team.render.localhost/asset-app/index.html?__matterpipe_render_token=', false);
+
+        $project->refresh();
 
         $assetResponse = $this
-            ->actingAs($owner)
-            ->get('http://asset-team.localhost/asset-app/__matterpipe/render/style.css')
+            ->withUnencryptedCookie(MatterpipeRuntimeTokens::RENDER_COOKIE, $this->renderToken($project, $owner))
+            ->get('http://asset-team.render.localhost/asset-app/style.css')
             ->assertOk();
 
         $this->assertSame('body { color: red; }', $assetResponse->streamedContent());
@@ -874,11 +886,13 @@ class MatterpipePlatformTest extends TestCase
             ->assertSee('href="https://localhost/"', false)
             ->assertSee('href="https://localhost/home"', false)
             ->assertSee($owner->name)
-            ->assertSee('personal-canvas/__matterpipe/render', false);
+            ->assertSee('http://personal-team.render.localhost/personal-canvas/index.html?__matterpipe_render_token=', false);
+
+        $project->refresh();
 
         $rawResponse = $this
-            ->actingAs($owner)
-            ->get('http://personal-team.localhost/personal-canvas/__matterpipe/render/index.html')
+            ->withUnencryptedCookie(MatterpipeRuntimeTokens::RENDER_COOKIE, $this->renderToken($project, $owner))
+            ->get('http://personal-team.render.localhost/personal-canvas/index.html')
             ->assertOk();
 
         $this->assertSame('personal', $rawResponse->streamedContent());
@@ -890,7 +904,8 @@ class MatterpipePlatformTest extends TestCase
 
         $this
             ->actingAs($outsider)
-            ->get('http://personal-team.localhost/personal-canvas/__matterpipe/render/index.html')
+            ->withUnencryptedCookie(MatterpipeRuntimeTokens::RENDER_COOKIE, 'invalid')
+            ->get('http://personal-team.render.localhost/personal-canvas/index.html')
             ->assertForbidden();
     }
 
@@ -901,15 +916,25 @@ class MatterpipePlatformTest extends TestCase
         $team->update(['subdomain' => 'docs-team']);
         $workspace = Workspace::factory()->create(['team_id' => $team->id]);
         $workspace->members()->attach($user, ['role' => WorkspaceRole::Member->value]);
-        Project::factory()->create([
+        $project = Project::factory()->create([
             'owner_type' => Team::class,
             'owner_id' => $team->id,
             'workspace_id' => $workspace->id,
             'slug' => 'docs-app',
         ]);
 
+        $this
+            ->actingAs($user)
+            ->postJson('http://docs-team.localhost/docs-app/__matterpipe/db/posts', [
+                'data' => ['title' => 'Session only'],
+            ])
+            ->assertForbidden();
+
+        $runtimeToken = $this->runtimeToken($project, $user);
+
         $created = $this
             ->actingAs($user)
+            ->withToken($runtimeToken)
             ->postJson('http://docs-team.localhost/docs-app/__matterpipe/db/posts', [
                 'data' => ['title' => 'Hello'],
             ])
@@ -918,6 +943,7 @@ class MatterpipePlatformTest extends TestCase
 
         $this
             ->actingAs($user)
+            ->withToken($runtimeToken)
             ->patchJson('http://docs-team.localhost/docs-app/__matterpipe/db/posts/'.$created['id'], [
                 'data' => ['status' => 'draft'],
             ])
@@ -944,6 +970,7 @@ class MatterpipePlatformTest extends TestCase
 
         $this
             ->actingAs($user)
+            ->withToken($this->runtimeToken($project, $user))
             ->post('http://upload-limit-team.localhost/upload-limit-app/__matterpipe/files', [
                 'file' => UploadedFile::fake()->create('asset.bin', 2),
             ])
@@ -972,6 +999,7 @@ class MatterpipePlatformTest extends TestCase
 
         $this
             ->actingAs($user)
+            ->withToken($this->runtimeToken($project, $user))
             ->post('http://file-count-team.localhost/file-count-app/__matterpipe/files', [
                 'file' => UploadedFile::fake()->create('asset.bin', 1),
             ])
@@ -1001,6 +1029,7 @@ class MatterpipePlatformTest extends TestCase
 
         $this
             ->actingAs($user)
+            ->withToken($this->runtimeToken($project, $user))
             ->post('http://storage-limit-team.localhost/storage-limit-app/__matterpipe/files', [
                 'file' => UploadedFile::fake()->create('asset.bin', 1),
             ])
@@ -1080,5 +1109,15 @@ class MatterpipePlatformTest extends TestCase
         if (! class_exists(ZipArchive::class)) {
             $this->markTestSkipped('The Zip extension is required for deployment tests.');
         }
+    }
+
+    protected function renderToken(Project $project, User $user): string
+    {
+        return app(MatterpipeRuntimeTokens::class)->makeRenderToken($project, $user);
+    }
+
+    protected function runtimeToken(Project $project, User $user): string
+    {
+        return app(MatterpipeRuntimeTokens::class)->makeRuntimeToken($project, $user);
     }
 }

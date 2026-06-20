@@ -12,6 +12,7 @@ use App\Models\Workspace;
 use App\Models\WorkspaceMembership;
 use App\Services\MatterpipeLimitResolver;
 use App\Services\MatterpipeQuota;
+use App\Services\MatterpipeRuntimeTokens;
 use App\Services\ProjectAnalytics;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -112,7 +113,7 @@ class WorkspaceController extends Controller
                         'slug' => $project->slug,
                         'description' => $project->description,
                         'url' => $project->url(),
-                        'previewUrl' => $project->previewUrl(),
+                        'previewUrl' => app(MatterpipeRuntimeTokens::class)->renderUrl($project, $user),
                         'ownerType' => 'team',
                         'ownerName' => $current_team->name,
                         'team' => [

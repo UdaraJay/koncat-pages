@@ -207,7 +207,7 @@ class Project extends Model
 
     public function previewUrl(): string
     {
-        return $this->url().'/__matterpipe/render/index.html';
+        return $this->url();
     }
 
     protected function resolveHostingTeamId(): ?string

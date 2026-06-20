@@ -3,7 +3,11 @@
 return [
     'hosting_domain' => env('MATTERPIPE_HOSTING_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST) ?: 'localhost'),
     'hosting_scheme' => env('MATTERPIPE_HOSTING_SCHEME', env('APP_ENV') === 'local' ? 'http' : 'https'),
+    'render_domain' => env('MATTERPIPE_RENDER_DOMAIN', 'render.'.(parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST) ?: 'localhost')),
+    'render_scheme' => env('MATTERPIPE_RENDER_SCHEME', env('APP_ENV') === 'local' ? 'http' : 'https'),
     'storage_disk' => env('MATTERPIPE_STORAGE_DISK', env('FILESYSTEM_DISK', 'local')),
+    'runtime_token_ttl' => (int) env('MATTERPIPE_RUNTIME_TOKEN_TTL', 10 * 60),
+    'render_cookie_ttl' => (int) env('MATTERPIPE_RENDER_COOKIE_TTL', 5 * 60),
 
     'quotas' => [
         'user_projects' => (int) env('MATTERPIPE_USER_PROJECTS_LIMIT', 25),

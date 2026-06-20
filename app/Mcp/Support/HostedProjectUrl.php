@@ -35,14 +35,19 @@ class HostedProjectUrl
 
         $host = rtrim(strtolower($parts['host']), '.');
         $hostingDomain = rtrim(strtolower((string) config('matterpipe.hosting_domain')), '.');
+        $renderDomain = rtrim(strtolower((string) config('matterpipe.render_domain')), '.');
 
-        if ($hostingDomain === '' || ! str_ends_with($host, '.'.$hostingDomain)) {
+        $domain = collect([$hostingDomain, $renderDomain])
+            ->filter()
+            ->first(fn (string $domain): bool => str_ends_with($host, '.'.$domain));
+
+        if (! is_string($domain)) {
             throw ValidationException::withMessages([
                 'url' => "The hosted project URL must use the {$hostingDomain} domain.",
             ]);
         }
 
-        $team = substr($host, 0, -strlen('.'.$hostingDomain));
+        $team = substr($host, 0, -strlen('.'.$domain));
         $path = $parts['path'] ?? '';
         $segments = array_values(array_filter(explode('/', trim($path, '/')), fn (string $segment): bool => $segment !== ''));
         $project = rawurldecode($segments[0] ?? '');

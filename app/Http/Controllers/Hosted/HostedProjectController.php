@@ -4,33 +4,33 @@ namespace App\Http\Controllers\Hosted;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Models\User;
+use App\Services\MatterpipeRuntimeTokens;
 use App\Services\ProjectAnalytics;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class HostedProjectController extends Controller
 {
-    public function __invoke(Request $request, ProjectAnalytics $analytics, string $team, string $project, ?string $path = null): View
+    public function __invoke(Request $request, ProjectAnalytics $analytics, MatterpipeRuntimeTokens $tokens, string $team, string $project, ?string $path = null): View
     {
         $hostedProject = $this->resolveProject($request, $team, $project);
+        $user = $request->user();
+        abort_unless($user instanceof User, 403);
 
         $path = trim($path ?: '', '/');
         abort_if($path === '__matterpipe' || str_starts_with($path, '__matterpipe/'), 404);
 
-        $renderUrl = "/{$project}/__matterpipe/render";
+        $renderPath = $path !== '' ? $path : 'index.html';
+        $renderUrl = $tokens->renderUrl($hostedProject, $user, $renderPath);
 
-        if ($path !== '') {
-            $renderUrl .= '/'.collect(explode('/', $path))
-                ->map(fn (string $segment) => rawurlencode($segment))
-                ->implode('/');
-        } else {
-            $renderUrl .= '/index.html';
-        }
+        $query = collect($request->query())
+            ->except(MatterpipeRuntimeTokens::RENDER_QUERY)
+            ->all();
 
-        if ($request->getQueryString()) {
-            $renderUrl .= '?'.$request->getQueryString();
+        if ($query !== []) {
+            $separator = str_contains($renderUrl, '?') ? '&' : '?';
+            $renderUrl .= $separator.http_build_query($query);
         }
 
         $mainAppUrl = rtrim(sprintf(
@@ -38,29 +38,19 @@ class HostedProjectController extends Controller
             config('matterpipe.hosting_scheme'),
             config('matterpipe.hosting_domain'),
         ), '/');
-        $user = $request->user();
-
-        if ($user) {
-            $analytics->recordProjectView($hostedProject, $user, $path === '' ? '/' : '/'.$path);
-        }
+        $analytics->recordProjectView($hostedProject, $user, $path === '' ? '/' : '/'.$path);
 
         return view('hosted.frame', [
             'dashboardUrl' => "{$mainAppUrl}/home",
             'homeUrl' => "{$mainAppUrl}/",
             'project' => $hostedProject,
             'renderUrl' => $renderUrl,
+            'renderOrigin' => sprintf('%s://%s.%s', config('matterpipe.render_scheme'), $team, config('matterpipe.render_domain')),
+            'runtimeToken' => $tokens->makeRuntimeToken($hostedProject, $user),
             'user' => $user,
             'userAvatar' => $user?->getAttribute('avatar'),
             'userInitials' => $this->initials($user?->name ?? $user?->email ?? ''),
         ]);
-    }
-
-    public function render(Request $request, string $team, string $project, ?string $path = null): StreamedResponse
-    {
-        return $this->streamDeploymentAsset(
-            $this->resolveProject($request, $team, $project),
-            $path,
-        );
     }
 
     protected function resolveProject(Request $request, string $team, string $project): Project
@@ -74,31 +64,6 @@ class HostedProjectController extends Controller
         abort_unless($request->user()?->canAccessHostedProject($hostedProject), 403);
 
         return $hostedProject;
-    }
-
-    protected function streamDeploymentAsset(Project $project, ?string $path = null): StreamedResponse
-    {
-        $deployment = $project->currentDeployment;
-        abort_unless($deployment !== null, 404);
-
-        $path = trim($path ?: 'index.html', '/');
-
-        if ($path === '' || str_ends_with($path, '/')) {
-            $path .= 'index.html';
-        }
-
-        abort_if($path === '__matterpipe' || str_starts_with($path, '__matterpipe/'), 404);
-
-        $disk = Storage::disk($deployment->disk);
-        $assetPath = $deployment->path.'/'.$path;
-
-        if (! $disk->exists($assetPath)) {
-            $assetPath = $deployment->path.'/index.html';
-        }
-
-        abort_unless($disk->exists($assetPath), 404);
-
-        return $disk->response($assetPath);
     }
 
     protected function initials(string $name): string
