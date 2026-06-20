@@ -227,6 +227,7 @@ function ProjectPreview({ project }: { project: Project }) {
                 <iframe
                     title={`${project.name} preview`}
                     src={project.previewUrl}
+                    sandbox="allow-scripts"
                     loading="lazy"
                     tabIndex={-1}
                     className="pointer-events-none h-[200%] w-[200%] origin-top-left scale-50 border-0 bg-background"

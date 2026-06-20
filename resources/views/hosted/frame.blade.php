@@ -188,7 +188,6 @@
 <body>
     <script>
         (() => {
-            const renderOrigin = @json($renderOrigin);
             const runtimeToken = @json($runtimeToken);
             const matterpipeBase = @json('/' . $project->slug . '/__matterpipe');
             const allowed = (method, path) => {
@@ -214,7 +213,9 @@
             };
 
             window.addEventListener('message', async (event) => {
-                if (event.origin !== renderOrigin || !event.data || event.data.type !== 'matterpipe:request') {
+                const appFrame = document.querySelector('.koncat-frame-app');
+
+                if (event.source !== appFrame?.contentWindow || !event.data || event.data.type !== 'matterpipe:request') {
                     return;
                 }
 
@@ -255,7 +256,7 @@
                         ok: response.ok,
                         status: response.status,
                         body,
-                    }, event.origin);
+                    }, event.origin === 'null' ? '*' : event.origin);
                 } catch (error) {
                     event.source?.postMessage({
                         type: 'matterpipe:response',
@@ -263,7 +264,7 @@
                         ok: false,
                         status: error.status || 500,
                         body: error.body || error.message || 'Matterpipe request failed',
-                    }, event.origin);
+                    }, event.origin === 'null' ? '*' : event.origin);
                 }
             });
         })();
@@ -285,7 +286,7 @@
         </a>
     </header>
     <iframe class="koncat-frame-app" src="{{ $renderUrl }}" title="{{ $project->name }}"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-modals allow-popups"
+        sandbox="allow-scripts allow-forms allow-downloads allow-modals allow-popups"
         referrerpolicy="no-referrer"></iframe>
     <footer class="koncat-frame-footer">
         <div>

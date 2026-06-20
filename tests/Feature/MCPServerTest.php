@@ -270,7 +270,7 @@ class MCPServerTest extends TestCase
         ])->assertOk();
 
         MCPServer::actingAs($user)->tool(FetchProjectTool::class, [
-            'url' => 'agent-team.render.localhost:8000/agent-app/assets/app.bin?cache=1#preview',
+            'url' => 'render.localhost:8000/agent-team/agent-app/assets/app.bin?cache=1#preview',
         ])
             ->assertOk()
             ->assertName('fetch')
@@ -323,7 +323,7 @@ class MCPServerTest extends TestCase
         $originalDeploymentId = $project->current_deployment_id;
 
         MCPServer::actingAs($user)->tool(DeployProjectTool::class, [
-            'url' => 'agent-team.render.localhost:8000/agent-app/index.html',
+            'url' => 'render.localhost:8000/agent-team/agent-app/index.html',
             'name' => 'Updated Agent App',
             'description' => 'Updated by an agent.',
             'files' => [

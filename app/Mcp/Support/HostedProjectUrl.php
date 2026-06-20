@@ -37,6 +37,21 @@ class HostedProjectUrl
         $hostingDomain = rtrim(strtolower((string) config('matterpipe.hosting_domain')), '.');
         $renderDomain = rtrim(strtolower((string) config('matterpipe.render_domain')), '.');
 
+        if ($renderDomain !== '' && $host === $renderDomain) {
+            $path = $parts['path'] ?? '';
+            $segments = array_values(array_filter(explode('/', trim($path, '/')), fn (string $segment): bool => $segment !== ''));
+            $team = rawurldecode($segments[0] ?? '');
+            $project = rawurldecode($segments[1] ?? '');
+
+            if ($team === '' || $project === '') {
+                throw ValidationException::withMessages([
+                    'url' => 'The hosted project URL must include both a team subdomain and project path.',
+                ]);
+            }
+
+            return [$team, $project];
+        }
+
         $domain = collect([$hostingDomain, $renderDomain])
             ->filter()
             ->sortByDesc(fn (string $domain): int => strlen($domain))

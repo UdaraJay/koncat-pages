@@ -169,7 +169,7 @@ class DashboardTest extends TestCase
             ->where('projects.0.url', 'http://preview-team.localhost/preview-app')
             ->where('projects.0.previewUrl', fn (string $value): bool => str_starts_with(
                 $value,
-                'http://preview-team.render.localhost/preview-app/index.html?__matterpipe_render_token=',
+                'http://render.localhost/preview-team/preview-app/index.html?__matterpipe_render_token=',
             )),
         );
     }

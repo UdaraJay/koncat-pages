@@ -565,15 +565,15 @@ class MatterpipePlatformTest extends TestCase
             ->assertSee('href="https://localhost/"', false)
             ->assertSee('href="https://localhost/home"', false)
             ->assertSee($user->name)
-            ->assertSee('sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-modals allow-popups"', false)
+            ->assertSee('sandbox="allow-scripts allow-forms allow-downloads allow-modals allow-popups"', false)
             ->assertSee('referrerpolicy="no-referrer"', false)
-            ->assertSee('http://design-team.render.localhost/team-app/index.html?__matterpipe_render_token=', false);
+            ->assertSee('http://render.localhost/design-team/team-app/index.html?__matterpipe_render_token=', false);
 
         $project->refresh();
 
         $rawResponse = $this
             ->withUnencryptedCookie(MatterpipeRuntimeTokens::RENDER_COOKIE, $this->renderToken($project, $user))
-            ->get('http://design-team.render.localhost/team-app/index.html')
+            ->get('http://render.localhost/design-team/team-app/index.html')
             ->assertOk();
 
         $this->assertStringContainsString('Hello', $rawResponse->streamedContent());
@@ -701,7 +701,7 @@ class MatterpipePlatformTest extends TestCase
 
         $rawResponse = $this
             ->withUnencryptedCookie(MatterpipeRuntimeTokens::RENDER_COOKIE, $this->renderToken($project->fresh(), $owner))
-            ->get('http://rollback-team.render.localhost/rollback-app/index.html')
+            ->get('http://render.localhost/rollback-team/rollback-app/index.html')
             ->assertOk();
 
         $this->assertSame('first', $rawResponse->streamedContent());
@@ -873,7 +873,7 @@ class MatterpipePlatformTest extends TestCase
         $response = $this
             ->actingAs($owner)
             ->withUnencryptedCookie(MatterpipeRuntimeTokens::RENDER_COOKIE, $this->renderToken($project, $owner))
-            ->get('http://raw-analytics-team.render.localhost/raw-analytics-app/index.html')
+            ->get('http://render.localhost/raw-analytics-team/raw-analytics-app/index.html')
             ->assertOk();
 
         $this->assertSame('raw', $response->streamedContent());
@@ -951,7 +951,7 @@ class MatterpipePlatformTest extends TestCase
 
         $rawResponse = $this
             ->withUnencryptedCookie(MatterpipeRuntimeTokens::RENDER_COOKIE, $this->renderToken($project, $owner))
-            ->get('http://frame-team.render.localhost/frame-app/index.html')
+            ->get('http://render.localhost/frame-team/frame-app/index.html')
             ->assertOk();
 
         $rawResponse->assertHeader(
@@ -1047,13 +1047,13 @@ class MatterpipePlatformTest extends TestCase
             ->actingAs($owner)
             ->get('http://asset-team.localhost/asset-app/')
             ->assertOk()
-            ->assertSee('http://asset-team.render.localhost/asset-app/index.html?__matterpipe_render_token=', false);
+            ->assertSee('http://render.localhost/asset-team/asset-app/index.html?__matterpipe_render_token=', false);
 
         $project->refresh();
 
         $assetResponse = $this
             ->withUnencryptedCookie(MatterpipeRuntimeTokens::RENDER_COOKIE, $this->renderToken($project, $owner))
-            ->get('http://asset-team.render.localhost/asset-app/style.css')
+            ->get('http://render.localhost/asset-team/asset-app/style.css')
             ->assertOk();
 
         $this->assertSame('body { color: red; }', $assetResponse->streamedContent());
@@ -1092,13 +1092,13 @@ class MatterpipePlatformTest extends TestCase
             ->assertSee('href="https://localhost/"', false)
             ->assertSee('href="https://localhost/home"', false)
             ->assertSee($owner->name)
-            ->assertSee('http://personal-team.render.localhost/personal-canvas/index.html?__matterpipe_render_token=', false);
+            ->assertSee('http://render.localhost/personal-team/personal-canvas/index.html?__matterpipe_render_token=', false);
 
         $project->refresh();
 
         $rawResponse = $this
             ->withUnencryptedCookie(MatterpipeRuntimeTokens::RENDER_COOKIE, $this->renderToken($project, $owner))
-            ->get('http://personal-team.render.localhost/personal-canvas/index.html')
+            ->get('http://render.localhost/personal-team/personal-canvas/index.html')
             ->assertOk();
 
         $this->assertSame('personal', $rawResponse->streamedContent());
@@ -1111,7 +1111,7 @@ class MatterpipePlatformTest extends TestCase
         $this
             ->actingAs($outsider)
             ->withUnencryptedCookie(MatterpipeRuntimeTokens::RENDER_COOKIE, 'invalid')
-            ->get('http://personal-team.render.localhost/personal-canvas/index.html')
+            ->get('http://render.localhost/personal-team/personal-canvas/index.html')
             ->assertForbidden();
     }
 

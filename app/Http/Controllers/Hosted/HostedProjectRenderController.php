@@ -22,7 +22,7 @@ class HostedProjectRenderController extends Controller
 
             return redirect()
                 ->to($request->fullUrlWithoutQuery(MatterpipeRuntimeTokens::RENDER_QUERY))
-                ->withCookie($this->renderCookie($tokens, $queryToken, $project));
+                ->withCookie($this->renderCookie($tokens, $queryToken, $team, $project));
         }
 
         $cookieToken = $request->cookie(MatterpipeRuntimeTokens::RENDER_COOKIE);
@@ -91,13 +91,13 @@ class HostedProjectRenderController extends Controller
         );
     }
 
-    protected function renderCookie(MatterpipeRuntimeTokens $tokens, string $value, string $project): \Symfony\Component\HttpFoundation\Cookie
+    protected function renderCookie(MatterpipeRuntimeTokens $tokens, string $value, string $team, string $project): \Symfony\Component\HttpFoundation\Cookie
     {
         return Cookie::make(
             MatterpipeRuntimeTokens::RENDER_COOKIE,
             $value,
             $tokens->renderCookieMinutes(),
-            '/'.$project,
+            '/'.$team.'/'.$project,
             null,
             config('matterpipe.render_scheme') === 'https',
             true,

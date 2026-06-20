@@ -45,7 +45,6 @@ class HostedProjectController extends Controller
             'homeUrl' => "{$mainAppUrl}/",
             'project' => $hostedProject,
             'renderUrl' => $renderUrl,
-            'renderOrigin' => sprintf('%s://%s.%s', config('matterpipe.render_scheme'), $team, config('matterpipe.render_domain')),
             'runtimeToken' => $tokens->makeRuntimeToken($hostedProject, $user),
             'user' => $user,
             'userAvatar' => $user?->getAttribute('avatar'),

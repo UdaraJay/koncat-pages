@@ -24,10 +24,10 @@ Route::get('terms', [LegalPageController::class, 'terms'])->name('legal.terms');
 Route::redirect('tos', '/terms')->name('legal.tos');
 Route::get('privacy', [LegalPageController::class, 'privacy'])->name('legal.privacy');
 
-Route::domain('{team}.'.config('matterpipe.render_domain'))
+Route::domain(config('matterpipe.render_domain'))
     ->group(function () {
-        Route::get('/{project}/__matterpipe/sdk.js', MatterpipeSdkController::class)->name('matterpipe.sdk');
-        Route::get('/{project}/{path?}', HostedProjectRenderController::class)->where('path', '.*')->name('hosted.project.render');
+        Route::get('/{team}/{project}/__matterpipe/sdk.js', MatterpipeSdkController::class)->name('matterpipe.sdk');
+        Route::get('/{team}/{project}/{path?}', HostedProjectRenderController::class)->where('path', '.*')->name('hosted.project.render');
     });
 
 Route::domain('{team}.'.config('matterpipe.hosting_domain'))

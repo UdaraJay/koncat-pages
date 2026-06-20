@@ -43,10 +43,10 @@ class MatterpipeRuntimeTokens
         abort_unless($team instanceof Team, 404);
 
         $url = rtrim(sprintf(
-            '%s://%s.%s/%s',
+            '%s://%s/%s/%s',
             config('matterpipe.render_scheme'),
-            $team->subdomain,
             config('matterpipe.render_domain'),
+            $team->subdomain,
             $project->slug,
         ), '/');
 
