@@ -158,171 +158,280 @@ function makeInsideBottomTabPath({
 
 function ReportPreview() {
     return (
-        <div className="absolute inset-0 overflow-hidden bg-[#f4f6f8] text-[#101820]">
-            <div className="grid h-full grid-cols-[176px_1fr]">
-                <aside className="relative border-r border-[#dfe5e8] bg-[#fbfcfc] px-5 py-6">
-                    <div className="flex items-center gap-2">
-                        <div className="grid size-8 place-items-center rounded-md bg-[#101820] text-xs font-semibold text-white">
-                            AC
+        <div className="absolute inset-0 overflow-hidden bg-[#0d1210] text-[#f5fff9]">
+            <div className="flex h-full flex-col p-6 pb-18 sm:p-8 sm:pb-18">
+                <div className="flex items-start justify-between gap-6">
+                    <div>
+                        <div className="text-sm font-medium tracking-tight text-[#41d88b]">
+                            Atlas Coffee Co.
                         </div>
-                        <div>
-                            <div className="text-sm font-semibold">
-                                Atlas Coffee
-                            </div>
-                            <div className="text-xs font-medium text-[#748089]">
-                                Board pack
-                            </div>
-                        </div>
+                        <h2 className="mt-1 text-4xl leading-[0.95] font-medium tracking-tight sm:text-5xl">
+                            Week 38 operating report
+                        </h2>
                     </div>
-
-                    <div className="mt-7 space-y-1">
-                        {['Summary', 'Channels', 'Inventory', 'Notes'].map(
-                            (item, index) => (
-                                <div
-                                    className={`rounded-md px-3 py-2 text-sm font-medium ${
-                                        index === 0
-                                            ? 'bg-[#dcefe8] text-[#175c4d]'
-                                            : 'text-[#6f7b84]'
-                                    }`}
-                                    key={item}
-                                >
-                                    {item}
-                                </div>
-                            ),
-                        )}
+                    <div className="flex items-center gap-2 text-xs font-medium text-[#8ca597]">
+                        <span className="rounded-full bg-[#17201b] px-3 py-1">
+                            Sep 16-22
+                        </span>
+                        <span className="rounded-full bg-[#41d88b] px-3 py-1 text-[#07100b]">
+                            Live
+                        </span>
                     </div>
+                </div>
 
-                    <div className="absolute right-5 bottom-18 left-5 rounded-md border border-[#dfe5e8] bg-white p-3">
-                        <div className="text-xs font-medium text-[#748089]">
-                            Forecast confidence
-                        </div>
-                        <div className="mt-2 flex items-end gap-1">
-                            {[38, 52, 64, 58, 76, 82].map((height, index) => (
-                                <div
-                                    className="w-3 rounded-sm bg-[#175c4d]"
-                                    key={`${height}-${index}`}
-                                    style={{ height: `${height / 4}px` }}
-                                />
-                            ))}
-                        </div>
-                    </div>
-                </aside>
-
-                <main className="min-w-0 px-8 py-6 pb-16">
-                    <div className="flex items-start justify-between gap-6">
-                        <div>
-                            <div className="text-xs font-semibold text-[#3d7b6c] uppercase">
-                                Week 38 executive report
+                <div className="mt-6 grid grid-cols-4 gap-3">
+                    {[
+                        ['$482k', 'Net revenue', '+14.2% vs last week'],
+                        ['31.8%', 'Gross margin', '+4.6 pts recovered'],
+                        ['1,284', 'Open orders', '188 new wholesale'],
+                        ['3.1%', 'Late stock', 'down from 4.3%'],
+                    ].map(([value, label, detail]) => (
+                        <div
+                            className="border border-[#223128] bg-[#141c18] p-4"
+                            key={label}
+                        >
+                            <div className="text-2xl leading-none font-medium tracking-tight">
+                                {value}
                             </div>
-                            <div className="mt-2 text-3xl font-semibold">
-                                Wholesale margin recovered to 31.8%
+                            <div className="mt-2 text-xs text-[#8ca597]">
+                                {label}
+                            </div>
+                            <div className="mt-4 text-xs font-medium text-[#41d88b]">
+                                {detail}
                             </div>
                         </div>
-                        <div className="rounded-md border border-[#dfe5e8] bg-white px-4 py-2 text-sm font-medium text-[#59656e]">
-                            Synced 09:41
-                        </div>
-                    </div>
+                    ))}
+                </div>
 
-                    <div className="mt-6 grid grid-cols-4 gap-3">
-                        {[
-                            ['Revenue', '$482k', '+14.2%', 'text-[#176a4b]'],
-                            [
-                                'Gross margin',
-                                '31.8%',
-                                '+4.6%',
-                                'text-[#176a4b]',
-                            ],
-                            ['Open orders', '1,284', '+188', 'text-[#7b4d12]'],
-                            ['Late stock', '3.1%', '-1.2%', 'text-[#176a4b]'],
-                        ].map(([label, value, change, color]) => (
-                            <div
-                                className="rounded-md border border-[#dfe5e8] bg-white p-4"
-                                key={label}
-                            >
-                                <div className="text-xs font-medium text-[#748089]">
-                                    {label}
-                                </div>
-                                <div className="mt-2 text-2xl font-semibold">
-                                    {value}
-                                </div>
-                                <div
-                                    className={`mt-1 text-xs font-semibold ${color}`}
-                                >
-                                    {change}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-[1fr_220px] gap-4">
-                        <section className="rounded-md border border-[#dfe5e8] bg-white p-5">
-                            <div className="flex items-center justify-between">
-                                <div className="text-sm font-semibold">
+                <div className="mt-3 grid min-h-0 flex-1 grid-cols-[1fr_14rem] gap-3">
+                    <section className="border border-[#223128] bg-[#101713] p-5">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <div className="text-sm font-medium tracking-tight">
                                     Net revenue by channel
                                 </div>
-                                <div className="flex gap-2 text-xs font-medium text-[#748089]">
-                                    <span>Retail</span>
-                                    <span>Wholesale</span>
+                                <div className="mt-1 text-xs text-[#8ca597]">
+                                    Retail stores and wholesale accounts
                                 </div>
                             </div>
-                            <div className="mt-5 flex h-44 items-end gap-2 border-b border-[#dfe5e8] pb-2">
-                                {[42, 48, 55, 61, 74, 71, 86, 92, 88, 97].map(
+                            <div className="flex gap-3 text-xs font-medium text-[#8ca597]">
+                                <span>Retail</span>
+                                <span>Wholesale</span>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 h-48 bg-[#0a0f0c] p-4 text-[#41d88b]">
+                            <svg
+                                className="h-full w-full overflow-visible"
+                                fill="none"
+                                viewBox="0 0 560 188"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <defs>
+                                    <linearGradient
+                                        id="reportRevenueArea"
+                                        x1="0"
+                                        x2="0"
+                                        y1="16"
+                                        y2="188"
+                                        gradientUnits="userSpaceOnUse"
+                                    >
+                                        <stop
+                                            stopColor="currentColor"
+                                            stopOpacity="0.26"
+                                        />
+                                        <stop
+                                            offset="1"
+                                            stopColor="currentColor"
+                                            stopOpacity="0"
+                                        />
+                                    </linearGradient>
+                                    <filter
+                                        id="reportRevenueGlow"
+                                        x="-12%"
+                                        y="-35%"
+                                        width="124%"
+                                        height="170%"
+                                        colorInterpolationFilters="sRGB"
+                                    >
+                                        <feGaussianBlur
+                                            stdDeviation="5"
+                                            result="blur"
+                                        />
+                                        <feColorMatrix
+                                            in="blur"
+                                            type="matrix"
+                                            values="0 0 0 0 0.02 0 0 0 0 0.55 0 0 0 0 0.28 0 0 0 0.32 0"
+                                        />
+                                        <feBlend
+                                            in="SourceGraphic"
+                                            mode="normal"
+                                        />
+                                    </filter>
+                                </defs>
+
+                                {[36, 74, 112, 150].map((y) => (
+                                    <path
+                                        d={`M8 ${y}H552`}
+                                        key={y}
+                                        stroke="currentColor"
+                                        strokeOpacity="0.1"
+                                    />
+                                ))}
+                                {[52, 154, 256, 358, 460].map((x) => (
+                                    <path
+                                        d={`M${x} 16V172`}
+                                        key={x}
+                                        stroke="currentColor"
+                                        strokeOpacity="0.06"
+                                    />
+                                ))}
+
+                                <path
+                                    d="M12 142C44 136 58 116 88 119C120 122 130 150 164 139C198 128 204 78 238 74C274 70 286 108 318 103C354 98 362 54 396 49C434 43 448 82 482 69C512 57 526 32 548 26V188H12V142Z"
+                                    fill="url(#reportRevenueArea)"
+                                />
+                                <path
+                                    d="M12 142C44 136 58 116 88 119C120 122 130 150 164 139C198 128 204 78 238 74C274 70 286 108 318 103C354 98 362 54 396 49C434 43 448 82 482 69C512 57 526 32 548 26"
+                                    filter="url(#reportRevenueGlow)"
+                                    stroke="currentColor"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="5"
+                                />
+                                <path
+                                    d="M12 156C52 151 79 147 116 149C164 152 183 159 226 151C269 143 296 129 342 132C400 136 436 116 480 107C514 100 534 98 548 94"
+                                    stroke="currentColor"
+                                    strokeLinecap="round"
+                                    strokeOpacity="0.28"
+                                    strokeWidth="3"
+                                />
+                                {[
+                                    [238, 74],
+                                    [396, 49],
+                                    [548, 26],
+                                ].map(([cx, cy]) => (
+                                    <g key={`${cx}-${cy}`}>
+                                        <circle
+                                            cx={cx}
+                                            cy={cy}
+                                            r="9"
+                                            fill="#0a0f0c"
+                                        />
+                                        <circle
+                                            cx={cx}
+                                            cy={cy}
+                                            r="5"
+                                            fill="currentColor"
+                                        />
+                                    </g>
+                                ))}
+                                <g transform="translate(430 18)">
+                                    <rect
+                                        width="98"
+                                        height="34"
+                                        fill="#141c18"
+                                    />
+                                    <text
+                                        x="12"
+                                        y="14"
+                                        fill="currentColor"
+                                        fontSize="10"
+                                        fontWeight="600"
+                                    >
+                                        Friday
+                                    </text>
+                                    <text
+                                        x="12"
+                                        y="27"
+                                        fill="currentColor"
+                                        fontSize="13"
+                                        fontWeight="700"
+                                    >
+                                        $118.4k
+                                    </text>
+                                </g>
+                            </svg>
+                        </div>
+                        <div className="mt-3 grid grid-cols-5 font-mono text-xs font-medium text-[#6d8175]">
+                            <span>Mon</span>
+                            <span>Tue</span>
+                            <span>Wed</span>
+                            <span>Thu</span>
+                            <span>Fri</span>
+                        </div>
+                    </section>
+
+                    <aside className="flex min-h-0 flex-col gap-3">
+                        <div className="border border-[#223128] bg-[#141c18] p-4">
+                            <div className="text-sm font-medium tracking-tight">
+                                Forecast confidence
+                            </div>
+                            <div className="mt-3 flex items-end gap-1.5">
+                                {[38, 52, 64, 58, 76, 82].map(
                                     (height, index) => (
                                         <div
-                                            className="flex flex-1 items-end gap-1"
+                                            className="w-4 bg-[#41d88b]"
                                             key={`${height}-${index}`}
-                                        >
-                                            <div
-                                                className="w-full rounded-t-sm bg-[#b7d8cc]"
-                                                style={{
-                                                    height: `${height}%`,
-                                                }}
-                                            />
-                                            <div
-                                                className="w-full rounded-t-sm bg-[#101820]"
-                                                style={{
-                                                    height: `${Math.max(height - 18, 20)}%`,
-                                                }}
-                                            />
-                                        </div>
+                                            style={{
+                                                height: `${height / 3}px`,
+                                            }}
+                                        />
                                     ),
                                 )}
                             </div>
-                            <div className="mt-3 grid grid-cols-5 text-xs font-medium text-[#748089]">
-                                <span>Apr</span>
-                                <span>May</span>
-                                <span>Jun</span>
-                                <span>Jul</span>
-                                <span>Aug</span>
+                            <div className="mt-3 text-xs font-medium text-[#8ca597]">
+                                Next week: $516k expected
                             </div>
-                        </section>
+                        </div>
 
-                        <section className="rounded-md border border-[#dfe5e8] bg-white p-5">
-                            <div className="text-sm font-semibold">
-                                Watch list
+                        <div className="flex-1 border border-[#223128] bg-[#141c18] p-4">
+                            <div className="text-sm font-medium tracking-tight">
+                                Notes for Monday
                             </div>
                             <div className="mt-4 space-y-3">
                                 {[
-                                    ['Ethiopia lots', '7 days cover'],
-                                    ['Cafe renewal', '$42k upside'],
-                                    ['Freight cost', '2.4 pts high'],
+                                    [
+                                        'Ethiopia Guji is at 7 days cover.',
+                                        'Move 18 bags from reserve.',
+                                    ],
+                                    [
+                                        'Cafe renewal closes Friday.',
+                                        '$42k upside if signed.',
+                                    ],
+                                    [
+                                        'Freight cost is 2.4 pts high.',
+                                        'Ask Linehaul for revised lane.',
+                                    ],
                                 ].map(([title, detail]) => (
-                                    <div
-                                        className="border-b border-[#edf1f2] pb-3 last:border-0 last:pb-0"
-                                        key={title}
-                                    >
-                                        <div className="text-sm font-semibold">
+                                    <div key={title}>
+                                        <div className="text-sm font-medium">
                                             {title}
                                         </div>
-                                        <div className="mt-1 text-xs font-medium text-[#748089]">
+                                        <div className="mt-1 text-xs text-[#8ca597]">
                                             {detail}
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                        </section>
-                    </div>
-                </main>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 text-xs font-medium">
+                            {['PDF', 'CSV', 'Share'].map((item, index) => (
+                                <div
+                                    className={`px-2 py-2 ${
+                                        index === 2
+                                            ? 'bg-[#41d88b] text-[#07100b]'
+                                            : 'bg-[#141c18] text-[#8ca597]'
+                                    }`}
+                                    key={item}
+                                >
+                                    {item}
+                                </div>
+                            ))}
+                        </div>
+                    </aside>
+                </div>
             </div>
         </div>
     );
@@ -330,135 +439,186 @@ function ReportPreview() {
 
 function FormPreview() {
     return (
-        <div className="absolute inset-0 overflow-hidden bg-[#eef4f1] text-[#17201c]">
-            <div className="grid h-full grid-cols-[0.92fr_1.08fr]">
-                <section className="flex flex-col justify-between border-r border-[#d5ded9] bg-[#fbfcfa] px-10 py-8 pb-18">
+        <div className="absolute inset-0 overflow-hidden bg-[#f7f9fc] text-[#151515]">
+            <div className="grid h-full grid-cols-[13rem_1fr_13rem]">
+                <aside className="flex flex-col justify-between bg-[#f2b705] p-6 pb-18">
                     <div>
-                        <div className="inline-flex rounded-full bg-[#d9eadf] px-3 py-1 text-xs font-semibold text-[#1f624a]">
-                            Client intake
+                        <div className="text-sm font-semibold tracking-tight text-[#151515]/70">
+                            Northstar Studio
                         </div>
-                        <h2 className="mt-5 max-w-sm text-5xl leading-[0.95] font-semibold">
-                            Scope the project before the first call.
+                        <h2 className="mt-3 text-4xl leading-[0.92] font-medium tracking-tight">
+                            Client project intake
                         </h2>
-                        <p className="mt-4 max-w-sm text-base leading-snug font-medium text-[#65736d]">
-                            Field logic, budget ranges, file requests, and
-                            follow-up routing in one hosted form.
-                        </p>
                     </div>
-
-                    <div className="grid max-w-sm grid-cols-3 gap-2">
-                        {['Brief', 'Budget', 'Files'].map((item, index) => (
-                            <div
-                                className={`rounded-md border px-3 py-2 text-sm font-semibold ${
-                                    index === 1
-                                        ? 'border-[#17201c] bg-[#17201c] text-white'
-                                        : 'border-[#d5ded9] bg-white text-[#65736d]'
-                                }`}
-                                key={item}
-                            >
-                                {item}
-                            </div>
-                        ))}
+                    <div className="space-y-2 text-sm font-medium">
+                        <div className="bg-[#151515] px-3 py-2 text-[#f2b705]">
+                            12 new submissions
+                        </div>
+                        <div className="bg-[#fff3c4] px-3 py-2">CRM routed</div>
                     </div>
-                </section>
+                </aside>
 
-                <section className="px-8 py-7 pb-16">
-                    <div className="rounded-md border border-[#d5ded9] bg-white shadow-sm">
-                        <div className="flex items-center justify-between border-b border-[#e5ebe8] px-5 py-4">
-                            <div>
-                                <div className="text-sm font-semibold">
-                                    Project request
-                                </div>
-                                <div className="mt-1 text-xs font-medium text-[#718079]">
-                                    Step 2 of 4
-                                </div>
-                            </div>
-                            <div className="h-2 w-28 rounded-full bg-[#e5ebe8]">
-                                <div className="h-full w-1/2 rounded-full bg-[#1f624a]" />
+                <main className="flex min-h-0 flex-col p-6 pb-18">
+                    <header className="flex items-start justify-between gap-6 border-b border-[#dbe1ea] pb-4">
+                        <div>
+                            <div className="max-w-md text-sm font-medium text-[#667085]">
+                                A hosted request form for qualified client work,
+                                routing, files, and launch dates.
                             </div>
                         </div>
+                        <div className="h-2 w-28 bg-[#dbe1ea]">
+                            <div className="h-full w-1/2 bg-[#f2b705]" />
+                        </div>
+                    </header>
 
-                        <div className="p-5">
-                            <div className="grid grid-cols-2 gap-3">
+                    <section className="mt-5 flex min-h-0 flex-1 flex-col bg-white p-5 shadow-sm shadow-[#98a2b3]/15">
+                        <div className="flex min-h-0 flex-col">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <div className="text-sm font-medium tracking-tight">
+                                        Website redesign request
+                                    </div>
+                                    <div className="mt-1 text-xs text-[#667085]">
+                                        Step 2 of 4: scope and budget
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-5 grid grid-cols-2 gap-3">
                                 {[
-                                    ['Company', 'Northstar Studio'],
+                                    ['Company', 'Brightline Health'],
                                     ['Contact', 'Rina Patel'],
                                 ].map(([label, value]) => (
-                                    <label className="block" key={label}>
-                                        <span className="text-xs font-semibold text-[#718079]">
+                                    <div key={label}>
+                                        <div className="text-xs font-medium text-muted-foreground">
                                             {label}
-                                        </span>
-                                        <span className="mt-1 block rounded-md border border-[#d5ded9] bg-[#fbfcfa] px-3 py-2.5 text-sm font-medium">
+                                        </div>
+                                        <div className="mt-1 truncate rounded-md bg-muted px-3 py-2.5 text-sm font-medium">
                                             {value}
-                                        </span>
-                                    </label>
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
 
-                            <label className="mt-4 block">
-                                <span className="text-xs font-semibold text-[#718079]">
-                                    What are you launching?
-                                </span>
-                                <span className="mt-1 grid grid-cols-3 gap-2">
+                            <div className="mt-5">
+                                <div className="text-xs font-medium text-muted-foreground">
+                                    What should the agent build?
+                                </div>
+                                <div className="mt-2 grid grid-cols-3 gap-2 text-center text-sm font-medium">
                                     {['Portal', 'Report', 'Workflow'].map(
                                         (label, index) => (
-                                            <span
-                                                className={`rounded-md border px-3 py-2 text-center text-sm font-semibold ${
+                                            <div
+                                                className={`rounded-md px-3 py-2 ${
                                                     index === 2
-                                                        ? 'border-[#1f624a] bg-[#e8f3ed] text-[#1f624a]'
-                                                        : 'border-[#d5ded9] text-[#65736d]'
+                                                        ? 'bg-amber-600 text-background'
+                                                        : 'bg-muted text-muted-foreground'
                                                 }`}
                                                 key={label}
                                             >
                                                 {label}
-                                            </span>
+                                            </div>
                                         ),
                                     )}
-                                </span>
-                            </label>
-
-                            <label className="mt-4 block">
-                                <span className="text-xs font-semibold text-[#718079]">
-                                    Budget range
-                                </span>
-                                <span className="mt-1 grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-md border border-[#d5ded9] bg-[#fbfcfa] px-3 py-3">
-                                    <span className="h-2 rounded-full bg-[#cdd9d4]">
-                                        <span className="block h-full w-3/4 rounded-full bg-[#1f624a]" />
-                                    </span>
-                                    <span className="text-sm font-semibold">
-                                        $18k
-                                    </span>
-                                    <span className="text-right text-sm font-medium text-[#718079]">
-                                        $30k
-                                    </span>
-                                </span>
-                            </label>
-
-                            <label className="mt-4 block">
-                                <span className="text-xs font-semibold text-[#718079]">
-                                    Key context
-                                </span>
-                                <span className="mt-1 block rounded-md border border-[#d5ded9] bg-[#fbfcfa] p-3">
-                                    <span className="block h-2 w-11/12 rounded-full bg-[#cdd9d4]" />
-                                    <span className="mt-2 block h-2 w-4/5 rounded-full bg-[#dce5e0]" />
-                                    <span className="mt-2 block h-2 w-2/3 rounded-full bg-[#dce5e0]" />
-                                </span>
-                            </label>
-
-                            <div className="mt-5 flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-sm font-semibold text-[#1f624a]">
-                                    <span className="grid size-6 place-items-center rounded-full bg-[#e8f3ed]">
-                                        3
-                                    </span>
-                                    files attached
                                 </div>
-                                <div className="rounded-full bg-[#17201c] px-5 py-2 text-sm font-semibold text-white">
-                                    Continue
+                            </div>
+
+                            <div className="mt-5 grid grid-cols-[1fr_9rem] gap-3">
+                                <div>
+                                    <div className="text-xs font-medium text-[#667085]">
+                                        Budget range
+                                    </div>
+                                    <div className="mt-2 bg-[#f2f4f7] p-3">
+                                        <div className="h-2 bg-[#dbe1ea]">
+                                            <div className="h-full w-3/4 bg-[#f2b705]" />
+                                        </div>
+                                        <div className="mt-3 flex justify-between text-xs font-medium text-[#667085]">
+                                            <span>$18k</span>
+                                            <span>$30k</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="text-xs font-medium text-[#667085]">
+                                        Launch
+                                    </div>
+                                    <div className="mt-2 bg-[#f2f4f7] px-3 py-3 text-sm font-medium">
+                                        Oct 14
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-5 bg-[#f2f4f7] p-3">
+                                <div className="text-xs font-medium text-[#667085]">
+                                    Project context
+                                </div>
+                                <div className="mt-2 text-sm leading-snug font-medium">
+                                    Need a private intake portal for clinic
+                                    partners, with file upload and weekly status
+                                    summaries.
+                                </div>
+                            </div>
+
+                            <div className="mt-auto flex items-center justify-between pt-5">
+                                <div className="bg-[#fff3c4] px-3 py-1 text-xs font-medium text-[#8a5b00]">
+                                    3 files attached
+                                </div>
+                                <div className="bg-[#151515] px-5 py-2 text-sm font-medium text-white">
+                                    Submit request
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </main>
+
+                <aside className="flex min-h-0 flex-col gap-3 bg-[#eef2f7] p-6 pb-18">
+                    <div className="bg-white p-4">
+                        <div className="text-xs font-medium text-[#667085]">
+                            Intake quality
+                        </div>
+                        <div className="mt-2 text-3xl leading-none font-medium tracking-tight">
+                            84%
+                        </div>
+                        <div className="mt-3 h-2 bg-[#dbe1ea]">
+                            <div className="h-full w-4/5 bg-[#f2b705]" />
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-4">
+                        <div className="text-xs font-medium text-[#667085]">
+                            Assigned owner
+                        </div>
+                        <div className="mt-3 flex items-center gap-2">
+                            <div className="grid size-8 place-items-center rounded-full bg-[#f2b705] text-xs font-medium">
+                                RP
+                            </div>
+                            <div className="min-w-0">
+                                <div className="truncate text-sm font-medium">
+                                    Rina Patel
+                                </div>
+                                <div className="text-xs text-[#667085]">
+                                    Enterprise lead
                                 </div>
                             </div>
                         </div>
                     </div>
-                </section>
+
+                    <div className="flex-1 bg-white p-4">
+                        <div className="text-xs font-medium text-[#667085]">
+                            Automations
+                        </div>
+                        <div className="mt-3 space-y-2 text-sm font-medium">
+                            <div className="bg-[#f2f4f7] px-2 py-1">
+                                brief.pdf saved
+                            </div>
+                            <div className="bg-[#f2f4f7] px-2 py-1">
+                                Slack ping sent
+                            </div>
+                            <div className="bg-[#151515] px-2 py-1 text-white">
+                                CRM task created
+                            </div>
+                        </div>
+                    </div>
+                </aside>
             </div>
         </div>
     );
@@ -466,12 +626,12 @@ function FormPreview() {
 
 function WeddingPreview() {
     return (
-        <div className="absolute inset-0 overflow-hidden bg-[#f8faf7] text-[#23191a]">
-            <div className="grid h-full grid-cols-[1fr_0.95fr]">
-                <main className="flex flex-col justify-between px-12 py-8 pb-18">
-                    <nav className="flex items-center justify-between text-sm font-semibold text-[#6d7a64]">
+        <div className="absolute inset-0 overflow-hidden bg-background text-foreground">
+            <div className="grid h-full grid-cols-[0.98fr_1.02fr] bg-muted p-6 pb-18 sm:p-8 sm:pb-18">
+                <main className="flex min-w-0 flex-col justify-between pr-6">
+                    <nav className="flex items-center justify-between gap-5 text-sm font-medium text-muted-foreground">
                         <span>Maya & Theo</span>
-                        <div className="flex gap-5">
+                        <div className="flex gap-4">
                             <span>Story</span>
                             <span>Weekend</span>
                             <span>RSVP</span>
@@ -479,71 +639,104 @@ function WeddingPreview() {
                     </nav>
 
                     <section>
-                        <div className="font-serif text-lg text-[#a75862] italic">
+                        <div className="font-medium tracking-tight text-pink-600">
+                            September 21, 2026
+                        </div>
+                        <h2 className="mt-3 max-w-md text-6xl leading-[0.86] font-medium tracking-tight">
+                            Maya & Theo
+                        </h2>
+                        <div className="mt-5 max-w-sm text-lg leading-snug font-medium tracking-tight text-foreground">
                             Willow House, Hudson Valley
                         </div>
-                        <h2 className="mt-5 max-w-lg font-serif text-7xl leading-[0.9] tracking-tight">
-                            We are getting married.
-                        </h2>
-                        <p className="mt-5 max-w-md text-lg leading-snug font-medium text-[#746862]">
-                            Join us for dinner under the trees, late-summer
-                            music, and a quiet weekend with the people we love.
-                        </p>
+                        <div className="mt-3 max-w-sm text-sm leading-snug font-medium text-muted-foreground">
+                            Dinner under the trees, late-summer music, and buses
+                            back after the last dance.
+                        </div>
                     </section>
 
-                    <div className="grid max-w-xl grid-cols-3 gap-3">
-                        {[
-                            ['Fri', 'Welcome drinks', '7:00 PM'],
-                            ['Sat', 'Ceremony', '5:30 PM'],
-                            ['Sun', 'Brunch', '10:30 AM'],
-                        ].map(([day, title, time]) => (
-                            <div
-                                className="rounded-md border border-[#dfe6d9] bg-white px-4 py-3"
-                                key={day}
-                            >
-                                <div className="text-xs font-semibold text-[#a75862]">
-                                    {day}
+                    <div>
+                        <div className="mb-3 flex items-center justify-between text-xs font-medium text-muted-foreground">
+                            <span>Weekend schedule</span>
+                            <span>koncat.co/maya-theo</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                            {[
+                                ['Fri', 'Welcome drinks', '7:00 PM'],
+                                ['Sat', 'Ceremony', '5:30 PM'],
+                                ['Sun', 'Farewell brunch', '10:30 AM'],
+                            ].map(([day, title, time], index) => (
+                                <div
+                                    className={`rounded-md p-3 ${
+                                        index === 1
+                                            ? 'bg-pink-600 text-background'
+                                            : 'bg-background/80'
+                                    }`}
+                                    key={day}
+                                >
+                                    <div
+                                        className={`text-xs font-medium ${
+                                            index === 1
+                                                ? 'text-background/80'
+                                                : 'text-pink-600'
+                                        }`}
+                                    >
+                                        {day}
+                                    </div>
+                                    <div className="mt-1 text-sm leading-tight font-medium">
+                                        {title}
+                                    </div>
+                                    <div
+                                        className={`mt-2 text-xs ${
+                                            index === 1
+                                                ? 'text-background/75'
+                                                : 'text-muted-foreground'
+                                        }`}
+                                    >
+                                        {time}
+                                    </div>
                                 </div>
-                                <div className="mt-1 text-sm font-semibold">
-                                    {title}
-                                </div>
-                                <div className="mt-1 text-xs font-medium text-[#746862]">
-                                    {time}
-                                </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
                 </main>
 
-                <aside className="relative overflow-hidden bg-[#dfe8d9] px-8 py-8 pb-18">
-                    <div className="absolute inset-x-8 top-8 bottom-18 overflow-hidden rounded-md bg-[#829477]">
-                        <div className="absolute inset-0 bg-[linear-gradient(160deg,#43513f,#829477_38%,#c3b194_70%,#f3d4c2)]" />
-                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[linear-gradient(180deg,transparent,#34402f)]" />
-                        <div className="absolute top-8 left-6 h-32 w-16 rounded-t-full bg-[#263223]/70" />
-                        <div className="absolute top-2 left-26 h-48 w-20 rounded-t-full bg-[#33452f]/60" />
-                        <div className="absolute top-10 right-10 h-40 w-18 rounded-t-full bg-[#465d40]/60" />
-                        <div className="absolute right-8 bottom-10 left-8 rounded-md border border-white/35 bg-white/18 p-4 text-white backdrop-blur-sm">
-                            <div className="text-sm font-semibold">
-                                Black-tie garden ceremony
+                <aside className="relative min-w-0 overflow-hidden rounded-md bg-background">
+                    <img
+                        className="h-full w-full object-cover"
+                        src="/assets/wedding.png"
+                        alt=""
+                        aria-hidden="true"
+                    />
+                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-foreground/55 to-transparent" />
+
+                    <div className="absolute top-4 right-4 rounded-md bg-background/90 p-3 backdrop-blur-sm">
+                        <div className="flex items-center justify-between gap-4">
+                            <div>
+                                <div className="text-sm font-medium">
+                                    Your RSVP
+                                </div>
+                                <div className="mt-1 text-xs text-muted-foreground">
+                                    2 attending
+                                </div>
                             </div>
-                            <div className="mt-1 text-xs font-medium opacity-85">
-                                Shuttle pickup at 4:45 PM
+                            <div className="grid size-8 place-items-center rounded-full bg-pink-600/20 text-xs font-medium text-pink-600">
+                                2
                             </div>
                         </div>
                     </div>
 
-                    <div className="absolute right-12 bottom-18 left-12 rounded-md bg-white p-4 shadow-xl shadow-[#65745c]/20">
-                        <div className="flex items-center justify-between gap-4">
+                    <div className="absolute right-4 bottom-4 left-4 rounded-md bg-background/92 p-4 backdrop-blur-sm">
+                        <div className="flex items-end justify-between gap-4">
                             <div>
-                                <div className="text-sm font-semibold">
-                                    RSVP received
+                                <div className="text-sm font-medium">
+                                    Willow House
                                 </div>
-                                <div className="mt-1 text-xs font-medium text-[#746862]">
-                                    118 guests confirmed
+                                <div className="mt-1 text-xs text-muted-foreground">
+                                    Shuttle pickup at Beacon Grand, 4:45 PM
                                 </div>
                             </div>
-                            <div className="rounded-full bg-[#23191a] px-4 py-2 text-sm font-semibold text-white">
-                                Reply
+                            <div className="rounded-sm bg-pink-600 px-3 py-1.5 text-xs font-medium text-background">
+                                Update reply
                             </div>
                         </div>
                     </div>

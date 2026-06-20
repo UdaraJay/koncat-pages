@@ -1039,7 +1039,7 @@ export default function Welcome() {
                             <div className="">
                                 <div>
                                     <div className="inline-block rounded-full bg-muted px-3 py-1 font-medium tracking-tight text-muted-foreground">
-                                        Access controls
+                                        Ready for everyone
                                     </div>
                                     <h2 className="mt-2 max-w-md text-3xl leading-tight font-medium tracking-tight text-foreground sm:text-4xl sm:leading-11 sm:tracking-tighter lg:text-5xl lg:leading-14">
                                         One page, four ways to lock the door.
