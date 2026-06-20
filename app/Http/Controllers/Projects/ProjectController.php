@@ -2,22 +2,48 @@
 
 namespace App\Http\Controllers\Projects;
 
+use App\Enums\ProjectSharePermission;
 use App\Enums\WorkspacePermission;
+use App\Http\Controllers\Concerns\BuildsProjectMoveTargets;
+use App\Http\Controllers\Concerns\BuildsProjectPayloads;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\MatterpipeQuota;
+use App\Services\ProjectAnalytics;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class ProjectController extends Controller
 {
+    use BuildsProjectMoveTargets, BuildsProjectPayloads;
+
+    public function show(Request $request, Project $project, ProjectAnalytics $analytics): Response
+    {
+        $user = $request->user();
+
+        $project
+            ->load(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment', 'shares.user', 'shares.sharer'])
+            ->loadCount(['deployments', 'shares']);
+
+        abort_unless($user->canAccessProject($project), 403);
+
+        $projectAnalytics = $analytics->viewSummaries(collect([$project]));
+
+        return Inertia::render('projects/show', [
+            'project' => $this->projectPayload($project, $user, $projectAnalytics[$project->id] ?? $analytics->emptySummary()),
+            'projectSharePermissions' => ProjectSharePermission::options(),
+            'moveTargets' => $this->projectMoveTargets($user),
+        ]);
+    }
+
     public function store(Request $request, MatterpipeQuota $quota): RedirectResponse
     {
         $user = $request->user();

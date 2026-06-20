@@ -1,3 +1,4 @@
+import { Link } from '@inertiajs/react';
 import {
     ArrowUpRight,
     CalendarClock,
@@ -5,6 +6,7 @@ import {
     HardDrive,
     Share2,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import EditProjectDialog from '@/components/edit-project-dialog';
 import MoveProjectDialog from '@/components/move-project-dialog';
@@ -31,10 +33,12 @@ export function ProjectCard({
     project,
     moveTargets,
     sharePermissions,
+    href,
 }: {
     project: Project;
     moveTargets: ProjectMoveTarget[];
     sharePermissions: ProjectSharePermissionOption[];
+    href?: string;
 }) {
     const [shareDialogOpen, setShareDialogOpen] = useState(false);
     const [analyticsDialogOpen, setAnalyticsDialogOpen] = useState(false);
@@ -77,44 +81,50 @@ export function ProjectCard({
             <article className="group flex overflow-hidden border bg-card transition">
                 <div className="flex min-w-0 flex-1 flex-col">
                     <div className="relative">
-                        <ProjectPreview project={project} />
-                        <div className="absolute top-4 left-4 flex shrink-0 items-center gap-1">
-                            {scope ? (
+                        <ProjectCardLink
+                            href={href}
+                            className="block focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                            ariaLabel={`Open ${project.name} details`}
+                        >
+                            <ProjectPreview project={project} />
+                            <div className="absolute top-4 left-4 flex shrink-0 items-center gap-1">
+                                {scope ? (
+                                    <Badge
+                                        variant={
+                                            project.currentDeployment
+                                                ? 'secondary'
+                                                : 'outline'
+                                        }
+                                        className="shrink-0 bg-background/60 text-foreground"
+                                    >
+                                        {scope}
+                                    </Badge>
+                                ) : null}
+
                                 <Badge
                                     variant={
-                                        project.currentDeployment
+                                        project.currentDeployment && !isArchived
                                             ? 'secondary'
                                             : 'outline'
                                     }
-                                    className="shrink-0 bg-background/60 text-foreground"
+                                    className="shrink-0"
                                 >
-                                    {scope}
+                                    {isArchived
+                                        ? 'Archived'
+                                        : project.currentDeployment
+                                          ? 'Live'
+                                          : 'Draft'}
                                 </Badge>
-                            ) : null}
-
-                            <Badge
-                                variant={
-                                    project.currentDeployment && !isArchived
-                                        ? 'secondary'
-                                        : 'outline'
-                                }
-                                className="shrink-0"
-                            >
-                                {isArchived
-                                    ? 'Archived'
-                                    : project.currentDeployment
-                                      ? 'Live'
-                                      : 'Draft'}
-                            </Badge>
-                            {project.sharePermissionLabel ? (
-                                <Badge
-                                    variant="outline"
-                                    className="shrink-0 bg-background text-foreground"
-                                >
-                                    {project.sharePermissionLabel}
-                                </Badge>
-                            ) : null}
-                        </div>
+                                {project.sharePermissionLabel ? (
+                                    <Badge
+                                        variant="outline"
+                                        className="shrink-0 bg-background text-foreground"
+                                    >
+                                        {project.sharePermissionLabel}
+                                    </Badge>
+                                ) : null}
+                            </div>
+                        </ProjectCardLink>
                         <div className="absolute top-3 right-3">
                             <ProjectCardMenu
                                 project={project}
@@ -128,31 +138,43 @@ export function ProjectCard({
                     </div>
 
                     <div className="flex flex-1 flex-col gap-4 p-4">
-                        <div className="">
-                            <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                    <h3 className="truncate font-medium">
-                                        {project.name}
-                                    </h3>
+                        <ProjectCardLink
+                            href={href}
+                            className="block focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                            ariaLabel={`Open ${project.name} details`}
+                        >
+                            <div>
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <h3 className="truncate font-medium">
+                                            {project.name}
+                                        </h3>
+                                    </div>
                                 </div>
-                            </div>
 
-                            {project.description ? (
-                                <div className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
-                                    {project.description}
-                                </div>
-                            ) : (
-                                <div className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
-                                    No description added.
-                                </div>
-                            )}
-                        </div>
+                                {project.description ? (
+                                    <div className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
+                                        {project.description}
+                                    </div>
+                                ) : (
+                                    <div className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
+                                        No description added.
+                                    </div>
+                                )}
+                            </div>
+                        </ProjectCardLink>
 
                         <div className="mt-auto flex items-end justify-between gap-3">
-                            <ProjectMeta
-                                project={project}
-                                deployedAt={deployedAt}
-                            />
+                            <ProjectCardLink
+                                href={href}
+                                className="block focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                                ariaLabel={`Open ${project.name} details`}
+                            >
+                                <ProjectMeta
+                                    project={project}
+                                    deployedAt={deployedAt}
+                                />
+                            </ProjectCardLink>
 
                             {isArchived ? (
                                 <Badge variant="outline">Hidden</Badge>
@@ -173,6 +195,28 @@ export function ProjectCard({
                 </div>
             </article>
         </>
+    );
+}
+
+function ProjectCardLink({
+    href,
+    className,
+    ariaLabel,
+    children,
+}: {
+    href?: string;
+    className?: string;
+    ariaLabel: string;
+    children: ReactNode;
+}) {
+    if (!href) {
+        return <div className={className}>{children}</div>;
+    }
+
+    return (
+        <Link href={href} prefetch className={className} aria-label={ariaLabel}>
+            {children}
+        </Link>
     );
 }
 

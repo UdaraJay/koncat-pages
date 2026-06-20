@@ -36,6 +36,7 @@ export function SharedProjectsSection({
                         <ProjectCard
                             key={project.id}
                             project={project}
+                            href={`/projects/${project.id}`}
                             moveTargets={moveTargets}
                             sharePermissions={sharePermissions}
                         />
@@ -45,9 +46,7 @@ export function SharedProjectsSection({
                 <div className="grid min-h-80 place-items-center bg-muted p-8 text-center">
                     <div className="max-w-sm space-y-2">
                         <Share2 className="mx-auto mb-5 size-8 text-border" />
-                        <h3 className="font-medium">
-                            No shared projects yet
-                        </h3>
+                        <h3 className="font-medium">No shared projects yet</h3>
                         <p className="text-sm text-muted-foreground">
                             Projects shared directly with your email address
                             will appear here.

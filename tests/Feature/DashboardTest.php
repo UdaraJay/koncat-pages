@@ -41,6 +41,102 @@ class DashboardTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_project_owner_can_visit_project_detail_page()
+    {
+        $user = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'hosting_team_id' => $user->personalTeam()->id,
+            'created_by' => $user->id,
+            'name' => 'Detail App',
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('projects.show', $project));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('projects/show')
+            ->where('project.id', $project->id)
+            ->where('project.name', 'Detail App')
+            ->has('moveTargets')
+            ->has('projectSharePermissions'));
+    }
+
+    public function test_direct_project_share_can_visit_project_detail_page()
+    {
+        $owner = User::factory()->create();
+        $recipient = User::factory()->create(['email' => 'recipient@example.com']);
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+            'created_by' => $owner->id,
+            'name' => 'Shared Detail App',
+        ]);
+
+        ProjectShare::factory()->forUser($recipient)->create([
+            'project_id' => $project->id,
+            'shared_by' => $owner->id,
+            'permission' => ProjectSharePermission::Read,
+        ]);
+
+        $response = $this
+            ->actingAs($recipient)
+            ->get(route('projects.show', $project));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('projects/show')
+            ->where('project.name', 'Shared Detail App')
+            ->where('project.sharePermission', ProjectSharePermission::Read->value)
+            ->where('project.canManageShares', false));
+    }
+
+    public function test_unrelated_user_cannot_visit_project_detail_page()
+    {
+        $owner = User::factory()->create();
+        $visitor = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+            'created_by' => $owner->id,
+        ]);
+
+        $this
+            ->actingAs($visitor)
+            ->get(route('projects.show', $project))
+            ->assertForbidden();
+    }
+
+    public function test_archived_project_owner_can_visit_project_detail_page()
+    {
+        $user = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'hosting_team_id' => $user->personalTeam()->id,
+            'created_by' => $user->id,
+            'name' => 'Archived Detail App',
+        ]);
+        $project->delete();
+        $archivedAt = $project->deleted_at?->toISOString();
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('projects.show', $project));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('projects/show')
+            ->where('project.name', 'Archived Detail App')
+            ->where('project.deletedAt', $archivedAt)
+            ->where('project.canRestore', true));
+    }
+
     public function test_dashboard_project_cards_include_a_raw_preview_url()
     {
         config([

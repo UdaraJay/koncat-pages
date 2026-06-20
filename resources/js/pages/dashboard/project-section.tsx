@@ -114,6 +114,7 @@ export function ProjectSection({
                         <ProjectCard
                             key={project.id}
                             project={project}
+                            href={`/projects/${project.id}`}
                             moveTargets={moveTargets}
                             sharePermissions={sharePermissions}
                         />

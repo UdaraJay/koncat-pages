@@ -42,6 +42,7 @@ Route::domain('{team}.'.config('matterpipe.hosting_domain'))
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('home', DashboardController::class)->name('dashboard');
+    Route::get('projects/{project}', [ProjectController::class, 'show'])->withTrashed()->name('projects.show');
     Route::post('projects', [ProjectController::class, 'store'])->name('projects.store');
     Route::patch('projects/{project}', [ProjectController::class, 'updateDetails'])->name('projects.update');
     Route::post('projects/{project}/deployments', [DeploymentController::class, 'storeGlobal'])->name('projects.deployments.store');
