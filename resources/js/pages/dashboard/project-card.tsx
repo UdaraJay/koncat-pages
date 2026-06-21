@@ -12,6 +12,7 @@ import EditProjectDialog from '@/components/edit-project-dialog';
 import MoveProjectDialog from '@/components/move-project-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { LogoIcon } from '@/icons';
 import type {
     Project,
     ProjectMoveTarget,
@@ -238,13 +239,8 @@ function ProjectPreview({ project }: { project: Project }) {
     }
 
     return (
-        <div className="relative aspect-video overflow-hidden border-b bg-muted">
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,.06)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,.06)_1px,transparent_1px)] bg-[size:24px_24px] dark:bg-[linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px)]" />
-            <div className="absolute inset-x-6 top-6 h-3 rounded-full bg-background shadow-sm" />
-            <div className="absolute right-6 bottom-6 left-6 rounded-md border bg-background/95 p-3 shadow-sm">
-                <div className="h-2 w-2/3 rounded-full bg-foreground/20" />
-                <div className="mt-2 h-2 w-1/2 rounded-full bg-foreground/10" />
-            </div>
+        <div className="relative flex aspect-video items-center justify-center overflow-hidden border-b bg-muted">
+            <LogoIcon className="size-10 text-border" />
         </div>
     );
 }

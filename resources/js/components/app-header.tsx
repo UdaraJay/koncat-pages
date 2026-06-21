@@ -13,7 +13,7 @@ import { UserMenuContent } from '@/components/user-menu-content';
 import { useInitials } from '@/hooks/use-initials';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
-import { Slash } from 'lucide-react';
+import { ChevronRightIcon, Slash } from 'lucide-react';
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
@@ -31,7 +31,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                 Koncat is in early-access. Some features may be limited.
             </div>
             <header className="sticky top-0 z-40 flex h-14 w-full items-center bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-                <div className="flex min-w-0 flex-1 items-center gap-2">
+                <div className="flex min-w-0 flex-1 items-center gap-1">
                     <Button
                         asChild
                         variant="ghost"
@@ -55,8 +55,8 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                     />
 
                     {breadcrumbs.length > 0 ? (
-                        <div className="hidden min-w-0 items-center gap-2 text-sm text-muted-foreground sm:flex">
-                            <span className="mr-3 text-border">/</span>
+                        <div className="hidden min-w-0 items-center gap-2 font-medium tracking-tight text-muted-foreground sm:flex">
+                            <ChevronRightIcon className="mr-2 size-4 text-muted-foreground/50" />
                             <Breadcrumbs breadcrumbs={breadcrumbs} />
                         </div>
                     ) : null}

@@ -3,10 +3,9 @@ import {
     Activity,
     ArrowUpRight,
     CalendarClock,
-    CheckCircle2,
+    Check,
     Folder,
     HardDrive,
-    RotateCcw,
     Share2,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -195,24 +194,25 @@ function DeploymentSummary({
             <div className="space-y-4 p-5">
                 <div className="flex items-center gap-2">
                     <HardDrive className="h-4 w-4 text-muted-foreground" />
-                    <h2 className="font-medium">Versions</h2>
+                    <h2 className="font-medium">Current version</h2>
                 </div>
 
-                <div className="border bg-background p-4">
+                <div className="rounded-lg border bg-background p-3 py-2">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <div className="flex items-center gap-1.5 font-medium">
-                                    {formatNullableDate(
-                                        currentDeployment.deployedAt,
-                                    )}
+                            <div className="flex flex-wrap items-start gap-2">
+                                <div className="flex min-w-0 items-start gap-1.5">
+                                    <DeploymentTimestamp
+                                        value={currentDeployment.deployedAt}
+                                        dateClassName="font-medium tracking-tight"
+                                        timeClassName="font-medium tracking-tight text-muted-foreground"
+                                    />
                                     <PolicyScreeningIndicator
                                         deployment={currentDeployment}
                                     />
                                 </div>
-                                <Badge variant="secondary">Live</Badge>
                             </div>
-                            <div className="mt-1 text-sm text-muted-foreground">
+                            <div className="text-sm text-muted-foreground">
                                 {formatNumber(currentDeployment.fileCount)}{' '}
                                 {currentDeployment.fileCount === 1
                                     ? 'file'
@@ -220,39 +220,41 @@ function DeploymentSummary({
                                 , {formatBytes(currentDeployment.totalBytes)}
                             </div>
                         </div>
-                        <a
-                            href={project.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-2 text-sm font-medium underline-offset-4 hover:underline"
-                        >
-                            Open
-                            <ArrowUpRight className="h-4 w-4" />
+                        <a href={project.url} target="_blank" rel="noreferrer">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="max-w-full whitespace-normal"
+                            >
+                                Open
+                            </Button>
                         </a>
                     </div>
                 </div>
 
                 {previousDeployments.length > 0 ? (
                     <div className="space-y-2">
-                        <div className="text-sm font-medium">History</div>
-                        <div className="divide-y border">
+                        <div className="text-sm font-medium">Past versions</div>
+                        <div className="divide-y rounded-lg border">
                             {previousDeployments.map((deployment) => (
                                 <div
                                     key={deployment.id}
-                                    className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between"
+                                    className="flex flex-col gap-3 p-3 py-2 sm:flex-row sm:items-center sm:justify-between"
                                 >
                                     <div className="min-w-0">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span className="flex items-center gap-1.5 text-sm font-medium">
-                                                {formatNullableDate(
-                                                    deployment.deployedAt,
-                                                )}
+                                        <div className="flex flex-wrap items-start gap-2">
+                                            <div className="flex min-w-0 items-start gap-1.5">
+                                                <DeploymentTimestamp
+                                                    value={
+                                                        deployment.deployedAt
+                                                    }
+                                                />
                                                 <PolicyScreeningIndicator
                                                     deployment={deployment}
                                                 />
-                                            </span>
+                                            </div>
                                         </div>
-                                        <div className="mt-1 text-xs text-muted-foreground">
+                                        <div className="text-xs text-muted-foreground">
                                             {formatNumber(deployment.fileCount)}{' '}
                                             {deployment.fileCount === 1
                                                 ? 'file'
@@ -268,7 +270,6 @@ function DeploymentSummary({
                                         disabled={rollbackId === deployment.id}
                                         onClick={() => rollback(deployment)}
                                     >
-                                        <RotateCcw className="h-4 w-4" />
                                         Rollback
                                     </Button>
                                 </div>
@@ -278,6 +279,30 @@ function DeploymentSummary({
                 ) : null}
             </div>
         </section>
+    );
+}
+
+function DeploymentTimestamp({
+    value,
+    dateClassName = 'text-sm font-medium tracking-tight',
+    timeClassName = 'text-sm font-medium tracking-tight text-muted-foreground',
+}: {
+    value: string;
+    dateClassName?: string;
+    timeClassName?: string;
+}) {
+    const timestamp = formatDeploymentTimestamp(value);
+
+    return (
+        <time
+            dateTime={value}
+            className="inline-flex min-w-0 flex-wrap items-baseline gap-x-1.5 leading-tight"
+        >
+            <span className={dateClassName}>{timestamp.date}</span>
+            {timestamp.time ? (
+                <span className={timeClassName}>{timestamp.time}</span>
+            ) : null}
+        </time>
     );
 }
 
@@ -298,14 +323,12 @@ function PolicyScreeningIndicator({
                     className="inline-flex rounded-sm text-emerald-600 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     aria-label="Automated policy screening"
                 >
-                    <CheckCircle2 className="h-4 w-4" />
+                    <Check className="size-3.5 stroke-3" />
                 </span>
             </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-64">
-                <p>
-                    Automated policy screening reduces common risk; it is not a
-                    guarantee of safety.
-                </p>
+            <TooltipContent side="top" className="text-center">
+                Automated policy screening reduces common risk; it is not a
+                guarantee of safety.
             </TooltipContent>
         </Tooltip>
     );
@@ -437,6 +460,33 @@ function analyticsRows(project: Project) {
 
 function formatNullableDate(value?: string | null): string {
     return value ? formatDate(value) : 'Never';
+}
+
+function formatDeploymentTimestamp(value: string): {
+    date: string;
+    time: string;
+} {
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return {
+            date: value,
+            time: '',
+        };
+    }
+
+    return {
+        date: new Intl.DateTimeFormat(undefined, {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        }).format(date),
+        time: new Intl.DateTimeFormat(undefined, {
+            hour: 'numeric',
+            minute: '2-digit',
+            timeZoneName: 'short',
+        }).format(date),
+    };
 }
 
 ProjectShow.layout = (props: Props) => ({

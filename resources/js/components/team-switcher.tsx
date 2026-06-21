@@ -220,7 +220,7 @@ function HeaderTeamSwitcher({ currentTeam, teams }: Props) {
             <DropdownMenuTrigger asChild>
                 <Button
                     variant="ghost"
-                    className="h-9 max-w-[220px] min-w-0 justify-start gap-2 px-2 text-foreground data-[state=open]:bg-accent"
+                    className="h-9 max-w-[220px] min-w-0 justify-start gap-2 px-2! text-foreground hover:bg-muted! data-[state=open]:bg-accent"
                 >
                     {renderTeamMark({
                         label: activeTeam.name,
