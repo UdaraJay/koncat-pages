@@ -28,7 +28,7 @@ class ProjectAnalytics
 
     /**
      * @param  EloquentCollection<int, Project>|Collection<int, Project>  $projects
-     * @return array<string, array{viewsTotal: int, uniqueViewersTotal: int, viewsLast7Days: int, lastViewedAt: string|null, sharedUsers: array<int, array{email: string, name: string|null, permissionLabel: string, pending: bool, viewsTotal: int, lastViewedAt: string|null}>}>
+     * @return array<string, array{viewsTotal: int, uniqueViewersTotal: int, viewsLast7Days: int, lastViewedAt: string|null, dailyViews: array<int, array{date: string, views: int}>, sharedUsers: array<int, array{email: string, name: string|null, permissionLabel: string, pending: bool, viewsTotal: int, lastViewedAt: string|null}>}>
      */
     public function viewSummaries(EloquentCollection|Collection $projects): array
     {
@@ -42,6 +42,10 @@ class ProjectAnalytics
         }
 
         $sevenDaysAgo = now()->subDays(7);
+        $today = now()->startOfDay();
+        $dailyStart = $today->copy()->subDays(13);
+        $dailyDates = collect(range(0, 13))
+            ->map(fn (int $offset) => $dailyStart->copy()->addDays($offset)->toDateString());
 
         $summaries = ProjectAnalyticsEvent::query()
             ->whereIn('project_id', $projectIds)
@@ -54,20 +58,39 @@ class ProjectAnalytics
             ->groupBy('project_id')
             ->get()
             ->keyBy('project_id');
+        $dailySummaries = ProjectAnalyticsEvent::query()
+            ->whereIn('project_id', $projectIds)
+            ->where('event_type', self::EVENT_PROJECT_VIEW)
+            ->where('occurred_at', '>=', $dailyStart)
+            ->select('project_id')
+            ->selectRaw('DATE(occurred_at) as viewed_on')
+            ->selectRaw('COUNT(*) as views')
+            ->groupBy(['project_id', 'viewed_on'])
+            ->get()
+            ->groupBy('project_id')
+            ->map(fn (Collection $views) => $views->keyBy('viewed_on'));
         $sharedUserSummaries = $this->sharedUserSummaries($projects);
 
         return $projectIds
-            ->mapWithKeys(function (string $projectId) use ($summaries, $sharedUserSummaries) {
+            ->mapWithKeys(function (string $projectId) use ($dailyDates, $dailySummaries, $summaries, $sharedUserSummaries) {
                 $summary = $summaries->get($projectId);
                 $lastViewedAt = $summary?->last_viewed_at
                     ? Carbon::parse($summary->last_viewed_at)->toISOString()
                     : null;
+                $projectDailyViews = $dailySummaries->get($projectId, collect());
 
                 return [$projectId => [
                     'viewsTotal' => (int) ($summary?->views_total ?? 0),
                     'uniqueViewersTotal' => (int) ($summary?->unique_viewers_total ?? 0),
                     'viewsLast7Days' => (int) ($summary?->views_last_7_days ?? 0),
                     'lastViewedAt' => $lastViewedAt,
+                    'dailyViews' => $dailyDates
+                        ->map(fn (string $date) => [
+                            'date' => $date,
+                            'views' => (int) ($projectDailyViews->get($date)?->views ?? 0),
+                        ])
+                        ->values()
+                        ->all(),
                     'sharedUsers' => $sharedUserSummaries[$projectId] ?? [],
                 ]];
             })
@@ -75,15 +98,24 @@ class ProjectAnalytics
     }
 
     /**
-     * @return array{viewsTotal: int, uniqueViewersTotal: int, viewsLast7Days: int, lastViewedAt: string|null, sharedUsers: array<int, array{email: string, name: string|null, permissionLabel: string, pending: bool, viewsTotal: int, lastViewedAt: string|null}>}
+     * @return array{viewsTotal: int, uniqueViewersTotal: int, viewsLast7Days: int, lastViewedAt: string|null, dailyViews: array<int, array{date: string, views: int}>, sharedUsers: array<int, array{email: string, name: string|null, permissionLabel: string, pending: bool, viewsTotal: int, lastViewedAt: string|null}>}
      */
     public function emptySummary(): array
     {
+        $today = now()->startOfDay();
+
         return [
             'viewsTotal' => 0,
             'uniqueViewersTotal' => 0,
             'viewsLast7Days' => 0,
             'lastViewedAt' => null,
+            'dailyViews' => collect(range(0, 13))
+                ->map(fn (int $offset) => [
+                    'date' => $today->copy()->subDays(13 - $offset)->toDateString(),
+                    'views' => 0,
+                ])
+                ->values()
+                ->all(),
             'sharedUsers' => [],
         ];
     }

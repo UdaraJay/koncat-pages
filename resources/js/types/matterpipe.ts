@@ -76,6 +76,10 @@ export type Project = {
         uniqueViewersTotal: number;
         viewsLast7Days: number;
         lastViewedAt?: string | null;
+        dailyViews?: {
+            date: string;
+            views: number;
+        }[];
         sharedUsers?: {
             email: string;
             name?: string | null;
