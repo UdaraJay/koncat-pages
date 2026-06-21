@@ -300,9 +300,9 @@ function renderTeamAvatar({
         <Avatar
             size={isSmall ? 'sm' : 'default'}
             className={cn(
-                isSmall ? 'rounded-sm border' : 'rounded-md',
+                isSmall ? 'size-6.75! rounded-sm' : 'rounded-sm',
                 isHeader
-                    ? 'border-violet-200 bg-violet-50'
+                    ? 'bg-violet-200'
                     : isSmall
                       ? 'bg-background'
                       : 'bg-sidebar-primary',
@@ -311,9 +311,9 @@ function renderTeamAvatar({
             <AvatarFallback
                 className={cn(
                     'font-medium',
-                    isSmall ? 'rounded-sm text-xs' : 'rounded-md text-xs',
+                    isSmall ? 'rounded-xs text-xs' : 'rounded-sm text-xs',
                     isHeader
-                        ? 'bg-violet-50 text-violet-700'
+                        ? 'bg-violet-200 text-violet-700'
                         : isSmall
                           ? 'bg-background text-foreground'
                           : 'bg-sidebar-primary text-sidebar-primary-foreground',

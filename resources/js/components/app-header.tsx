@@ -30,7 +30,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
             <div className="bg-yellow-100 p-2 px-6 text-sm text-yellow-800">
                 Koncat is in early-access. Some features may be limited.
             </div>
-            <header className="sticky top-0 z-40 flex h-14 w-full items-center bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+            <header className="sticky top-0 z-40 flex h-14 w-full items-center bg-linear-to-b from-background from-60% to-transparent px-4">
                 <div className="flex min-w-0 flex-1 items-center gap-1">
                     <Button
                         asChild
@@ -43,7 +43,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                             aria-label="Koncat home"
                             className="flex items-center"
                         >
-                            <AppLogoIcon className="-mt-[3px] size-5.75 fill-current text-foreground" />
+                            <AppLogoIcon className="-mt-[2px] size-5.75 fill-current text-foreground" />
                             <div className="font-[Koulen] text-2xl">Koncat</div>
                         </Link>
                     </Button>
