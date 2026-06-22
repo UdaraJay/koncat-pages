@@ -502,7 +502,7 @@ class MatterpipePlatformTest extends TestCase
             'project_id' => $project->id,
             'user_id' => $user->id,
             'disk' => 'local',
-            'path' => 'deployments/unpublish-me',
+            'path' => "teams/{$project->hosting_team_id}/projects/{$project->id}/deployments/preserved",
             'file_count' => 1,
             'total_bytes' => 128,
             'deployed_at' => now(),
@@ -532,10 +532,10 @@ class MatterpipePlatformTest extends TestCase
 
         $user = User::factory()->create();
         $team = $user->currentTeam;
-        Storage::disk('public')->put('team-branding/design-team/logo.png', 'logo');
+        Storage::disk('public')->put("teams/{$team->id}/branding/logo.png", 'logo');
         $team->update([
             'subdomain' => 'design-team',
-            'brand_logo_path' => 'team-branding/design-team/logo.png',
+            'brand_logo_path' => "teams/{$team->id}/branding/logo.png",
             'brand_background_color' => '#123456',
             'brand_foreground_color' => '#fefdfc',
         ]);
@@ -560,6 +560,7 @@ class MatterpipePlatformTest extends TestCase
         $project->refresh();
 
         $this->assertNotNull($project->current_deployment_id);
+        $this->assertStringStartsWith("teams/{$team->id}/projects/{$project->id}/deployments/", $project->currentDeployment->path);
 
         $response = $this
             ->actingAs($user)
@@ -835,7 +836,7 @@ class MatterpipePlatformTest extends TestCase
         $deployment = $project->deployments()->create([
             'user_id' => $owner->id,
             'disk' => 'local',
-            'path' => 'deployments/analytics-app',
+            'path' => "teams/{$project->hosting_team_id}/projects/{$project->id}/deployments/analytics",
             'file_count' => 1,
             'total_bytes' => 12,
             'deployed_at' => now(),
@@ -870,15 +871,15 @@ class MatterpipePlatformTest extends TestCase
             'hosting_team_id' => $owner->personalTeam()->id,
             'slug' => 'raw-analytics-app',
         ]);
-        Storage::disk('local')->put('deployments/raw-analytics-app/index.html', 'raw');
         $deployment = $project->deployments()->create([
             'user_id' => $owner->id,
             'disk' => 'local',
-            'path' => 'deployments/raw-analytics-app',
+            'path' => "teams/{$project->hosting_team_id}/projects/{$project->id}/deployments/raw",
             'file_count' => 1,
             'total_bytes' => 3,
             'deployed_at' => now(),
         ]);
+        Storage::disk('local')->put($deployment->path.'/index.html', 'raw');
         $project->update(['current_deployment_id' => $deployment->id]);
 
         $response = $this
@@ -1193,6 +1194,27 @@ class MatterpipePlatformTest extends TestCase
             ])
             ->assertRedirect()
             ->assertSessionHasErrors(['file' => 'The uploaded file is too large.']);
+    }
+
+    public function test_hosted_file_upload_uses_team_scoped_storage_path(): void
+    {
+        Storage::fake('local');
+        config(['matterpipe.storage_disk' => 'local']);
+
+        [$user, $project] = $this->hostedFileProject('files-team', 'files-app');
+
+        $this
+            ->actingAs($user)
+            ->withToken($this->runtimeToken($project, $user))
+            ->post('http://files-team.localhost/files-app/__matterpipe/files', [
+                'file' => UploadedFile::fake()->create('asset.bin', 1),
+            ])
+            ->assertCreated();
+
+        $file = ProjectFile::firstOrFail();
+
+        $this->assertStringStartsWith("teams/{$project->hosting_team_id}/projects/{$project->id}/files/{$file->id}-", $file->path);
+        Storage::disk('local')->assertExists($file->path);
     }
 
     public function test_hosted_file_upload_rejects_project_file_count_over_limit(): void

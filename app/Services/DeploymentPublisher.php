@@ -19,6 +19,7 @@ class DeploymentPublisher
     public function __construct(
         protected MatterpipeQuota $quota,
         protected DeploymentSecurityScanService $securityScans,
+        protected TeamStoragePaths $paths,
     ) {
         //
     }
@@ -90,14 +91,12 @@ class DeploymentPublisher
 
         $disk = (string) config('matterpipe.storage_disk');
 
-        $projectScope = $project->workspace_id ?? $project->owner_id;
-
-        return DB::transaction(function () use ($project, $archive, $user, $manifest, $totalBytes, $fileCount, $disk, $projectScope, $deploymentFiles, $scan) {
+        return DB::transaction(function () use ($project, $archive, $user, $manifest, $totalBytes, $fileCount, $disk, $deploymentFiles, $scan) {
             $deployment = Deployment::create([
                 'project_id' => $project->id,
                 'user_id' => $user?->id,
                 'disk' => $disk,
-                'path' => "deployments/{$projectScope}/{$project->id}/pending",
+                'path' => $this->paths->deploymentDirectory($project, 'pending'),
                 'original_filename' => $archive->getClientOriginalName(),
                 'manifest' => $manifest,
                 'file_count' => $fileCount,
@@ -105,7 +104,7 @@ class DeploymentPublisher
                 'deployed_at' => now(),
             ]);
 
-            $deploymentPath = "deployments/{$projectScope}/{$project->id}/{$deployment->id}";
+            $deploymentPath = $this->paths->deploymentDirectory($project, $deployment->id);
             $storage = Storage::disk($disk);
 
             foreach ($deploymentFiles as $file) {

@@ -134,7 +134,7 @@ class TeamTest extends TestCase
 
         $user = User::factory()->create();
         $team = Team::factory()->create([
-            'brand_logo_path' => 'team-branding/logo.png',
+            'brand_logo_path' => 'teams/test-team/branding/logo.png',
             'brand_background_color' => '#123456',
             'brand_foreground_color' => '#abcdef',
         ]);
@@ -150,7 +150,7 @@ class TeamTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('team-settings/branding')
                 ->where('team.name', $team->name)
-                ->where('team.brandLogoUrl', Storage::disk('public')->url('team-branding/logo.png'))
+                ->where('team.brandLogoUrl', Storage::disk('public')->url('teams/test-team/branding/logo.png'))
                 ->where('team.brandBackgroundColor', '#123456')
                 ->where('team.brandForegroundColor', '#abcdef')
                 ->where('permissions.canUpdateTeam', true),
@@ -282,6 +282,7 @@ class TeamTest extends TestCase
         $firstLogoPath = $team->fresh()->brand_logo_path;
 
         $this->assertNotNull($firstLogoPath);
+        $this->assertStringStartsWith("teams/{$team->id}/branding/", $firstLogoPath);
         Storage::disk('public')->assertExists($firstLogoPath);
 
         $this

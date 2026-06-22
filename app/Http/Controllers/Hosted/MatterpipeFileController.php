@@ -10,6 +10,7 @@ use App\Services\MatterpipeLimitResolver;
 use App\Services\MatterpipeQuota;
 use App\Services\MatterpipeRuntimeContext;
 use App\Services\MatterpipeRuntimeTokens;
+use App\Services\TeamStoragePaths;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -19,7 +20,7 @@ class MatterpipeFileController extends Controller
 {
     use ResolvesHostedProject;
 
-    public function store(Request $request, string $team, string $project, MatterpipeQuota $quota, MatterpipeLimitResolver $limits, MatterpipeRuntimeTokens $tokens): JsonResponse
+    public function store(Request $request, string $team, string $project, MatterpipeQuota $quota, MatterpipeLimitResolver $limits, MatterpipeRuntimeTokens $tokens, TeamStoragePaths $paths): JsonResponse
     {
         $hostedProject = $this->hostedProject($request, $team, $project);
         $runtime = $this->writeRuntime($request, $hostedProject, $tokens);
@@ -50,11 +51,7 @@ class MatterpipeFileController extends Controller
             'size' => $file->getSize(),
         ]);
 
-        $path = $file->storeAs(
-            'project-files/'.($hostedProject->workspace_id ?? $hostedProject->owner_id)."/{$hostedProject->id}",
-            $record->id.'-'.$file->hashName(),
-            $disk,
-        );
+        $path = $file->storeAs($paths->projectFilesDirectory($hostedProject), $paths->projectFileName($record, $file->hashName()), $disk);
 
         $record->update(['path' => $path]);
 

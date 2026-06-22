@@ -10,6 +10,7 @@ use App\Http\Requests\Teams\UpdateTeamBrandingRequest;
 use App\Models\Membership;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\TeamStoragePaths;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -109,14 +110,14 @@ class TeamSettingsController extends Controller
     /**
      * Update the current team's branding settings.
      */
-    public function updateBranding(UpdateTeamBrandingRequest $request, Team $current_team): RedirectResponse
+    public function updateBranding(UpdateTeamBrandingRequest $request, Team $current_team, TeamStoragePaths $paths): RedirectResponse
     {
         Gate::authorize('update', $current_team);
 
         $uploadedLogoPath = null;
 
         if ($request->hasFile('logo')) {
-            $uploadedLogoPath = $request->file('logo')->store("team-branding/{$current_team->id}", 'public');
+            $uploadedLogoPath = $request->file('logo')->storeAs($paths->brandingDirectory($current_team->id), $request->file('logo')->hashName(), 'public');
         }
 
         try {
@@ -153,14 +154,14 @@ class TeamSettingsController extends Controller
     /**
      * Delete the current team.
      */
-    public function destroy(DeleteTeamRequest $request, Team $current_team): RedirectResponse
+    public function destroy(DeleteTeamRequest $request, Team $current_team, TeamStoragePaths $paths): RedirectResponse
     {
         $user = $request->user();
         $fallbackTeam = $user->isCurrentTeam($current_team)
             ? $user->fallbackTeam($current_team)
             : null;
 
-        DB::transaction(function () use ($user, $current_team) {
+        DB::transaction(function () use ($user, $current_team, $paths) {
             User::where('current_team_id', $current_team->id)
                 ->where('id', '!=', $user->id)
                 ->each(fn (User $affectedUser) => $affectedUser->switchTeam($affectedUser->personalTeam()));
@@ -169,9 +170,8 @@ class TeamSettingsController extends Controller
             $current_team->workspaces()->each(fn ($workspace) => $workspace->delete());
             $current_team->invitations()->delete();
             $current_team->memberships()->delete();
-            if ($current_team->brand_logo_path) {
-                Storage::disk('public')->delete($current_team->brand_logo_path);
-            }
+            Storage::disk('public')->deleteDirectory($paths->brandingDirectory($current_team->id));
+            Storage::disk((string) config('matterpipe.storage_disk'))->deleteDirectory($paths->teamDirectory($current_team->id));
             $current_team->delete();
         });
 
