@@ -18,6 +18,7 @@ trait BuildsProjectPayloads
     {
         $team = $project->workspace?->team;
         $canManageShares = $user->canManageProjectShares($project);
+        $canDelete = $user->canDeleteProject($project);
 
         if (! $team && $project->owner instanceof Team) {
             $team = $project->owner;
@@ -52,9 +53,10 @@ trait BuildsProjectPayloads
             'canUpdate' => $user->canUpdateProject($project) && ! $project->trashed(),
             'canDeploy' => $user->canDeployProject($project),
             'canUnpublish' => $project->current_deployment_id !== null && $user->canDeployProject($project) && ! $project->trashed(),
-            'canArchive' => $user->canDeleteProject($project) && ! $project->trashed(),
-            'canRestore' => $user->canDeleteProject($project) && $project->trashed(),
-            'canMove' => $user->canDeleteProject($project) && ! $project->trashed(),
+            'canArchive' => $canDelete && ! $project->trashed(),
+            'canRestore' => $canDelete && $project->trashed(),
+            'canDeletePermanently' => $canDelete && $project->trashed(),
+            'canMove' => $canDelete && ! $project->trashed(),
             'canManageShares' => $canManageShares,
             'sharePermission' => $this->shareForUser($project, $user)?->permission->value,
             'sharePermissionLabel' => $this->shareForUser($project, $user)?->permission->label(),

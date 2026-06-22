@@ -165,6 +165,7 @@ function DeploymentSummary({
     deployments: ProjectDeployment[];
 }) {
     const [rollbackId, setRollbackId] = useState<string | null>(null);
+    const isArchived = Boolean(project.deletedAt);
     const currentDeploymentId = project.currentDeployment?.id ?? null;
     const currentDeployment = project.currentDeployment;
     const previousDeployments = deployments.filter(
@@ -183,68 +184,71 @@ function DeploymentSummary({
         );
     };
 
-    if (!currentDeployment) {
-        return (
-            <section className="border bg-card">
-                <div className="space-y-3 p-5">
-                    <div className="flex items-center gap-2">
-                        <HardDrive className="h-4 w-4 text-muted-foreground" />
-                        <h2 className="font-medium">Versions</h2>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                        No deployment is live yet.
-                    </p>
-                </div>
-            </section>
-        );
-    }
-
     return (
         <section className="border bg-card">
             <div className="space-y-4 p-5">
                 <div className="flex items-center gap-2">
                     <HardDrive className="h-4 w-4 text-muted-foreground" />
-                    <h2 className="font-medium">Current version</h2>
+                    <h2 className="font-medium">
+                        {currentDeployment ? 'Current version' : 'Versions'}
+                    </h2>
                 </div>
 
-                <div className="rounded-lg border bg-background p-3 py-2">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0">
-                            <div className="flex flex-wrap items-start gap-2">
-                                <div className="flex min-w-0 items-center gap-1.5">
-                                    <DeploymentTimestamp
-                                        value={currentDeployment.deployedAt}
-                                        dateClassName="font-medium tracking-tight"
-                                        timeClassName="font-medium tracking-tight text-muted-foreground"
-                                    />
-                                    <PolicyScreeningIndicator
-                                        deployment={currentDeployment}
-                                    />
+                {currentDeployment ? (
+                    <div className="rounded-lg border bg-background p-3 py-2">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0">
+                                <div className="flex flex-wrap items-start gap-2">
+                                    <div className="flex min-w-0 items-center gap-1.5">
+                                        <DeploymentTimestamp
+                                            value={currentDeployment.deployedAt}
+                                            dateClassName="font-medium tracking-tight"
+                                            timeClassName="font-medium tracking-tight text-muted-foreground"
+                                        />
+                                        <PolicyScreeningIndicator
+                                            deployment={currentDeployment}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                    {formatNumber(currentDeployment.fileCount)}{' '}
+                                    {currentDeployment.fileCount === 1
+                                        ? 'file'
+                                        : 'files'}
+                                    ,{' '}
+                                    {formatBytes(currentDeployment.totalBytes)}
                                 </div>
                             </div>
-                            <div className="text-sm text-muted-foreground">
-                                {formatNumber(currentDeployment.fileCount)}{' '}
-                                {currentDeployment.fileCount === 1
-                                    ? 'file'
-                                    : 'files'}
-                                , {formatBytes(currentDeployment.totalBytes)}
-                            </div>
+                            {!isArchived ? (
+                                <a
+                                    href={project.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="max-w-full whitespace-normal"
+                                    >
+                                        Open
+                                    </Button>
+                                </a>
+                            ) : null}
                         </div>
-                        <a href={project.url} target="_blank" rel="noreferrer">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="max-w-full whitespace-normal"
-                            >
-                                Open
-                            </Button>
-                        </a>
                     </div>
-                </div>
+                ) : (
+                    <p className="text-sm text-muted-foreground">
+                        No deployment is live yet.
+                    </p>
+                )}
 
                 {previousDeployments.length > 0 ? (
                     <div className="space-y-2">
-                        <div className="text-sm font-medium">Past versions</div>
+                        <div className="text-sm font-medium">
+                            {currentDeployment
+                                ? 'Past versions'
+                                : 'Saved versions'}
+                        </div>
                         <div className="divide-y rounded-lg border">
                             {previousDeployments.map((deployment) => (
                                 <div
@@ -273,15 +277,21 @@ function DeploymentSummary({
                                             {formatBytes(deployment.totalBytes)}
                                         </div>
                                     </div>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        disabled={rollbackId === deployment.id}
-                                        onClick={() => rollback(deployment)}
-                                    >
-                                        Rollback
-                                    </Button>
+                                    {!isArchived ? (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={
+                                                rollbackId === deployment.id
+                                            }
+                                            onClick={() => rollback(deployment)}
+                                        >
+                                            {currentDeployment
+                                                ? 'Rollback'
+                                                : 'Restore'}
+                                        </Button>
+                                    ) : null}
                                 </div>
                             ))}
                         </div>

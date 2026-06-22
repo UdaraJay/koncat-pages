@@ -362,6 +362,7 @@ class DashboardTest extends TestCase
             ->has('projects', 1)
             ->where('projects.0.name', 'Archived App')
             ->where('projects.0.canRestore', true)
+            ->where('projects.0.canDeletePermanently', true)
             ->where('projectFilters.status', 'archived')
             ->where('projects.0.deletedAt', fn ($value) => $value !== null)
         );

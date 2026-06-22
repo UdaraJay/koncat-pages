@@ -13,10 +13,12 @@ use App\Models\User;
 use App\Models\Workspace;
 use App\Services\MatterpipeQuota;
 use App\Services\ProjectAnalytics;
+use App\Services\TeamStoragePaths;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -252,6 +254,34 @@ class ProjectController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Project restored.')]);
 
         return back();
+    }
+
+    public function destroyPermanently(Request $request, Project $project, TeamStoragePaths $paths): RedirectResponse
+    {
+        abort_unless($project->trashed(), 404);
+        abort_unless($project->hosting_team_id !== null, 422);
+        Gate::authorize('delete', $project);
+
+        $request->validate([
+            'name' => ['required', 'string', Rule::in([$project->name])],
+        ]);
+
+        $projectDirectory = $paths->projectDirectory($project->hosting_team_id, $project->id);
+
+        if (! Storage::disk((string) config('matterpipe.storage_disk'))->deleteDirectory($projectDirectory)) {
+            throw ValidationException::withMessages([
+                'project' => __('Project files could not be deleted. Please try again.'),
+            ]);
+        }
+
+        DB::transaction(function () use ($project): void {
+            $project->update(['current_deployment_id' => null]);
+            $project->forceDelete();
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Project permanently deleted.')]);
+
+        return to_route('dashboard', ['status' => 'archived']);
     }
 
     public function destroy(Request $request, Team $current_team, Workspace $workspace, Project $project): RedirectResponse

@@ -8,6 +8,7 @@ use App\Models\Deployment;
 use App\Models\DeploymentSecurityScan;
 use App\Models\Project;
 use App\Models\ProjectAnalyticsEvent;
+use App\Models\ProjectDocument;
 use App\Models\ProjectFile;
 use App\Models\ProjectShare;
 use App\Models\Team;
@@ -417,6 +418,201 @@ class MatterpipePlatformTest extends TestCase
         $this->assertNotSoftDeleted('projects', [
             'id' => $project->id,
         ]);
+    }
+
+    public function test_project_owner_can_permanently_delete_an_archived_project_and_clean_up_storage(): void
+    {
+        Storage::fake('local');
+        config(['matterpipe.storage_disk' => 'local']);
+
+        $user = User::factory()->create();
+        $recipient = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'hosting_team_id' => $user->personalTeam()->id,
+            'created_by' => $user->id,
+            'name' => 'Delete Me',
+            'slug' => 'delete-me',
+        ]);
+        $projectDirectory = "teams/{$project->hosting_team_id}/projects/{$project->id}";
+        $deployment = Deployment::create([
+            'project_id' => $project->id,
+            'user_id' => $user->id,
+            'disk' => 'local',
+            'path' => "{$projectDirectory}/deployments/current",
+            'file_count' => 1,
+            'total_bytes' => 128,
+            'deployed_at' => now(),
+        ]);
+        $project->update(['current_deployment_id' => $deployment->id]);
+        $file = ProjectFile::create([
+            'project_id' => $project->id,
+            'uploaded_by' => $user->id,
+            'disk' => 'local',
+            'path' => "{$projectDirectory}/files/upload.txt",
+            'original_name' => 'upload.txt',
+            'mime_type' => 'text/plain',
+            'size' => 12,
+        ]);
+        $document = ProjectDocument::create([
+            'project_id' => $project->id,
+            'collection' => 'notes',
+            'data' => ['title' => 'A note'],
+        ]);
+        $share = ProjectShare::factory()->forUser($recipient)->create([
+            'project_id' => $project->id,
+            'shared_by' => $user->id,
+        ]);
+        $event = ProjectAnalyticsEvent::create([
+            'project_id' => $project->id,
+            'user_id' => $recipient->id,
+            'deployment_id' => $deployment->id,
+            'event_type' => 'project.view',
+            'path' => '/',
+            'occurred_at' => now(),
+        ]);
+        $scan = DeploymentSecurityScan::create([
+            'project_id' => $project->id,
+            'deployment_id' => $deployment->id,
+            'user_id' => $user->id,
+            'status' => 'passed',
+            'highest_severity' => null,
+            'risk_score' => 0,
+            'scanner' => 'test',
+            'scanner_version' => '1',
+            'findings' => [],
+            'metadata' => [],
+            'started_at' => now(),
+            'finished_at' => now(),
+        ]);
+
+        Storage::disk('local')->put("{$deployment->path}/index.html", '<h1>Deleted</h1>');
+        Storage::disk('local')->put($file->path, 'uploaded');
+        $project->delete();
+
+        $this
+            ->actingAs($user)
+            ->delete(route('projects.destroy-permanent', $project), [
+                'name' => 'Delete Me',
+            ])
+            ->assertRedirect(route('dashboard', ['status' => 'archived']));
+
+        $this->assertDatabaseMissing('projects', ['id' => $project->id]);
+        $this->assertDatabaseMissing('deployments', ['id' => $deployment->id]);
+        $this->assertDatabaseMissing('project_files', ['id' => $file->id]);
+        $this->assertDatabaseMissing('project_documents', ['id' => $document->id]);
+        $this->assertDatabaseMissing('project_shares', ['id' => $share->id]);
+        $this->assertDatabaseMissing('project_analytics_events', ['id' => $event->id]);
+        $this->assertDatabaseMissing('deployment_security_scans', ['id' => $scan->id]);
+        $this->assertSame([], Storage::disk('local')->allFiles($projectDirectory));
+    }
+
+    public function test_active_project_cannot_be_permanently_deleted(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'hosting_team_id' => $user->personalTeam()->id,
+            'created_by' => $user->id,
+            'name' => 'Active App',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->delete(route('projects.destroy-permanent', $project), [
+                'name' => 'Active App',
+            ])
+            ->assertNotFound();
+
+        $this->assertNotSoftDeleted('projects', ['id' => $project->id]);
+    }
+
+    public function test_project_permanent_delete_requires_exact_project_name(): void
+    {
+        Storage::fake('local');
+        config(['matterpipe.storage_disk' => 'local']);
+
+        $user = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'hosting_team_id' => $user->personalTeam()->id,
+            'created_by' => $user->id,
+            'name' => 'Archived App',
+        ]);
+        $projectDirectory = "teams/{$project->hosting_team_id}/projects/{$project->id}";
+        Storage::disk('local')->put("{$projectDirectory}/files/upload.txt", 'uploaded');
+        $project->delete();
+
+        $this
+            ->actingAs($user)
+            ->delete(route('projects.destroy-permanent', $project), [
+                'name' => 'Wrong name',
+            ])
+            ->assertSessionHasErrors('name');
+
+        $this->assertSoftDeleted('projects', ['id' => $project->id]);
+        Storage::disk('local')->assertExists("{$projectDirectory}/files/upload.txt");
+    }
+
+    public function test_project_permanent_delete_keeps_archived_project_when_storage_cleanup_fails(): void
+    {
+        config(['matterpipe.storage_disk' => 'local']);
+
+        $user = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'hosting_team_id' => $user->personalTeam()->id,
+            'created_by' => $user->id,
+            'name' => 'Storage Failure App',
+        ]);
+        $projectDirectory = "teams/{$project->hosting_team_id}/projects/{$project->id}";
+        $project->delete();
+        $disk = \Mockery::mock();
+
+        Storage::shouldReceive('disk')
+            ->once()
+            ->with('local')
+            ->andReturn($disk);
+        $disk->shouldReceive('deleteDirectory')
+            ->once()
+            ->with($projectDirectory)
+            ->andReturn(false);
+
+        $this
+            ->actingAs($user)
+            ->delete(route('projects.destroy-permanent', $project), [
+                'name' => 'Storage Failure App',
+            ])
+            ->assertSessionHasErrors('project');
+
+        $this->assertSoftDeleted('projects', ['id' => $project->id]);
+    }
+
+    public function test_unrelated_user_cannot_permanently_delete_archived_project(): void
+    {
+        $owner = User::factory()->create();
+        $visitor = User::factory()->create();
+        $project = Project::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $owner->id,
+            'hosting_team_id' => $owner->personalTeam()->id,
+            'created_by' => $owner->id,
+            'name' => 'Private Archived App',
+        ]);
+        $project->delete();
+
+        $this
+            ->actingAs($visitor)
+            ->delete(route('projects.destroy-permanent', $project), [
+                'name' => 'Private Archived App',
+            ])
+            ->assertForbidden();
+
+        $this->assertSoftDeleted('projects', ['id' => $project->id]);
     }
 
     public function test_project_quotas_count_archived_projects(): void

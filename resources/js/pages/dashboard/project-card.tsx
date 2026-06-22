@@ -19,6 +19,7 @@ import type {
     ProjectSharePermissionOption,
 } from '@/types';
 
+import { DeleteProjectDialog } from './delete-project-dialog';
 import { ProjectAnalyticsDialog } from './project-analytics-dialog';
 import { ProjectCardMenu } from './project-card-menu';
 import { ShareProjectDialog } from './share-project-dialog';
@@ -45,6 +46,7 @@ export function ProjectCard({
     const [analyticsDialogOpen, setAnalyticsDialogOpen] = useState(false);
     const [moveDialogOpen, setMoveDialogOpen] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const deployedAt = project.currentDeployment?.deployedAt
         ? formatDate(project.currentDeployment.deployedAt)
         : null;
@@ -78,6 +80,11 @@ export function ProjectCard({
                 project={project}
                 open={editDialogOpen}
                 onOpenChange={setEditDialogOpen}
+            />
+            <DeleteProjectDialog
+                project={project}
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
             />
             <article className="group flex overflow-hidden border bg-card transition">
                 <div className="flex min-w-0 flex-1 flex-col">
@@ -131,6 +138,7 @@ export function ProjectCard({
                                 project={project}
                                 canMove={moveTargets.length > 0}
                                 onAnalytics={() => setAnalyticsDialogOpen(true)}
+                                onDelete={() => setDeleteDialogOpen(true)}
                                 onEdit={() => setEditDialogOpen(true)}
                                 onMove={() => setMoveDialogOpen(true)}
                                 onShare={() => setShareDialogOpen(true)}

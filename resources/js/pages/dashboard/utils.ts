@@ -4,7 +4,7 @@ import type { ProjectFilterStatus } from './types';
 
 export function projectActionUrl(
     project: Project,
-    action: 'unpublish' | 'restore' | '',
+    action: 'unpublish' | 'restore' | 'permanent' | '',
 ) {
     const url = `/projects/${project.id}`;
 

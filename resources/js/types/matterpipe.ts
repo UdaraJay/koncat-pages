@@ -94,6 +94,7 @@ export type Project = {
     canUnpublish?: boolean;
     canArchive?: boolean;
     canRestore?: boolean;
+    canDeletePermanently?: boolean;
     canMove?: boolean;
     canManageShares?: boolean;
     sharePermission?: ProjectSharePermission | null;

@@ -7,6 +7,7 @@ import {
     Pencil,
     RotateCcw,
     Share2,
+    Trash2,
     Unplug,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ export function ProjectCardMenu({
     project,
     canMove,
     onAnalytics,
+    onDelete,
     onEdit,
     onMove,
     onShare,
@@ -32,10 +34,12 @@ export function ProjectCardMenu({
     project: Project;
     canMove: boolean;
     onAnalytics: () => void;
+    onDelete: () => void;
     onEdit: () => void;
     onMove: () => void;
     onShare: () => void;
 }) {
+    const isArchived = Boolean(project.deletedAt);
     const archiveProject = () => {
         router.delete(projectActionUrl(project, ''), {
             preserveScroll: true,
@@ -72,7 +76,7 @@ export function ProjectCardMenu({
                     <MoreHorizontal className="h-4 w-4" />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuContent align="end" className="max-w-52 min-w-44">
                 <DropdownMenuItem onSelect={onAnalytics}>
                     <Eye className="h-4 w-4" />
                     Analytics
@@ -103,11 +107,27 @@ export function ProjectCardMenu({
                 project.canMove ? (
                     <DropdownMenuSeparator />
                 ) : null}
-                {project.canRestore ? (
-                    <DropdownMenuItem onSelect={restoreProject}>
-                        <RotateCcw className="h-4 w-4" />
-                        Restore
-                    </DropdownMenuItem>
+                {isArchived ? (
+                    <>
+                        {project.canRestore ? (
+                            <DropdownMenuItem onSelect={restoreProject}>
+                                <RotateCcw className="h-4 w-4" />
+                                Restore
+                            </DropdownMenuItem>
+                        ) : null}
+                        {project.canRestore && project.canDeletePermanently ? (
+                            <DropdownMenuSeparator />
+                        ) : null}
+                        {project.canDeletePermanently ? (
+                            <DropdownMenuItem
+                                variant="destructive"
+                                onSelect={onDelete}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                Delete permanently
+                            </DropdownMenuItem>
+                        ) : null}
+                    </>
                 ) : (
                     <>
                         <DropdownMenuItem

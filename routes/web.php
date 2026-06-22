@@ -62,6 +62,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('projects/{project}/unpublish', [ProjectController::class, 'unpublish'])->name('projects.unpublish');
     Route::delete('projects/{project}', [ProjectController::class, 'archive'])->name('projects.archive');
     Route::post('projects/{project}/restore', [ProjectController::class, 'restore'])->withTrashed()->name('projects.restore');
+    Route::delete('projects/{project}/permanent', [ProjectController::class, 'destroyPermanently'])->withTrashed()->name('projects.destroy-permanent');
 
     Route::get('teams', [TeamController::class, 'index'])->name('teams.index');
     Route::post('teams', [TeamController::class, 'store'])->name('teams.store');
