@@ -26,12 +26,12 @@ class TeamInvitationTest extends TestCase
 
         $response = $this
             ->actingAs($owner)
-            ->post(route('teams.invitations.store', $team), [
+            ->post(route('team-settings.invitations.store', $team), [
                 'email' => 'invited@example.com',
                 'role' => TeamRole::Member->value,
             ]);
 
-        $response->assertRedirect(route('teams.edit', $team));
+        $response->assertRedirect(route('team-settings.members.index', $team));
 
         $this->assertDatabaseHas('team_invitations', [
             'team_id' => $team->id,
@@ -92,12 +92,12 @@ class TeamInvitationTest extends TestCase
 
         $response = $this
             ->actingAs($admin)
-            ->post(route('teams.invitations.store', $team), [
+            ->post(route('team-settings.invitations.store', $team), [
                 'email' => 'invited@example.com',
                 'role' => TeamRole::Member->value,
             ]);
 
-        $response->assertRedirect(route('teams.edit', $team));
+        $response->assertRedirect(route('team-settings.members.index', $team));
     }
 
     public function test_existing_team_members_cannot_be_invited()
@@ -113,7 +113,7 @@ class TeamInvitationTest extends TestCase
 
         $response = $this
             ->actingAs($owner)
-            ->post(route('teams.invitations.store', $team), [
+            ->post(route('team-settings.invitations.store', $team), [
                 'email' => 'member@example.com',
                 'role' => TeamRole::Member->value,
             ]);
@@ -137,7 +137,7 @@ class TeamInvitationTest extends TestCase
 
         $response = $this
             ->actingAs($owner)
-            ->post(route('teams.invitations.store', $team), [
+            ->post(route('team-settings.invitations.store', $team), [
                 'email' => 'invited@example.com',
                 'role' => TeamRole::Member->value,
             ]);
@@ -156,7 +156,7 @@ class TeamInvitationTest extends TestCase
 
         $response = $this
             ->actingAs($member)
-            ->post(route('teams.invitations.store', $team), [
+            ->post(route('team-settings.invitations.store', $team), [
                 'email' => 'invited@example.com',
                 'role' => TeamRole::Member->value,
             ]);
@@ -178,9 +178,9 @@ class TeamInvitationTest extends TestCase
 
         $response = $this
             ->actingAs($owner)
-            ->delete(route('teams.invitations.destroy', [$team, $invitation]));
+            ->delete(route('team-settings.invitations.destroy', [$team, $invitation]));
 
-        $response->assertRedirect(route('teams.edit', $team));
+        $response->assertRedirect(route('team-settings.members.index', $team));
 
         $this->assertDatabaseMissing('team_invitations', [
             'id' => $invitation->id,

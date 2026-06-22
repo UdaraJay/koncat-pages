@@ -26,7 +26,8 @@ export default function CreateTeamModal({ children }: PropsWithChildren) {
             <DialogContent>
                 <Form
                     key={String(open)}
-                    {...store.form()}
+                    action={store.url()}
+                    method="post"
                     className="space-y-6"
                     onSuccess={() => setOpen(false)}
                 >

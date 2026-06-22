@@ -10,7 +10,8 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { edit, index } from '@/routes/teams';
+import { general } from '@/routes/team-settings';
+import { index } from '@/routes/teams';
 import type { Team } from '@/types';
 
 type Props = {
@@ -76,7 +77,9 @@ export default function TeamsIndex({ teams }: Props) {
                                                     asChild
                                                 >
                                                     <Link
-                                                        href={edit(team.slug)}
+                                                        href={general(
+                                                            team.slug,
+                                                        )}
                                                     >
                                                         <Eye className="h-4 w-4" />
                                                     </Link>
@@ -96,7 +99,9 @@ export default function TeamsIndex({ teams }: Props) {
                                                     asChild
                                                 >
                                                     <Link
-                                                        href={edit(team.slug)}
+                                                        href={general(
+                                                            team.slug,
+                                                        )}
                                                     >
                                                         <Pencil className="h-4 w-4" />
                                                     </Link>

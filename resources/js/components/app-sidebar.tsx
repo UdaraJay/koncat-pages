@@ -1,6 +1,5 @@
-import { Link, usePage } from '@inertiajs/react';
-import { Boxes, KeyRound, LayoutGrid, Settings } from 'lucide-react';
-import AppLogo from '@/components/app-logo';
+import { usePage } from '@inertiajs/react';
+import { Boxes, KeyRound, LayoutGrid, Settings, Users } from 'lucide-react';
 import { NavMain } from '@/components/nav-main';
 import { NavProjects } from '@/components/nav-projects';
 import { NavUser } from '@/components/nav-user';
@@ -23,6 +22,9 @@ export function AppSidebar() {
     const projects = currentTeamProjects ?? [];
     const dashboardUrl = dashboard();
     const workspacesUrl = currentTeam ? `/${currentTeam.slug}/workspaces` : '#';
+    const teamSettingsUrl = currentTeam
+        ? `/${currentTeam.slug}/settings/general`
+        : '#';
 
     const mainNavItems: NavItem[] = [
         {
@@ -34,6 +36,11 @@ export function AppSidebar() {
             title: 'Workspaces',
             href: workspacesUrl,
             icon: Boxes,
+        },
+        {
+            title: 'Team settings',
+            href: teamSettingsUrl,
+            icon: Users,
         },
         {
             title: 'API tokens',

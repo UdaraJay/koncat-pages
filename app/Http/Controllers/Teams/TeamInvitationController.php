@@ -20,11 +20,11 @@ class TeamInvitationController extends Controller
     /**
      * Store a newly created invitation.
      */
-    public function store(CreateTeamInvitationRequest $request, Team $team): RedirectResponse
+    public function store(CreateTeamInvitationRequest $request, Team $current_team): RedirectResponse
     {
-        Gate::authorize('inviteMember', $team);
+        Gate::authorize('inviteMember', $current_team);
 
-        $invitation = $team->invitations()->create([
+        $invitation = $current_team->invitations()->create([
             'email' => $request->validated('email'),
             'role' => TeamRole::from($request->validated('role')),
             'invited_by' => $request->user()->id,
@@ -36,23 +36,23 @@ class TeamInvitationController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Invitation sent.')]);
 
-        return to_route('teams.edit', ['team' => $team->slug]);
+        return to_route('team-settings.members.index', ['current_team' => $current_team]);
     }
 
     /**
      * Cancel the specified invitation.
      */
-    public function destroy(Team $team, TeamInvitation $invitation): RedirectResponse
+    public function destroy(Team $current_team, TeamInvitation $invitation): RedirectResponse
     {
-        abort_unless($invitation->team_id === $team->id, 404);
+        abort_unless($invitation->team_id === $current_team->id, 404);
 
-        Gate::authorize('cancelInvitation', $team);
+        Gate::authorize('cancelInvitation', $current_team);
 
         $invitation->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Invitation cancelled.')]);
 
-        return to_route('teams.edit', ['team' => $team->slug]);
+        return to_route('team-settings.members.index', ['current_team' => $current_team]);
     }
 
     /**

@@ -16,41 +16,41 @@ class TeamMemberController extends Controller
     /**
      * Update the specified team member's role.
      */
-    public function update(UpdateTeamMemberRequest $request, Team $team, User $user): RedirectResponse
+    public function update(UpdateTeamMemberRequest $request, Team $current_team, User $user): RedirectResponse
     {
-        Gate::authorize('updateMember', $team);
+        Gate::authorize('updateMember', $current_team);
 
         $newRole = TeamRole::from($request->validated('role'));
 
-        $team->memberships()
+        $current_team->memberships()
             ->where('user_id', $user->id)
             ->firstOrFail()
             ->update(['role' => $newRole]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Member role updated.')]);
 
-        return to_route('teams.edit', ['team' => $team->slug]);
+        return to_route('team-settings.members.index', ['current_team' => $current_team]);
     }
 
     /**
      * Remove the specified team member.
      */
-    public function destroy(Team $team, User $user): RedirectResponse
+    public function destroy(Team $current_team, User $user): RedirectResponse
     {
-        Gate::authorize('removeMember', $team);
+        Gate::authorize('removeMember', $current_team);
 
-        abort_if($team->owner()?->is($user), 403, __('The team owner cannot be removed.'));
+        abort_if($current_team->owner()?->is($user), 403, __('The team owner cannot be removed.'));
 
-        $team->memberships()
+        $current_team->memberships()
             ->where('user_id', $user->id)
             ->delete();
 
-        if ($user->isCurrentTeam($team)) {
+        if ($user->isCurrentTeam($current_team)) {
             $user->switchTeam($user->personalTeam());
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Member removed.')]);
 
-        return to_route('teams.edit', ['team' => $team->slug]);
+        return to_route('team-settings.members.index', ['current_team' => $current_team]);
     }
 }

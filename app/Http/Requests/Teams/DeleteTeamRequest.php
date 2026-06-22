@@ -16,7 +16,7 @@ class DeleteTeamRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return Gate::allows('delete', $this->route('team'));
+        return Gate::allows('delete', $this->team());
     }
 
     /**
@@ -52,7 +52,7 @@ class DeleteTeamRequest extends FormRequest
      */
     private function team(): Team
     {
-        $team = $this->route('team');
+        $team = $this->route('team') ?? $this->route('current_team');
 
         abort_if(! $team instanceof Team, 404);
 

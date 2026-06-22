@@ -1,5 +1,5 @@
-import { router } from '@inertiajs/react';
-import { Check, ChevronsUpDown, Plus, Users } from 'lucide-react';
+import { Link, router } from '@inertiajs/react';
+import { Check, ChevronsUpDown, Plus, Settings, Users } from 'lucide-react';
 import type { ReactNode } from 'react';
 import CreateTeamModal from '@/components/create-team-modal';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -159,6 +159,24 @@ function SidebarTeamSwitcher({ currentTeam, teams }: Props) {
                             </DropdownMenuItem>
                         ))}
                         <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                            <Link
+                                href={`/${activeTeam.slug}/settings/general`}
+                                className="gap-2 p-2"
+                                onClick={() => setOpenMobile(false)}
+                            >
+                                {renderTeamMark({
+                                    label: 'Settings',
+                                    size: 'sm',
+                                    icon: <Settings className="size-4" />,
+                                    variant: 'sidebar',
+                                })}
+                                <div className="font-medium text-muted-foreground">
+                                    Team settings
+                                </div>
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         <CreateTeamModal>
                             <DropdownMenuItem
                                 className="gap-2 p-2"
@@ -265,6 +283,22 @@ function HeaderTeamSwitcher({ currentTeam, teams }: Props) {
                         ) : null}
                     </DropdownMenuItem>
                 ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                    <Link
+                        href={`/${activeTeam.slug}/settings/general`}
+                        className="gap-2 p-2"
+                    >
+                        {renderTeamMark({
+                            label: 'Settings',
+                            size: 'sm',
+                            icon: <Settings className="size-4" />,
+                        })}
+                        <div className="font-medium text-muted-foreground">
+                            Team settings
+                        </div>
+                    </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <CreateTeamModal>
                     <DropdownMenuItem

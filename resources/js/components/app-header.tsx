@@ -35,7 +35,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                     <Button
                         asChild
                         variant="ghost"
-                        className="rounded-md pl-2!"
+                        className="rounded-md pl-2! select-none"
                     >
                         <Link
                             href={dashboardUrl}

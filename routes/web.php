@@ -12,7 +12,10 @@ use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\Projects\DeploymentController;
 use App\Http\Controllers\Projects\ProjectController;
 use App\Http\Controllers\Projects\ProjectShareController;
+use App\Http\Controllers\Teams\TeamController;
 use App\Http\Controllers\Teams\TeamInvitationController;
+use App\Http\Controllers\Teams\TeamMemberController;
+use App\Http\Controllers\Teams\TeamSettingsController;
 use App\Http\Controllers\Workspaces\WorkspaceController;
 use App\Http\Controllers\Workspaces\WorkspaceMemberController;
 use App\Http\Middleware\AllowHostedProjectFrames;
@@ -59,6 +62,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('projects/{project}/unpublish', [ProjectController::class, 'unpublish'])->name('projects.unpublish');
     Route::delete('projects/{project}', [ProjectController::class, 'archive'])->name('projects.archive');
     Route::post('projects/{project}/restore', [ProjectController::class, 'restore'])->withTrashed()->name('projects.restore');
+
+    Route::get('teams', [TeamController::class, 'index'])->name('teams.index');
+    Route::post('teams', [TeamController::class, 'store'])->name('teams.store');
+    Route::post('teams/{team}/switch', [TeamController::class, 'switch'])
+        ->middleware(EnsureTeamMembership::class)
+        ->name('teams.switch');
 });
 
 Route::prefix('{current_team}')
@@ -66,6 +75,22 @@ Route::prefix('{current_team}')
     ->scopeBindings()
     ->group(function () {
         Route::redirect('dashboard', '/home');
+
+        Route::get('settings', fn () => to_route('team-settings.general'))->name('team-settings.index');
+        Route::get('settings/general', [TeamSettingsController::class, 'general'])->name('team-settings.general');
+        Route::patch('settings/general', [TeamSettingsController::class, 'update'])->name('team-settings.update');
+        Route::delete('settings/general', [TeamSettingsController::class, 'destroy'])->name('team-settings.destroy');
+        Route::get('settings/members', [TeamSettingsController::class, 'members'])->name('team-settings.members.index');
+
+        Route::patch('settings/members/{user}', [TeamMemberController::class, 'update'])
+            ->withoutScopedBindings()
+            ->name('team-settings.members.update');
+        Route::delete('settings/members/{user}', [TeamMemberController::class, 'destroy'])
+            ->withoutScopedBindings()
+            ->name('team-settings.members.destroy');
+
+        Route::post('settings/invitations', [TeamInvitationController::class, 'store'])->name('team-settings.invitations.store');
+        Route::delete('settings/invitations/{invitation}', [TeamInvitationController::class, 'destroy'])->name('team-settings.invitations.destroy');
 
         Route::get('workspaces', [WorkspaceController::class, 'index'])->name('workspaces.index');
         Route::post('workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');

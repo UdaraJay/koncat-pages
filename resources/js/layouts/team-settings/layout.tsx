@@ -1,63 +1,52 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
-import { edit as editAppearance } from '@/routes/appearance';
-import { edit } from '@/routes/profile';
-import { edit as editSecurity } from '@/routes/security';
-import type { NavItem } from '@/types';
+import type { NavItem, Team } from '@/types';
 
-const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Profile',
-        href: edit(),
-        icon: null,
-    },
-    {
-        title: 'Security',
-        href: editSecurity(),
-        icon: null,
-    },
-    {
-        title: 'Usage',
-        href: '/settings/usage',
-        icon: null,
-    },
-    {
-        title: 'API tokens',
-        href: '/settings/api-tokens',
-        icon: null,
-    },
-    {
-        title: 'Connected apps',
-        href: '/settings/connected-applications',
-        icon: null,
-    },
-    {
-        title: 'Appearance',
-        href: editAppearance(),
-        icon: null,
-    },
-];
+type PageProps = {
+    currentTeam?: Team | null;
+};
 
-export default function SettingsLayout({ children }: PropsWithChildren) {
+export default function TeamSettingsLayout({ children }: PropsWithChildren) {
+    const { currentTeam } = usePage<PageProps>().props;
     const { isCurrentOrParentUrl } = useCurrentUrl();
+
+    const teamSettingsUrl = (path: string) =>
+        currentTeam ? `/${currentTeam.slug}/settings/${path}` : '#';
+
+    const sidebarNavItems: NavItem[] = [
+        {
+            title: 'General',
+            href: teamSettingsUrl('general'),
+            icon: null,
+        },
+        {
+            title: 'Members',
+            href: teamSettingsUrl('members'),
+            icon: null,
+        },
+    ];
 
     return (
         <div className="px-4 py-6">
             <Heading
-                title="Settings"
-                description="Manage your profile and account settings"
+                title="Team settings"
+                description={
+                    currentTeam
+                        ? `Manage ${currentTeam.name}`
+                        : 'Manage team settings'
+                }
             />
 
             <div className="flex flex-col lg:flex-row lg:space-x-12">
                 <aside className="w-full max-w-xl lg:w-48">
                     <nav
                         className="flex flex-col space-y-1 space-x-0"
-                        aria-label="Settings"
+                        aria-label="Team settings"
                     >
                         {sidebarNavItems.map((item, index) => (
                             <Button

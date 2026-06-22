@@ -34,7 +34,9 @@ class TeamTest extends TestCase
                 'name' => 'Test Team',
             ]);
 
-        $response->assertRedirect();
+        $team = Team::where('name', 'Test Team')->firstOrFail();
+
+        $response->assertRedirect(route('team-settings.general', $team));
 
         $this->assertDatabaseHas('teams', [
             'name' => 'Test Team',
@@ -82,7 +84,7 @@ class TeamTest extends TestCase
         ]);
     }
 
-    public function test_the_team_edit_page_can_be_rendered()
+    public function test_the_team_general_settings_page_can_be_rendered()
     {
         $user = User::factory()->create();
         $team = Team::factory()->create();
@@ -91,12 +93,32 @@ class TeamTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->get(route('teams.edit', $team));
+            ->get(route('team-settings.general', $team));
 
         $response
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('teams/edit')
+                ->component('team-settings/general')
+                ->where('team.name', $team->name)
+                ->where('permissions.canUpdateTeam', true),
+            );
+    }
+
+    public function test_the_team_members_settings_page_can_be_rendered()
+    {
+        $user = User::factory()->create();
+        $team = Team::factory()->create();
+
+        $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('team-settings.members.index', $team));
+
+        $response
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('team-settings/members')
                 ->where('members.0.role', TeamRole::Owner->value)
                 ->where('members.0.role_label', TeamRole::Owner->label()),
             );
@@ -111,12 +133,12 @@ class TeamTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->patch(route('teams.update', $team), [
+            ->patch(route('team-settings.update', $team), [
                 'name' => 'Updated Name',
                 'subdomain' => 'updated-team',
             ]);
 
-        $response->assertRedirect(route('teams.edit', $team->fresh()));
+        $response->assertRedirect(route('team-settings.general', $team->fresh()));
 
         $this->assertDatabaseHas('teams', [
             'id' => $team->id,
@@ -137,11 +159,11 @@ class TeamTest extends TestCase
 
         $this
             ->actingAs($user)
-            ->patch(route('teams.update', $team), [
+            ->patch(route('team-settings.update', $team), [
                 'name' => 'Updated Name',
                 'subdomain' => 'original-team',
             ])
-            ->assertRedirect(route('teams.edit', $team->fresh()));
+            ->assertRedirect(route('team-settings.general', $team->fresh()));
 
         $this->assertDatabaseHas('teams', [
             'id' => $team->id,
@@ -161,7 +183,7 @@ class TeamTest extends TestCase
 
         $response = $this
             ->actingAs($member)
-            ->patch(route('teams.update', $team), [
+            ->patch(route('team-settings.update', $team), [
                 'name' => 'Updated Name',
                 'subdomain' => $team->subdomain,
             ]);
@@ -178,7 +200,7 @@ class TeamTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->delete(route('teams.destroy', $team), [
+            ->delete(route('team-settings.destroy', $team), [
                 'name' => $team->name,
             ]);
 
@@ -198,7 +220,7 @@ class TeamTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->delete(route('teams.destroy', $team), [
+            ->delete(route('team-settings.destroy', $team), [
                 'name' => 'Wrong Name',
             ]);
 
@@ -227,7 +249,7 @@ class TeamTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->delete(route('teams.destroy', $zuluTeam), [
+            ->delete(route('team-settings.destroy', $zuluTeam), [
                 'name' => $zuluTeam->name,
             ]);
 
@@ -251,7 +273,7 @@ class TeamTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->delete(route('teams.destroy', $team), [
+            ->delete(route('team-settings.destroy', $team), [
                 'name' => $team->name,
             ]);
 
@@ -275,7 +297,7 @@ class TeamTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->delete(route('teams.destroy', $team), [
+            ->delete(route('team-settings.destroy', $team), [
                 'name' => $team->name,
             ]);
 
@@ -302,7 +324,7 @@ class TeamTest extends TestCase
 
         $response = $this
             ->actingAs($owner)
-            ->delete(route('teams.destroy', $team), [
+            ->delete(route('team-settings.destroy', $team), [
                 'name' => $team->name,
             ]);
 
@@ -319,7 +341,7 @@ class TeamTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->delete(route('teams.destroy', $personalTeam), [
+            ->delete(route('team-settings.destroy', $personalTeam), [
                 'name' => $personalTeam->name,
             ]);
 
@@ -342,7 +364,7 @@ class TeamTest extends TestCase
 
         $response = $this
             ->actingAs($member)
-            ->delete(route('teams.destroy', $team), [
+            ->delete(route('team-settings.destroy', $team), [
                 'name' => $team->name,
             ]);
 
@@ -363,6 +385,31 @@ class TeamTest extends TestCase
         $response->assertRedirect();
 
         $this->assertEquals($team->id, $user->fresh()->current_team_id);
+    }
+
+    public function test_legacy_teams_settings_index_redirects_to_global_teams()
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->get('/settings/teams');
+
+        $response->assertRedirect(route('teams.index'));
+    }
+
+    public function test_legacy_team_settings_edit_redirects_to_team_general_settings()
+    {
+        $user = User::factory()->create();
+        $team = Team::factory()->create();
+
+        $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get("/settings/teams/{$team->slug}");
+
+        $response->assertRedirect(route('team-settings.general', $team));
     }
 
     public function test_users_cannot_switch_to_team_they_dont_belong_to()

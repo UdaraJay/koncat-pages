@@ -23,11 +23,11 @@ class TeamMemberTest extends TestCase
 
         $response = $this
             ->actingAs($owner)
-            ->patch(route('teams.members.update', [$team, $member]), [
+            ->patch(route('team-settings.members.update', [$team, $member]), [
                 'role' => TeamRole::Admin->value,
             ]);
 
-        $response->assertRedirect(route('teams.edit', $team));
+        $response->assertRedirect(route('team-settings.members.index', $team));
 
         $this->assertEquals(
             TeamRole::Admin->value,
@@ -48,7 +48,7 @@ class TeamMemberTest extends TestCase
 
         $response = $this
             ->actingAs($admin)
-            ->patch(route('teams.members.update', [$team, $member]), [
+            ->patch(route('team-settings.members.update', [$team, $member]), [
                 'role' => TeamRole::Admin->value,
             ]);
 
@@ -66,9 +66,9 @@ class TeamMemberTest extends TestCase
 
         $response = $this
             ->actingAs($owner)
-            ->delete(route('teams.members.destroy', [$team, $member]));
+            ->delete(route('team-settings.members.destroy', [$team, $member]));
 
-        $response->assertRedirect(route('teams.edit', $team));
+        $response->assertRedirect(route('team-settings.members.index', $team));
 
         $this->assertFalse($member->fresh()->belongsToTeam($team));
     }
@@ -86,7 +86,7 @@ class TeamMemberTest extends TestCase
 
         $response = $this
             ->actingAs($admin)
-            ->delete(route('teams.members.destroy', [$team, $member]));
+            ->delete(route('team-settings.members.destroy', [$team, $member]));
 
         $response->assertForbidden();
     }
@@ -100,7 +100,7 @@ class TeamMemberTest extends TestCase
 
         $response = $this
             ->actingAs($owner)
-            ->delete(route('teams.members.destroy', [$team, $owner]));
+            ->delete(route('team-settings.members.destroy', [$team, $owner]));
 
         $response->assertForbidden();
 
@@ -118,7 +118,7 @@ class TeamMemberTest extends TestCase
 
         $response = $this
             ->actingAs($owner)
-            ->patch(route('teams.members.update', [$team, $member]), [
+            ->patch(route('team-settings.members.update', [$team, $member]), [
                 'role' => TeamRole::Owner->value,
             ]);
 
@@ -144,7 +144,7 @@ class TeamMemberTest extends TestCase
 
         $this
             ->actingAs($owner)
-            ->delete(route('teams.members.destroy', [$team, $member]));
+            ->delete(route('team-settings.members.destroy', [$team, $member]));
 
         $this->assertEquals($personalTeam->id, $member->fresh()->current_team_id);
     }

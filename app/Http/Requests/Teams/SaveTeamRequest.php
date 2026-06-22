@@ -16,7 +16,7 @@ class SaveTeamRequest extends FormRequest
      */
     public function rules(): array
     {
-        $team = $this->route('team');
+        $team = $this->route('team') ?? $this->route('current_team');
 
         return [
             'name' => ['required', 'string', 'max:255', new TeamName],
