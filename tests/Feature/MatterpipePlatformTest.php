@@ -527,17 +527,25 @@ class MatterpipePlatformTest extends TestCase
     {
         $this->skipWithoutZip();
         Storage::fake('local');
+        Storage::fake('public');
         config(['matterpipe.storage_disk' => 'local']);
 
         $user = User::factory()->create();
         $team = $user->currentTeam;
-        $team->update(['subdomain' => 'design-team']);
+        Storage::disk('public')->put('team-branding/design-team/logo.png', 'logo');
+        $team->update([
+            'subdomain' => 'design-team',
+            'brand_logo_path' => 'team-branding/design-team/logo.png',
+            'brand_background_color' => '#123456',
+            'brand_foreground_color' => '#fefdfc',
+        ]);
         $workspace = Workspace::factory()->create(['team_id' => $team->id]);
         $workspace->members()->attach($user, ['role' => WorkspaceRole::Member->value]);
         $project = Project::factory()->create([
             'owner_type' => Team::class,
             'owner_id' => $team->id,
             'workspace_id' => $workspace->id,
+            'hosting_team_id' => $team->id,
             'name' => 'Team App',
             'slug' => 'team-app',
         ]);
@@ -563,6 +571,10 @@ class MatterpipePlatformTest extends TestCase
             ->assertSee('Team App')
             ->assertSee('href="https://localhost/"', false)
             ->assertSee('href="https://localhost/home"', false)
+            ->assertSee('href="https://localhost/projects/'.$project->id.'"', false)
+            ->assertSee('src="'.$team->fresh()->brandLogoUrl().'"', false)
+            ->assertSee('--frame-bg: #123456;', false)
+            ->assertSee('--frame-foreground: #fefdfc;', false)
             ->assertSee($user->name)
             ->assertSee('sandbox="allow-scripts allow-forms allow-downloads allow-modals allow-popups"', false)
             ->assertSee('referrerpolicy="no-referrer"', false)

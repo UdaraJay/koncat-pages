@@ -42,7 +42,13 @@ class HostedProjectController extends Controller
 
         return view('hosted.frame', [
             'dashboardUrl' => "{$mainAppUrl}/home",
+            'projectDetailsUrl' => "{$mainAppUrl}/projects/{$hostedProject->getRouteKey()}",
             'homeUrl' => "{$mainAppUrl}/",
+            'frameBranding' => [
+                'logoUrl' => $hostedProject->hostingTeam?->brandLogoUrl(),
+                'backgroundColor' => $hostedProject->hostingTeam?->brand_background_color,
+                'foregroundColor' => $hostedProject->hostingTeam?->brand_foreground_color,
+            ],
             'project' => $hostedProject,
             'renderUrl' => $renderUrl,
             'runtimeToken' => $tokens->makeRuntimeToken($hostedProject, $user),

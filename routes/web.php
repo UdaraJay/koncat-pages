@@ -80,6 +80,8 @@ Route::prefix('{current_team}')
         Route::get('settings/general', [TeamSettingsController::class, 'general'])->name('team-settings.general');
         Route::patch('settings/general', [TeamSettingsController::class, 'update'])->name('team-settings.update');
         Route::delete('settings/general', [TeamSettingsController::class, 'destroy'])->name('team-settings.destroy');
+        Route::get('settings/branding', [TeamSettingsController::class, 'branding'])->name('team-settings.branding');
+        Route::patch('settings/branding', [TeamSettingsController::class, 'updateBranding'])->name('team-settings.branding.update');
         Route::get('settings/members', [TeamSettingsController::class, 'members'])->name('team-settings.members.index');
 
         Route::patch('settings/members/{user}', [TeamMemberController::class, 'update'])

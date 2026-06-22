@@ -16,6 +16,15 @@
             --frame-muted: #686861;
             --frame-surface: #ffffff;
             --frame-accent: #2f6f98;
+            @if ($frameBranding['backgroundColor'])
+                --frame-bg: {{ $frameBranding['backgroundColor'] }};
+            @endif
+            @if ($frameBranding['foregroundColor'])
+                --frame-foreground: {{ $frameBranding['foregroundColor'] }};
+                --frame-muted: color-mix(in srgb, var(--frame-foreground) 66%, var(--frame-bg));
+                --frame-border: color-mix(in srgb, var(--frame-foreground) 18%, var(--frame-bg));
+                --frame-surface: color-mix(in srgb, white 88%, var(--frame-bg));
+            @endif
         }
 
         * {
@@ -48,6 +57,32 @@
             gap: 16px;
             min-width: 0;
             padding: 0 12px;
+        }
+
+        .koncat-frame-project-link {
+            display: flex;
+            align-items: center;
+            min-width: 0;
+            flex: 1 1 auto;
+            gap: 8px;
+            color: var(--frame-foreground);
+            text-decoration: none;
+        }
+
+        .koncat-frame-project-link:hover .koncat-frame-project {
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        .koncat-frame-team-logo {
+            width: 24px;
+            height: 24px;
+            flex: 0 0 auto;
+            overflow: hidden;
+            border: 1px solid var(--frame-border);
+            border-radius: 4px;
+            background: var(--frame-surface);
+            object-fit: contain;
         }
 
         .koncat-frame-brand,
@@ -83,9 +118,8 @@
         .koncat-frame-project {
             min-width: 0;
             overflow: hidden;
-            color: var(--frame-muted);
+            color: var(--frame-foreground);
             font-size: 13px;
-            text-align: center;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
@@ -270,10 +304,14 @@
         })();
     </script>
     <header class="koncat-frame-bar">
-
-        <div class="koncat-frame-project" title="{{ $project->name }}">
-            {{ $project->name }}
-        </div>
+        <a class="koncat-frame-project-link" href="{{ $projectDetailsUrl }}" title="{{ $project->name }}" target="_top">
+            @if ($frameBranding['logoUrl'])
+                <img class="koncat-frame-team-logo" src="{{ $frameBranding['logoUrl'] }}" alt="">
+            @endif
+            <span class="koncat-frame-project">
+                {{ $project->name }}
+            </span>
+        </a>
         <a class="koncat-frame-user-link" href="{{ $dashboardUrl }}" title="{{ $user?->email }}" target="_top">
             <span class="koncat-frame-user-name">{{ $user?->name ?? $user?->email }}</span>
             <span class="koncat-frame-avatar" aria-hidden="true">

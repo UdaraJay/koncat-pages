@@ -8,6 +8,9 @@ export type Team = {
     hostingDomain?: string;
     hostingScheme?: string;
     isPersonal: boolean;
+    brandLogoUrl?: string | null;
+    brandBackgroundColor?: string | null;
+    brandForegroundColor?: string | null;
     role?: TeamRole;
     roleLabel?: string;
     canUpdateTeam: boolean;

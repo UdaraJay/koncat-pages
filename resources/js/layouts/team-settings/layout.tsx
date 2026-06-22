@@ -25,6 +25,11 @@ export default function TeamSettingsLayout({ children }: PropsWithChildren) {
             icon: null,
         },
         {
+            title: 'Branding',
+            href: teamSettingsUrl('branding'),
+            icon: null,
+        },
+        {
             title: 'Members',
             href: teamSettingsUrl('members'),
             icon: null,

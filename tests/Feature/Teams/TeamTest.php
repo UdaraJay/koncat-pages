@@ -6,7 +6,9 @@ use App\Enums\TeamRole;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -126,6 +128,35 @@ class TeamTest extends TestCase
             );
     }
 
+    public function test_the_team_branding_settings_page_can_be_rendered()
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $team = Team::factory()->create([
+            'brand_logo_path' => 'team-branding/logo.png',
+            'brand_background_color' => '#123456',
+            'brand_foreground_color' => '#abcdef',
+        ]);
+
+        $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('team-settings.branding', $team));
+
+        $response
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('team-settings/branding')
+                ->where('team.name', $team->name)
+                ->where('team.brandLogoUrl', Storage::disk('public')->url('team-branding/logo.png'))
+                ->where('team.brandBackgroundColor', '#123456')
+                ->where('team.brandForegroundColor', '#abcdef')
+                ->where('permissions.canUpdateTeam', true),
+            );
+    }
+
     public function test_creator_and_read_only_are_assignable_but_owner_and_member_are_not()
     {
         $this->assertSame(
@@ -203,6 +234,123 @@ class TeamTest extends TestCase
             'name' => 'Updated Name',
             'subdomain' => 'updated-team',
         ]);
+    }
+
+    public function test_team_branding_can_be_updated_by_admins()
+    {
+        $owner = User::factory()->create();
+        $admin = User::factory()->create();
+        $team = Team::factory()->create();
+
+        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+        $team->members()->attach($admin, ['role' => TeamRole::Admin->value]);
+
+        $response = $this
+            ->actingAs($admin)
+            ->patch(route('team-settings.branding.update', $team), [
+                'brand_background_color' => '#102030',
+                'brand_foreground_color' => '#f0e0d0',
+            ]);
+
+        $response->assertRedirect(route('team-settings.branding', $team));
+
+        $this->assertDatabaseHas('teams', [
+            'id' => $team->id,
+            'brand_background_color' => '#102030',
+            'brand_foreground_color' => '#f0e0d0',
+        ]);
+    }
+
+    public function test_team_branding_logo_can_be_uploaded_replaced_and_removed()
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $team = Team::factory()->create();
+
+        $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+
+        $this
+            ->actingAs($user)
+            ->patch(route('team-settings.branding.update', $team), [
+                'logo' => UploadedFile::fake()->image('logo.png', 80, 80),
+                'brand_background_color' => '#010203',
+                'brand_foreground_color' => '#fefdfc',
+            ])
+            ->assertRedirect(route('team-settings.branding', $team));
+
+        $firstLogoPath = $team->fresh()->brand_logo_path;
+
+        $this->assertNotNull($firstLogoPath);
+        Storage::disk('public')->assertExists($firstLogoPath);
+
+        $this
+            ->actingAs($user)
+            ->patch(route('team-settings.branding.update', $team), [
+                'logo' => UploadedFile::fake()->image('replacement.png', 80, 80),
+                'brand_background_color' => '#111111',
+                'brand_foreground_color' => '#eeeeee',
+            ])
+            ->assertRedirect(route('team-settings.branding', $team));
+
+        $secondLogoPath = $team->fresh()->brand_logo_path;
+
+        $this->assertNotNull($secondLogoPath);
+        $this->assertNotSame($firstLogoPath, $secondLogoPath);
+        Storage::disk('public')->assertMissing($firstLogoPath);
+        Storage::disk('public')->assertExists($secondLogoPath);
+
+        $this
+            ->actingAs($user)
+            ->patch(route('team-settings.branding.update', $team), [
+                'remove_logo' => true,
+                'brand_background_color' => null,
+                'brand_foreground_color' => null,
+            ])
+            ->assertRedirect(route('team-settings.branding', $team));
+
+        Storage::disk('public')->assertMissing($secondLogoPath);
+        $this->assertNull($team->fresh()->brand_logo_path);
+    }
+
+    public function test_team_branding_rejects_invalid_colors_and_uploads()
+    {
+        $user = User::factory()->create();
+        $team = Team::factory()->create();
+
+        $team->members()->attach($user, ['role' => TeamRole::Owner->value]);
+
+        $this
+            ->actingAs($user)
+            ->patch(route('team-settings.branding.update', $team), [
+                'logo' => UploadedFile::fake()->create('logo.txt', 1, 'text/plain'),
+                'brand_background_color' => '102030',
+                'brand_foreground_color' => '#xyzxyz',
+            ])
+            ->assertSessionHasErrors([
+                'logo',
+                'brand_background_color',
+                'brand_foreground_color',
+            ]);
+    }
+
+    public function test_team_branding_cannot_be_updated_by_creators()
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $team = Team::factory()->create();
+
+        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+        $team->members()->attach($member, ['role' => TeamRole::Creator->value]);
+
+        $response = $this
+            ->actingAs($member)
+            ->patch(route('team-settings.branding.update', $team), [
+                'brand_background_color' => '#102030',
+                'brand_foreground_color' => '#f0e0d0',
+            ]);
+
+        $response->assertForbidden();
     }
 
     public function test_team_subdomain_does_not_change_when_name_changes_without_editing_it()
