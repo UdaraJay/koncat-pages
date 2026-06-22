@@ -55,7 +55,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                     />
 
                     {breadcrumbs.length > 0 ? (
-                        <div className="hidden min-w-0 items-center gap-2 font-medium tracking-tight text-muted-foreground sm:flex">
+                        <div className="hidden min-w-0 items-center gap-2 sm:flex">
                             <ChevronRightIcon className="mr-2 size-4 text-muted-foreground/50" />
                             <Breadcrumbs breadcrumbs={breadcrumbs} />
                         </div>
