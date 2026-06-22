@@ -9,6 +9,7 @@ use App\Services\DeploymentPublisher;
 use App\Services\MatterpipeLimitResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class DeployApiController extends Controller
 {
@@ -19,7 +20,7 @@ class DeployApiController extends Controller
         $user = $this->userFromBearerToken($request);
         abort_unless($user !== null, 401);
 
-        abort_unless($user->canDeployProject($project), 403);
+        Gate::forUser($user)->authorize('deploy', $project);
 
         $archiveRules = ['required', 'file', 'mimes:zip'];
         $maxArchiveBytes = $limits->deploymentBytes($project);

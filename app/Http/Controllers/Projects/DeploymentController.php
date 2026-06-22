@@ -11,6 +11,7 @@ use App\Services\DeploymentPublisher;
 use App\Services\MatterpipeLimitResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
 class DeploymentController extends Controller
@@ -19,7 +20,7 @@ class DeploymentController extends Controller
     {
         abort_unless($project->workspace_id === $workspace->id, 404);
         abort_unless($workspace->team_id === $current_team->id, 403);
-        abort_unless($request->user()->canDeployProject($project), 403);
+        Gate::authorize('deploy', $project);
 
         $this->publishFromRequest($request, $project, $publisher, $limits);
 
@@ -30,7 +31,7 @@ class DeploymentController extends Controller
 
     public function storeGlobal(Request $request, Project $project, DeploymentPublisher $publisher, MatterpipeLimitResolver $limits): RedirectResponse
     {
-        abort_unless($request->user()->canDeployProject($project), 403);
+        Gate::authorize('deploy', $project);
 
         $this->publishFromRequest($request, $project, $publisher, $limits);
 
@@ -43,7 +44,7 @@ class DeploymentController extends Controller
     {
         abort_unless(! $project->trashed(), 404);
         abort_unless($deployment->project_id === $project->id, 404);
-        abort_unless($request->user()->canDeployProject($project), 403);
+        Gate::authorize('deploy', $project);
 
         $project->update(['current_deployment_id' => $deployment->id]);
 

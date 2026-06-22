@@ -20,6 +20,8 @@ class TeamMemberController extends Controller
     {
         Gate::authorize('updateMember', $current_team);
 
+        abort_if($current_team->owner()?->is($user), 403, __('The team owner role cannot be changed.'));
+
         $newRole = TeamRole::from($request->validated('role'));
 
         $current_team->memberships()
@@ -40,6 +42,9 @@ class TeamMemberController extends Controller
         Gate::authorize('removeMember', $current_team);
 
         abort_if($current_team->owner()?->is($user), 403, __('The team owner cannot be removed.'));
+
+        $current_team->workspaces()
+            ->each(fn ($workspace) => $workspace->members()->detach($user));
 
         $current_team->memberships()
             ->where('user_id', $user->id)

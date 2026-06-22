@@ -6,14 +6,18 @@ enum TeamRole: string
 {
     case Owner = 'owner';
     case Admin = 'admin';
-    case Member = 'member';
+    case Creator = 'creator';
+    case ReadOnly = 'read_only';
 
     /**
      * Get the display label for the role.
      */
     public function label(): string
     {
-        return ucfirst($this->value);
+        return match ($this) {
+            self::ReadOnly => __('Read-only'),
+            default => __(str($this->value)->replace('_', ' ')->title()->toString()),
+        };
     }
 
     /**
@@ -26,11 +30,34 @@ enum TeamRole: string
         return match ($this) {
             self::Owner => TeamPermission::cases(),
             self::Admin => [
+                TeamPermission::ViewTeam,
                 TeamPermission::UpdateTeam,
+                TeamPermission::AddMember,
+                TeamPermission::UpdateMember,
+                TeamPermission::RemoveMember,
                 TeamPermission::CreateInvitation,
                 TeamPermission::CancelInvitation,
+                TeamPermission::ViewWorkspace,
+                TeamPermission::CreateWorkspace,
+                TeamPermission::ManageWorkspace,
+                TeamPermission::ViewProject,
+                TeamPermission::CreateProject,
             ],
-            self::Member => [],
+            self::Creator => [
+                TeamPermission::ViewTeam,
+                TeamPermission::ViewWorkspace,
+                TeamPermission::ViewProject,
+                TeamPermission::CreateProject,
+                TeamPermission::UpdateOwnProject,
+                TeamPermission::DeleteOwnProject,
+                TeamPermission::DeployOwnProject,
+                TeamPermission::ShareOwnProject,
+            ],
+            self::ReadOnly => [
+                TeamPermission::ViewTeam,
+                TeamPermission::ViewWorkspace,
+                TeamPermission::ViewProject,
+            ],
         };
     }
 
@@ -40,27 +67,6 @@ enum TeamRole: string
     public function hasPermission(TeamPermission $permission): bool
     {
         return in_array($permission, $this->permissions());
-    }
-
-    /**
-     * Get the hierarchy level for this role.
-     * Higher numbers indicate higher privileges.
-     */
-    public function level(): int
-    {
-        return match ($this) {
-            self::Owner => 3,
-            self::Admin => 2,
-            self::Member => 1,
-        };
-    }
-
-    /**
-     * Check if this role is at least as privileged as another role.
-     */
-    public function isAtLeast(TeamRole $role): bool
-    {
-        return $this->level() >= $role->level();
     }
 
     /**

@@ -63,13 +63,12 @@ class MatterpipePlatformTest extends TestCase
         ]);
     }
 
-    public function test_workspace_membership_gates_workspace_pages(): void
+    public function test_team_membership_gates_workspace_pages(): void
     {
         [$owner, $member, $outsider] = User::factory()->count(3)->create();
         $team = Team::factory()->create();
         $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-        $team->members()->attach($member, ['role' => TeamRole::Member->value]);
-        $team->members()->attach($outsider, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($member, ['role' => TeamRole::ReadOnly->value]);
 
         $workspace = Workspace::factory()->create(['team_id' => $team->id]);
         $workspace->members()->attach($member, ['role' => WorkspaceRole::Member->value]);
@@ -364,7 +363,7 @@ class MatterpipePlatformTest extends TestCase
     {
         $user = User::factory()->create();
         $team = Team::factory()->create();
-        $team->members()->attach($user, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($user, ['role' => TeamRole::ReadOnly->value]);
         $workspace = Workspace::factory()->create(['team_id' => $team->id]);
         $workspace->members()->attach($user, ['role' => WorkspaceRole::Member->value]);
         $project = Project::factory()->create([
@@ -777,7 +776,7 @@ class MatterpipePlatformTest extends TestCase
         $this->assertSame([], Storage::disk('local')->allFiles());
     }
 
-    public function test_hosted_apps_require_workspace_membership(): void
+    public function test_hosted_apps_allow_read_only_team_members(): void
     {
         $this->skipWithoutZip();
         Storage::fake('local');
@@ -787,7 +786,7 @@ class MatterpipePlatformTest extends TestCase
         $outsider = User::factory()->create();
         $team = $member->currentTeam;
         $team->update(['subdomain' => 'private-team']);
-        $team->members()->attach($outsider, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($outsider, ['role' => TeamRole::ReadOnly->value]);
         $workspace = Workspace::factory()->create(['team_id' => $team->id]);
         $workspace->members()->attach($member, ['role' => WorkspaceRole::Member->value]);
         $project = Project::factory()->create([
@@ -806,7 +805,7 @@ class MatterpipePlatformTest extends TestCase
         $this
             ->actingAs($outsider)
             ->get('http://private-team.localhost/private-app/')
-            ->assertForbidden();
+            ->assertOk();
     }
 
     public function test_top_level_hosted_project_visit_records_project_view_event(): void

@@ -9,6 +9,7 @@ use App\Models\ProjectShare;
 use App\Services\ProjectShareService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -16,7 +17,7 @@ class ProjectShareController extends Controller
 {
     public function store(Request $request, Project $project, ProjectShareService $shares): RedirectResponse
     {
-        abort_unless($request->user()->canManageProjectShares($project), 403);
+        Gate::authorize('create', [ProjectShare::class, $project]);
 
         $validated = $request->validate([
             'email' => ['required', 'string', 'email', 'max:255'],
@@ -38,7 +39,7 @@ class ProjectShareController extends Controller
     public function update(Request $request, Project $project, ProjectShare $share): RedirectResponse
     {
         abort_unless($share->project_id === $project->id, 404);
-        abort_unless($request->user()->canManageProjectShares($project), 403);
+        Gate::authorize('update', $share);
 
         $validated = $request->validate([
             'permission' => ['required', 'string', Rule::enum(ProjectSharePermission::class)],
@@ -53,10 +54,10 @@ class ProjectShareController extends Controller
         return back();
     }
 
-    public function destroy(Request $request, Project $project, ProjectShare $share): RedirectResponse
+    public function destroy(Project $project, ProjectShare $share): RedirectResponse
     {
         abort_unless($share->project_id === $project->id, 404);
-        abort_unless($request->user()->canManageProjectShares($project), 403);
+        Gate::authorize('delete', $share);
 
         $share->delete();
 

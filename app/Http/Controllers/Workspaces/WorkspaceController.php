@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Workspaces;
 
-use App\Enums\WorkspacePermission;
 use App\Enums\WorkspaceRole;
 use App\Http\Controllers\Concerns\BuildsProjectMoveTargets;
 use App\Http\Controllers\Controller;
@@ -17,6 +16,7 @@ use App\Services\ProjectAnalytics;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -28,20 +28,18 @@ class WorkspaceController extends Controller
     public function index(Request $request, Team $current_team, MatterpipeLimitResolver $limits): Response
     {
         $user = $request->user();
-        abort_unless($user->belongsToTeam($current_team), 403);
+        Gate::authorize('view', $current_team);
 
         $workspaces = $current_team->workspaces()
             ->withCount('projects')
-            ->when(! $user->canManageTeamWorkspaces($current_team), function ($query) use ($user) {
-                $query->whereHas('members', fn ($members) => $members->whereKey($user->id));
-            })
             ->orderBy('name')
             ->get()
+            ->filter(fn (Workspace $workspace) => Gate::forUser($user)->allows('view', $workspace))
             ->map(fn (Workspace $workspace) => $this->workspacePayload($workspace, $user));
 
         return Inertia::render('workspaces/index', [
             'workspaces' => $workspaces,
-            'canCreateWorkspace' => $user->canManageTeamWorkspaces($current_team),
+            'canCreateWorkspace' => Gate::forUser($user)->allows('createWorkspace', $current_team),
             'quota' => [
                 'workspaces' => $current_team->workspaces()->count(),
                 'maxWorkspaces' => $limits->teamWorkspaces($current_team),
@@ -52,7 +50,7 @@ class WorkspaceController extends Controller
     public function store(Request $request, Team $current_team, MatterpipeQuota $quota): RedirectResponse
     {
         $user = $request->user();
-        abort_unless($user->canManageTeamWorkspaces($current_team), 403);
+        Gate::authorize('createWorkspace', $current_team);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -76,7 +74,8 @@ class WorkspaceController extends Controller
     public function show(Request $request, Team $current_team, Workspace $workspace, MatterpipeLimitResolver $limits, ProjectAnalytics $analytics): Response
     {
         $user = $request->user();
-        $this->authorizeWorkspaceView($user, $current_team, $workspace);
+        abort_unless($workspace->team_id === $current_team->id, 403);
+        Gate::authorize('view', $workspace);
         $projects = $workspace->projects()
             ->with(['currentDeployment.securityScan', 'hostingTeam', 'shares.user'])
             ->withCount(['deployments', 'shares'])
@@ -151,8 +150,8 @@ class WorkspaceController extends Controller
 
     public function update(Request $request, Team $current_team, Workspace $workspace): RedirectResponse
     {
-        $user = $request->user();
-        $this->authorizeWorkspacePermission($user, $current_team, $workspace, WorkspacePermission::UpdateWorkspace);
+        abort_unless($workspace->team_id === $current_team->id, 403);
+        Gate::authorize('update', $workspace);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -167,8 +166,8 @@ class WorkspaceController extends Controller
 
     public function destroy(Request $request, Team $current_team, Workspace $workspace): RedirectResponse
     {
-        $user = $request->user();
-        $this->authorizeWorkspacePermission($user, $current_team, $workspace, WorkspacePermission::DeleteWorkspace);
+        abort_unless($workspace->team_id === $current_team->id, 403);
+        Gate::authorize('delete', $workspace);
 
         $request->validate([
             'name' => ['required', 'string', Rule::in([$workspace->name])],
@@ -179,17 +178,6 @@ class WorkspaceController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Workspace deleted.')]);
 
         return to_route('workspaces.index', $current_team);
-    }
-
-    protected function authorizeWorkspaceView(User $user, Team $team, Workspace $workspace): void
-    {
-        abort_unless($workspace->team_id === $team->id && $user->belongsToTeam($team), 403);
-        abort_unless($user->canManageTeamWorkspaces($team) || $user->belongsToWorkspace($workspace), 403);
-    }
-
-    protected function authorizeWorkspacePermission(User $user, Team $team, Workspace $workspace, WorkspacePermission $permission): void
-    {
-        abort_unless($workspace->team_id === $team->id && $user->hasWorkspacePermission($workspace, $permission), 403);
     }
 
     /**

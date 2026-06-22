@@ -13,6 +13,7 @@ use App\Models\Workspace;
 use App\Services\ProjectAnalytics;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -133,9 +134,8 @@ class DashboardController extends Controller
     {
         return Workspace::query()
             ->where('team_id', $team->id)
-            ->when(! $user->canManageTeamWorkspaces($team), function ($query) use ($user) {
-                $query->whereHas('members', fn ($members) => $members->whereKey($user->id));
-            })
+            ->get()
+            ->filter(fn (Workspace $workspace) => Gate::forUser($user)->allows('view', $workspace))
             ->pluck('id')
             ->all();
     }

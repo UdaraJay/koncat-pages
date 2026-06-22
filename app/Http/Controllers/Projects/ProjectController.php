@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Projects;
 
 use App\Enums\ProjectSharePermission;
-use App\Enums\WorkspacePermission;
 use App\Http\Controllers\Concerns\BuildsProjectMoveTargets;
 use App\Http\Controllers\Concerns\BuildsProjectPayloads;
 use App\Http\Controllers\Controller;
@@ -17,6 +16,7 @@ use App\Services\ProjectAnalytics;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -34,7 +34,7 @@ class ProjectController extends Controller
             ->load(['owner', 'workspace.team', 'hostingTeam', 'currentDeployment.securityScan', 'shares.user', 'shares.sharer'])
             ->loadCount(['deployments', 'shares']);
 
-        abort_unless($user->canAccessProject($project), 403);
+        Gate::authorize('view', $project);
 
         $projectAnalytics = $analytics->viewSummaries(collect([$project]));
         $deployments = $project->deployments()
@@ -93,16 +93,16 @@ class ProjectController extends Controller
         }
 
         $team = Team::query()->whereKey($validated['team_id'] ?? null)->firstOrFail();
-        abort_unless($user->belongsToTeam($team), 403);
+        Gate::authorize('view', $team);
 
         $workspace = null;
 
         if ($validated['workspace_id'] ?? null) {
             $workspace = Workspace::query()->whereKey($validated['workspace_id'])->firstOrFail();
             abort_unless($workspace->team_id === $team->id, 422);
-            abort_unless($user->canCreateWorkspaceProject($workspace), 403);
+            Gate::authorize('createProject', $workspace);
         } else {
-            abort_unless($user->canCreateTeamProject($team), 403);
+            Gate::authorize('createProject', $team);
         }
 
         $this->ensureProjectPathAvailable($validated['slug'] ?? null, $team->id);
@@ -128,7 +128,7 @@ class ProjectController extends Controller
 
     public function storeInWorkspace(Request $request, Team $current_team, Workspace $workspace, MatterpipeQuota $quota): RedirectResponse
     {
-        $this->authorizeRequest($request->user(), $current_team, $workspace, WorkspacePermission::CreateProject);
+        $this->authorizeWorkspace($current_team, $workspace, 'createProject');
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -154,7 +154,7 @@ class ProjectController extends Controller
 
     public function update(Request $request, Team $current_team, Workspace $workspace, Project $project): RedirectResponse
     {
-        $this->authorizeProject($request->user(), $current_team, $workspace, $project, WorkspacePermission::UpdateProject);
+        $this->authorizeProject($current_team, $workspace, $project, 'update');
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -173,7 +173,7 @@ class ProjectController extends Controller
     public function updateDetails(Request $request, Project $project): RedirectResponse
     {
         abort_unless(! $project->trashed(), 404);
-        abort_unless($request->user()->canUpdateProject($project), 403);
+        Gate::authorize('update', $project);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -191,7 +191,7 @@ class ProjectController extends Controller
     {
         $user = $request->user();
 
-        abort_unless($user->canDeleteProject($project), 403);
+        Gate::authorize('move', $project);
 
         $validated = $request->validate([
             'owner_type' => ['required', 'string', Rule::in(['user', 'team'])],
@@ -222,7 +222,7 @@ class ProjectController extends Controller
 
     public function unpublish(Request $request, Project $project): RedirectResponse
     {
-        abort_unless($request->user()->canDeployProject($project), 403);
+        Gate::authorize('deploy', $project);
 
         $project->update(['current_deployment_id' => null]);
 
@@ -233,7 +233,7 @@ class ProjectController extends Controller
 
     public function archive(Request $request, Project $project): RedirectResponse
     {
-        abort_unless($request->user()->canDeleteProject($project), 403);
+        Gate::authorize('delete', $project);
 
         $project->delete();
 
@@ -245,7 +245,7 @@ class ProjectController extends Controller
     public function restore(Request $request, Project $project): RedirectResponse
     {
         abort_unless($project->trashed(), 404);
-        abort_unless($request->user()->canDeleteProject($project), 403);
+        Gate::authorize('delete', $project);
 
         $project->restore();
 
@@ -256,7 +256,7 @@ class ProjectController extends Controller
 
     public function destroy(Request $request, Team $current_team, Workspace $workspace, Project $project): RedirectResponse
     {
-        $this->authorizeProject($request->user(), $current_team, $workspace, $project, WorkspacePermission::DeleteProject);
+        $this->authorizeProject($current_team, $workspace, $project, 'delete');
 
         $request->validate([
             'name' => ['required', 'string', Rule::in([$project->name])],
@@ -283,15 +283,19 @@ class ProjectController extends Controller
         ];
     }
 
-    protected function authorizeRequest(User $user, Team $team, Workspace $workspace, WorkspacePermission $permission): void
+    protected function authorizeWorkspace(Team $team, Workspace $workspace, string $ability): void
     {
-        abort_unless($workspace->team_id === $team->id && $user->hasWorkspacePermission($workspace, $permission), 403);
+        abort_unless($workspace->team_id === $team->id, 403);
+
+        Gate::authorize($ability, $workspace);
     }
 
-    protected function authorizeProject(User $user, Team $team, Workspace $workspace, Project $project, WorkspacePermission $permission): void
+    protected function authorizeProject(Team $team, Workspace $workspace, Project $project, string $ability): void
     {
         abort_unless($project->workspace_id === $workspace->id, 404);
-        $this->authorizeRequest($user, $team, $workspace, $permission);
+        abort_unless($workspace->team_id === $team->id, 403);
+
+        Gate::authorize($ability, $project);
     }
 
     /**
@@ -309,16 +313,16 @@ class ProjectController extends Controller
         }
 
         $team = Team::query()->whereKey($validated['team_id'] ?? null)->firstOrFail();
-        abort_unless($user->belongsToTeam($team), 403);
+        Gate::authorize('view', $team);
 
         $workspace = null;
 
         if ($validated['workspace_id'] ?? null) {
             $workspace = Workspace::query()->whereKey($validated['workspace_id'])->firstOrFail();
             abort_unless($workspace->team_id === $team->id, 422);
-            abort_unless($user->canCreateWorkspaceProject($workspace), 403);
+            Gate::authorize('createProject', $workspace);
         } else {
-            abort_unless($user->canCreateTeamProject($team), 403);
+            Gate::authorize('createProject', $team);
         }
 
         return [Team::class, $team->id, $workspace, $team];

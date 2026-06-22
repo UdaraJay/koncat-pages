@@ -264,7 +264,7 @@ class DashboardTest extends TestCase
         ]);
     }
 
-    public function test_direct_project_share_cannot_update_project_card_details()
+    public function test_direct_write_project_share_can_update_project_card_details()
     {
         $owner = User::factory()->create();
         $recipient = User::factory()->create(['email' => 'writer@example.com']);
@@ -288,12 +288,12 @@ class DashboardTest extends TestCase
                 'name' => 'Shared Rename',
                 'description' => 'Shared description',
             ])
-            ->assertForbidden();
+            ->assertRedirect();
 
         $this->assertDatabaseHas('projects', [
             'id' => $project->id,
-            'name' => 'Owner App',
-            'description' => 'Owner description',
+            'name' => 'Shared Rename',
+            'description' => 'Shared description',
         ]);
     }
 
@@ -486,7 +486,7 @@ class DashboardTest extends TestCase
         $recipient = User::factory()->create(['email' => 'recipient@example.com']);
         $team = Team::factory()->create(['name' => 'Acme']);
         $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-        $team->members()->attach($recipient, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($recipient, ['role' => TeamRole::ReadOnly->value]);
 
         Project::factory()->create([
             'owner_type' => User::class,
@@ -531,12 +531,12 @@ class DashboardTest extends TestCase
                 ->where('sharedProjects.0.name', 'Shared App'));
     }
 
-    public function test_work_team_home_uses_team_and_workspace_access(): void
+    public function test_read_only_work_team_home_can_view_team_and_workspace_projects(): void
     {
         [$owner, $member] = User::factory()->count(2)->create();
         $team = Team::factory()->create(['name' => 'Acme']);
         $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-        $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($member, ['role' => TeamRole::ReadOnly->value]);
         $member->switchTeam($team);
 
         $memberWorkspace = Workspace::factory()->create(['team_id' => $team->id]);
@@ -573,14 +573,15 @@ class DashboardTest extends TestCase
                 ->component('dashboard')
                 ->where('homeScope.team.isPersonal', false)
                 ->where('homeScope.projectLabel', 'Team projects')
-                ->has('projects', 2)
+                ->has('projects', 3)
                 ->where('projects.0.name', 'Member Workspace App')
-                ->where('projects.1.name', 'Team Level App')
+                ->where('projects.1.name', 'Private Workspace App')
+                ->where('projects.2.name', 'Team Level App')
                 ->has('sharedProjects', 0)
                 ->has('createOptions.owners', 1)
-                ->where('createOptions.owners.0.type', 'team')
                 ->where('createOptions.owners.0.canCreateProject', false)
-                ->has('createOptions.owners.0.workspaces', 1));
+                ->has('createOptions.owners.0.workspaces', 1)
+                ->where('createOptions.owners.0.workspaces.0.name', $memberWorkspace->name));
     }
 
     public function test_team_owners_can_see_all_workspace_projects_on_work_team_home(): void
@@ -611,12 +612,12 @@ class DashboardTest extends TestCase
                 ->where('createOptions.owners.0.canCreateProject', true));
     }
 
-    public function test_direct_email_shares_do_not_appear_on_work_team_home(): void
+    public function test_direct_email_shares_for_team_projects_are_superseded_by_team_access(): void
     {
         [$owner, $recipient] = User::factory()->count(2)->create();
         $team = Team::factory()->create(['name' => 'Acme']);
         $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-        $team->members()->attach($recipient, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($recipient, ['role' => TeamRole::ReadOnly->value]);
 
         $workspace = Workspace::factory()->create(['team_id' => $team->id]);
         $sharedProject = Project::factory()->create([
@@ -639,7 +640,8 @@ class DashboardTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('dashboard')
-                ->has('projects', 0)
+                ->has('projects', 1)
+                ->where('projects.0.name', 'Directly Shared Workspace App')
                 ->has('sharedProjects', 0));
 
         $recipient->switchTeam($recipient->personalTeam());
@@ -651,8 +653,7 @@ class DashboardTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('dashboard')
                 ->has('projects', 0)
-                ->has('sharedProjects', 1)
-                ->where('sharedProjects.0.name', 'Directly Shared Workspace App'));
+                ->has('sharedProjects', 0));
     }
 
     public function test_switching_current_team_changes_home_and_sidebar_projects(): void

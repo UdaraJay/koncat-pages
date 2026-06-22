@@ -123,7 +123,7 @@ class ProjectSharingTest extends TestCase
         $member = User::factory()->create(['email' => 'member@example.com']);
         $team = Team::factory()->create();
         $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-        $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($member, ['role' => TeamRole::ReadOnly->value]);
         $project = Project::factory()->create([
             'owner_type' => Team::class,
             'owner_id' => $team->id,
@@ -197,6 +197,179 @@ class ProjectSharingTest extends TestCase
 
         $this
             ->actingAs($writer)
+            ->delete(route('projects.archive', $project))
+            ->assertForbidden();
+    }
+
+    public function test_read_only_team_members_can_view_but_not_mutate_team_projects(): void
+    {
+        $hostingDomain = config('matterpipe.hosting_domain');
+
+        $owner = User::factory()->create();
+        $reader = User::factory()->create();
+        $team = Team::factory()->create(['subdomain' => 'read-only-team']);
+        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+        $team->members()->attach($reader, ['role' => TeamRole::ReadOnly->value]);
+        $project = Project::factory()->create([
+            'owner_type' => Team::class,
+            'owner_id' => $team->id,
+            'hosting_team_id' => $team->id,
+            'created_by' => $owner->id,
+            'slug' => 'team-app',
+        ]);
+
+        $this
+            ->actingAs($reader)
+            ->get(route('projects.show', $project))
+            ->assertOk();
+
+        $this
+            ->actingAs($reader)
+            ->patch(route('projects.update', $project), [
+                'name' => 'Changed',
+                'description' => null,
+            ])
+            ->assertForbidden();
+
+        $this
+            ->actingAs($reader)
+            ->post(route('projects.deployments.store', $project))
+            ->assertForbidden();
+
+        $this
+            ->actingAs($reader)
+            ->post(route('projects.shares.store', $project), [
+                'email' => 'shared@example.com',
+                'permission' => ProjectSharePermission::Read->value,
+            ])
+            ->assertForbidden();
+
+        $this
+            ->actingAs($reader)
+            ->withToken(app(MatterpipeRuntimeTokens::class)->makeRuntimeToken($project, $reader))
+            ->postJson("http://read-only-team.{$hostingDomain}/team-app/__matterpipe/db/posts", [
+                'data' => ['title' => 'Nope'],
+            ])
+            ->assertForbidden();
+
+        $this
+            ->actingAs($reader)
+            ->delete(route('projects.archive', $project))
+            ->assertForbidden();
+    }
+
+    public function test_creators_can_create_and_manage_team_projects_they_created(): void
+    {
+        $creator = User::factory()->create();
+        $team = Team::factory()->create();
+        $team->members()->attach($creator, ['role' => TeamRole::Creator->value]);
+
+        $this
+            ->actingAs($creator)
+            ->post(route('projects.store'), [
+                'owner_type' => 'team',
+                'team_id' => $team->id,
+                'name' => 'Creator App',
+                'slug' => 'creator-app',
+            ])
+            ->assertRedirect(route('dashboard'));
+
+        $project = Project::query()->where('slug', 'creator-app')->firstOrFail();
+
+        $this->assertSame($creator->id, $project->created_by);
+
+        $this
+            ->actingAs($creator)
+            ->patch(route('projects.update', $project), [
+                'name' => 'Updated Creator App',
+                'description' => 'Owned by the creator',
+            ])
+            ->assertRedirect();
+
+        $this
+            ->actingAs($creator)
+            ->post(route('projects.deployments.store', $project))
+            ->assertSessionHasErrors('archive');
+
+        $this
+            ->actingAs($creator)
+            ->delete(route('projects.archive', $project))
+            ->assertRedirect();
+
+        $this->assertSoftDeleted('projects', [
+            'id' => $project->id,
+        ]);
+    }
+
+    public function test_creators_can_only_manage_other_projects_when_write_shared(): void
+    {
+        $hostingDomain = config('matterpipe.hosting_domain');
+
+        $owner = User::factory()->create();
+        $creator = User::factory()->create(['email' => 'creator@example.com']);
+        $team = Team::factory()->create(['subdomain' => 'creator-team']);
+        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+        $team->members()->attach($creator, ['role' => TeamRole::Creator->value]);
+        $project = Project::factory()->create([
+            'owner_type' => Team::class,
+            'owner_id' => $team->id,
+            'hosting_team_id' => $team->id,
+            'created_by' => $owner->id,
+            'slug' => 'owner-app',
+        ]);
+
+        $this
+            ->actingAs($creator)
+            ->patch(route('projects.update', $project), [
+                'name' => 'Nope',
+                'description' => null,
+            ])
+            ->assertForbidden();
+
+        $this
+            ->actingAs($creator)
+            ->withToken(app(MatterpipeRuntimeTokens::class)->makeRuntimeToken($project, $creator))
+            ->postJson("http://creator-team.{$hostingDomain}/owner-app/__matterpipe/db/posts", [
+                'data' => ['title' => 'Nope'],
+            ])
+            ->assertForbidden();
+
+        ProjectShare::factory()->forUser($creator)->write()->create([
+            'project_id' => $project->id,
+            'shared_by' => $owner->id,
+        ]);
+
+        $this
+            ->actingAs($creator)
+            ->patch(route('projects.update', $project), [
+                'name' => 'Write Shared App',
+                'description' => null,
+            ])
+            ->assertRedirect();
+
+        $this
+            ->actingAs($creator)
+            ->withToken(app(MatterpipeRuntimeTokens::class)->makeRuntimeToken($project->fresh(), $creator))
+            ->postJson("http://creator-team.{$hostingDomain}/owner-app/__matterpipe/db/posts", [
+                'data' => ['title' => 'Draft'],
+            ])
+            ->assertCreated();
+
+        $this
+            ->actingAs($creator)
+            ->post(route('projects.deployments.store', $project))
+            ->assertForbidden();
+
+        $this
+            ->actingAs($creator)
+            ->post(route('projects.shares.store', $project), [
+                'email' => 'new@example.com',
+                'permission' => ProjectSharePermission::Read->value,
+            ])
+            ->assertForbidden();
+
+        $this
+            ->actingAs($creator)
             ->delete(route('projects.archive', $project))
             ->assertForbidden();
     }

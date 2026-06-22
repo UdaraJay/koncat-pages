@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 
 trait HasTeams
@@ -118,14 +119,6 @@ trait HasTeams
     }
 
     /**
-     * Determine if the user is the owner of the given team.
-     */
-    public function ownsTeam(Team $team): bool
-    {
-        return $this->teamRole($team) === TeamRole::Owner;
-    }
-
-    /**
      * Get the user's role on the given team.
      */
     public function teamRole(Team $team): ?TeamRole
@@ -165,6 +158,7 @@ trait HasTeams
             isPersonal: $team->is_personal,
             role: $role?->value,
             roleLabel: $role?->label(),
+            canUpdateTeam: Gate::forUser($this)->allows('update', $team),
             isCurrent: $this->isCurrentTeam($team),
         );
     }
@@ -174,16 +168,14 @@ trait HasTeams
      */
     public function toTeamPermissions(Team $team): TeamPermissions
     {
-        $role = $this->teamRole($team);
-
         return new TeamPermissions(
-            canUpdateTeam: $role?->hasPermission(TeamPermission::UpdateTeam) ?? false,
-            canDeleteTeam: $role?->hasPermission(TeamPermission::DeleteTeam) ?? false,
-            canAddMember: $role?->hasPermission(TeamPermission::AddMember) ?? false,
-            canUpdateMember: $role?->hasPermission(TeamPermission::UpdateMember) ?? false,
-            canRemoveMember: $role?->hasPermission(TeamPermission::RemoveMember) ?? false,
-            canCreateInvitation: $role?->hasPermission(TeamPermission::CreateInvitation) ?? false,
-            canCancelInvitation: $role?->hasPermission(TeamPermission::CancelInvitation) ?? false,
+            canUpdateTeam: Gate::forUser($this)->allows('update', $team),
+            canDeleteTeam: Gate::forUser($this)->allows('delete', $team),
+            canAddMember: Gate::forUser($this)->allows('addMember', $team),
+            canUpdateMember: Gate::forUser($this)->allows('updateMember', $team),
+            canRemoveMember: Gate::forUser($this)->allows('removeMember', $team),
+            canCreateInvitation: Gate::forUser($this)->allows('inviteMember', $team),
+            canCancelInvitation: Gate::forUser($this)->allows('cancelInvitation', $team),
         );
     }
 
@@ -219,27 +211,27 @@ trait HasTeams
 
     public function canManageTeamWorkspaces(Team $team): bool
     {
-        $role = $this->teamRole($team);
-
-        return $role === TeamRole::Owner || $role === TeamRole::Admin;
+        return Gate::forUser($this)->allows('manageWorkspaces', $team);
     }
 
     public function hasWorkspacePermission(Workspace $workspace, WorkspacePermission $permission): bool
     {
-        if (! $this->belongsToTeam($workspace->team)) {
-            return false;
-        }
-
-        if ($this->canManageTeamWorkspaces($workspace->team)) {
-            return true;
-        }
-
-        return $this->workspaceRole($workspace)?->hasPermission($permission) ?? false;
+        return Gate::forUser($this)->allows(match ($permission) {
+            WorkspacePermission::UpdateWorkspace => 'update',
+            WorkspacePermission::DeleteWorkspace => 'delete',
+            WorkspacePermission::AddMember => 'addMember',
+            WorkspacePermission::UpdateMember => 'updateMember',
+            WorkspacePermission::RemoveMember => 'removeMember',
+            WorkspacePermission::CreateProject => 'createProject',
+            WorkspacePermission::UpdateProject => 'updateProject',
+            WorkspacePermission::DeleteProject => 'deleteProject',
+            WorkspacePermission::DeployProject => 'deployProject',
+        }, $workspace);
     }
 
     public function canCreateTeamProject(Team $team): bool
     {
-        return $this->canManageTeamWorkspaces($team);
+        return Gate::forUser($this)->allows('createProject', $team);
     }
 
     public function canCreateWorkspaceProject(Workspace $workspace): bool
@@ -249,7 +241,7 @@ trait HasTeams
 
     public function canAccessProject(Project $project): bool
     {
-        return $this->canAccessProjectInherited($project) || $this->hasProjectShare($project);
+        return Gate::forUser($this)->allows('view', $project);
     }
 
     public function canAccessProjectInherited(Project $project): bool
@@ -266,52 +258,38 @@ trait HasTeams
             $workspace = $project->workspace;
 
             return $workspace !== null
-                && ($this->canManageTeamWorkspaces($workspace->team) || $this->belongsToWorkspace($workspace));
+                && Gate::forUser($this)->allows('view', $workspace);
         }
 
         $team = $project->owner;
 
-        return $team instanceof Team && $this->belongsToTeam($team);
+        return $team instanceof Team
+            && $this->hasTeamPermission($team, TeamPermission::ViewProject);
     }
 
     public function canWriteProjectContent(Project $project): bool
     {
-        return $this->canAccessProjectInherited($project) || $this->hasProjectShare($project, ProjectSharePermission::Write);
+        return Gate::forUser($this)->allows('write', $project);
     }
 
     public function canManageProjectShares(Project $project): bool
     {
-        if ($project->owner_type === User::class) {
-            return $project->owner_id === $this->id;
-        }
-
-        if ($project->owner_type !== Team::class) {
-            return false;
-        }
-
-        if ($project->workspace_id !== null) {
-            return $project->workspace !== null
-                && $this->hasWorkspacePermission($project->workspace, WorkspacePermission::AddMember);
-        }
-
-        $team = $project->owner;
-
-        return $team instanceof Team && $this->canManageTeamWorkspaces($team);
+        return Gate::forUser($this)->allows('share', $project);
     }
 
     public function canUpdateProject(Project $project): bool
     {
-        return $this->canManageProject($project, WorkspacePermission::UpdateProject);
+        return Gate::forUser($this)->allows('update', $project);
     }
 
     public function canDeleteProject(Project $project): bool
     {
-        return $this->canManageProject($project, WorkspacePermission::DeleteProject);
+        return Gate::forUser($this)->allows('delete', $project);
     }
 
     public function canDeployProject(Project $project): bool
     {
-        return $this->canManageProject($project, WorkspacePermission::DeployProject);
+        return Gate::forUser($this)->allows('deploy', $project);
     }
 
     public function canAccessHostedProject(Project $project): bool
@@ -331,38 +309,18 @@ trait HasTeams
             ->exists();
     }
 
-    protected function canManageProject(Project $project, WorkspacePermission $workspacePermission): bool
-    {
-        if ($project->owner_type === User::class) {
-            return $project->owner_id === $this->id;
-        }
-
-        if ($project->owner_type !== Team::class) {
-            return false;
-        }
-
-        if ($project->workspace_id !== null) {
-            return $project->workspace !== null
-                && $this->hasWorkspacePermission($project->workspace, $workspacePermission);
-        }
-
-        $team = $project->owner;
-
-        return $team instanceof Team && $this->canManageTeamWorkspaces($team);
-    }
-
     public function toWorkspacePermissions(Workspace $workspace): WorkspacePermissions
     {
         return new WorkspacePermissions(
-            canUpdateWorkspace: $this->hasWorkspacePermission($workspace, WorkspacePermission::UpdateWorkspace),
-            canDeleteWorkspace: $this->hasWorkspacePermission($workspace, WorkspacePermission::DeleteWorkspace),
-            canAddMember: $this->hasWorkspacePermission($workspace, WorkspacePermission::AddMember),
-            canUpdateMember: $this->hasWorkspacePermission($workspace, WorkspacePermission::UpdateMember),
-            canRemoveMember: $this->hasWorkspacePermission($workspace, WorkspacePermission::RemoveMember),
-            canCreateProject: $this->hasWorkspacePermission($workspace, WorkspacePermission::CreateProject),
-            canUpdateProject: $this->hasWorkspacePermission($workspace, WorkspacePermission::UpdateProject),
-            canDeleteProject: $this->hasWorkspacePermission($workspace, WorkspacePermission::DeleteProject),
-            canDeployProject: $this->hasWorkspacePermission($workspace, WorkspacePermission::DeployProject),
+            canUpdateWorkspace: Gate::forUser($this)->allows('update', $workspace),
+            canDeleteWorkspace: Gate::forUser($this)->allows('delete', $workspace),
+            canAddMember: Gate::forUser($this)->allows('addMember', $workspace),
+            canUpdateMember: Gate::forUser($this)->allows('updateMember', $workspace),
+            canRemoveMember: Gate::forUser($this)->allows('removeMember', $workspace),
+            canCreateProject: Gate::forUser($this)->allows('createProject', $workspace),
+            canUpdateProject: Gate::forUser($this)->allows('updateProject', $workspace),
+            canDeleteProject: Gate::forUser($this)->allows('deleteProject', $workspace),
+            canDeployProject: Gate::forUser($this)->allows('deployProject', $workspace),
         );
     }
 }

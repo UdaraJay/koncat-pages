@@ -67,29 +67,7 @@ export default function TeamsIndex({ teams }: Props) {
 
                             <TooltipProvider>
                                 <div className="flex items-center gap-2">
-                                    {team.role === 'member' ? (
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    data-test="team-view-button"
-                                                    asChild
-                                                >
-                                                    <Link
-                                                        href={general(
-                                                            team.slug,
-                                                        )}
-                                                    >
-                                                        <Eye className="h-4 w-4" />
-                                                    </Link>
-                                                </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                                <p>View team</p>
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    ) : (
+                                    {team.canUpdateTeam ? (
                                         <Tooltip>
                                             <TooltipTrigger asChild>
                                                 <Button
@@ -109,6 +87,28 @@ export default function TeamsIndex({ teams }: Props) {
                                             </TooltipTrigger>
                                             <TooltipContent>
                                                 <p>Edit team</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    ) : (
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    data-test="team-view-button"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={general(
+                                                            team.slug,
+                                                        )}
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </Link>
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>View team</p>
                                             </TooltipContent>
                                         </Tooltip>
                                     )}

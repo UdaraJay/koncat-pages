@@ -28,7 +28,7 @@ class TeamInvitationTest extends TestCase
             ->actingAs($owner)
             ->post(route('team-settings.invitations.store', $team), [
                 'email' => 'invited@example.com',
-                'role' => TeamRole::Member->value,
+                'role' => TeamRole::Creator->value,
             ]);
 
         $response->assertRedirect(route('team-settings.members.index', $team));
@@ -36,7 +36,7 @@ class TeamInvitationTest extends TestCase
         $this->assertDatabaseHas('team_invitations', [
             'team_id' => $team->id,
             'email' => 'invited@example.com',
-            'role' => TeamRole::Member->value,
+            'role' => TeamRole::Creator->value,
         ]);
     }
 
@@ -94,7 +94,7 @@ class TeamInvitationTest extends TestCase
             ->actingAs($admin)
             ->post(route('team-settings.invitations.store', $team), [
                 'email' => 'invited@example.com',
-                'role' => TeamRole::Member->value,
+                'role' => TeamRole::Creator->value,
             ]);
 
         $response->assertRedirect(route('team-settings.members.index', $team));
@@ -109,13 +109,13 @@ class TeamInvitationTest extends TestCase
         $team = Team::factory()->create();
 
         $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-        $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($member, ['role' => TeamRole::Creator->value]);
 
         $response = $this
             ->actingAs($owner)
             ->post(route('team-settings.invitations.store', $team), [
                 'email' => 'member@example.com',
-                'role' => TeamRole::Member->value,
+                'role' => TeamRole::Creator->value,
             ]);
 
         $response->assertSessionHasErrors('email');
@@ -139,29 +139,46 @@ class TeamInvitationTest extends TestCase
             ->actingAs($owner)
             ->post(route('team-settings.invitations.store', $team), [
                 'email' => 'invited@example.com',
-                'role' => TeamRole::Member->value,
+                'role' => TeamRole::Creator->value,
             ]);
 
         $response->assertSessionHasErrors('email');
     }
 
-    public function test_team_invitations_cannot_be_created_by_members()
+    public function test_team_invitations_cannot_be_created_by_creators()
     {
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $team = Team::factory()->create();
 
         $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-        $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($member, ['role' => TeamRole::Creator->value]);
 
         $response = $this
             ->actingAs($member)
             ->post(route('team-settings.invitations.store', $team), [
                 'email' => 'invited@example.com',
-                'role' => TeamRole::Member->value,
+                'role' => TeamRole::Creator->value,
             ]);
 
         $response->assertForbidden();
+    }
+
+    public function test_team_invitations_cannot_use_legacy_member_role()
+    {
+        $owner = User::factory()->create();
+        $team = Team::factory()->create();
+
+        $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
+
+        $response = $this
+            ->actingAs($owner)
+            ->post(route('team-settings.invitations.store', $team), [
+                'email' => 'invited@example.com',
+                'role' => 'member',
+            ]);
+
+        $response->assertSessionHasErrors('role');
     }
 
     public function test_team_invitations_can_be_cancelled_by_owners()
@@ -198,7 +215,7 @@ class TeamInvitationTest extends TestCase
         $invitation = TeamInvitation::factory()->create([
             'team_id' => $team->id,
             'email' => 'invited@example.com',
-            'role' => TeamRole::Member,
+            'role' => TeamRole::Creator,
             'invited_by' => $owner->id,
         ]);
 

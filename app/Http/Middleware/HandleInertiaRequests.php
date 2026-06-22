@@ -7,6 +7,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Services\MatterpipeRuntimeTokens;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -61,11 +62,9 @@ class HandleInertiaRequests extends Middleware
                 ? $user->currentTeam
                     ->workspaces()
                     ->withCount('projects')
-                    ->when(! $user->canManageTeamWorkspaces($user->currentTeam), function ($query) use ($user) {
-                        $query->whereHas('members', fn ($members) => $members->whereKey($user->id));
-                    })
                     ->orderBy('name')
                     ->get()
+                    ->filter(fn ($workspace) => Gate::forUser($user)->allows('view', $workspace))
                     ->map(fn ($workspace) => [
                         'id' => $workspace->id,
                         'teamId' => $workspace->team_id,
@@ -97,24 +96,21 @@ class HandleInertiaRequests extends Middleware
                 $query
                     ->where('owner_type', User::class)
                     ->where('owner_id', $user->id);
-            }, function ($query) use ($team, $user) {
+            }, function ($query) use ($team) {
                 $query
                     ->where('owner_type', Team::class)
                     ->where('owner_id', $team->id)
-                    ->where(function ($projects) use ($team, $user) {
+                    ->where(function ($projects) use ($team) {
                         $projects
                             ->whereNull('workspace_id')
-                            ->orWhereHas('workspace', function ($workspaces) use ($team, $user) {
+                            ->orWhereHas('workspace', function ($workspaces) use ($team) {
                                 $workspaces->where('team_id', $team->id);
-
-                                if (! $user->canManageTeamWorkspaces($team)) {
-                                    $workspaces->whereHas('members', fn ($members) => $members->whereKey($user->id));
-                                }
                             });
                     });
             })
             ->latest('updated_at')
             ->get()
+            ->filter(fn (Project $project) => Gate::forUser($user)->allows('view', $project))
             ->map(fn (Project $project) => [
                 'id' => $project->id,
                 'name' => $project->name,

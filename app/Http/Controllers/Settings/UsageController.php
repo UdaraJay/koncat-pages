@@ -7,8 +7,8 @@ use App\Models\Team;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\MatterpipeLimitResolver;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -48,11 +48,9 @@ class UsageController extends Controller
             ->withCount([
                 'projects as projects_count' => fn ($query) => $query->withTrashed(),
             ])
-            ->when(! $canSeeTeamTotals, function (Builder $query) use ($user): void {
-                $query->whereHas('members', fn (Builder $members) => $members->whereKey($user->id));
-            })
             ->orderBy('name')
             ->get()
+            ->filter(fn (Workspace $workspace) => Gate::forUser($user)->allows('view', $workspace))
             ->map(fn (Workspace $workspace) => [
                 'id' => $workspace->id,
                 'name' => $workspace->name,

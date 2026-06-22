@@ -115,13 +115,13 @@ class UsageTest extends TestCase
             );
     }
 
-    public function test_regular_team_member_only_sees_visible_team_usage(): void
+    public function test_read_only_team_member_sees_team_workspace_usage_without_totals(): void
     {
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $team = Team::factory()->create(['name' => 'Design']);
         $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-        $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($member, ['role' => TeamRole::ReadOnly->value]);
         $member->switchTeam($team);
 
         $visibleWorkspace = Workspace::factory()->create([
@@ -160,8 +160,9 @@ class UsageTest extends TestCase
                 ->where('usage.team.canSeeTeamTotals', false)
                 ->missing('usage.team.projects')
                 ->missing('usage.team.workspaces')
-                ->has('usage.team.visibleWorkspaces', 1)
-                ->where('usage.team.visibleWorkspaces.0.name', 'Visible')
+                ->has('usage.team.visibleWorkspaces', 2)
+                ->where('usage.team.visibleWorkspaces.0.name', 'Hidden')
+                ->where('usage.team.visibleWorkspaces.1.name', 'Visible')
                 ->missing('usage.projectResources'),
             );
     }

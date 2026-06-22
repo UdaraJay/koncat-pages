@@ -21,7 +21,7 @@ class TeamPolicy
      */
     public function view(User $user, Team $team): bool
     {
-        return $user->belongsToTeam($team);
+        return $user->hasTeamPermission($team, TeamPermission::ViewTeam);
     }
 
     /**
@@ -33,11 +33,43 @@ class TeamPolicy
     }
 
     /**
+     * Determine whether the user can switch to the team.
+     */
+    public function switch(User $user, Team $team): bool
+    {
+        return $this->view($user, $team);
+    }
+
+    /**
      * Determine whether the user can update the model.
      */
     public function update(User $user, Team $team): bool
     {
         return $user->hasTeamPermission($team, TeamPermission::UpdateTeam);
+    }
+
+    /**
+     * Determine whether the user can create workspaces in the team.
+     */
+    public function createWorkspace(User $user, Team $team): bool
+    {
+        return $user->hasTeamPermission($team, TeamPermission::CreateWorkspace);
+    }
+
+    /**
+     * Determine whether the user can manage all workspaces in the team.
+     */
+    public function manageWorkspaces(User $user, Team $team): bool
+    {
+        return $user->hasTeamPermission($team, TeamPermission::ManageWorkspace);
+    }
+
+    /**
+     * Determine whether the user can create team-owned projects outside a workspace.
+     */
+    public function createProject(User $user, Team $team): bool
+    {
+        return $user->hasTeamPermission($team, TeamPermission::CreateProject);
     }
 
     /**

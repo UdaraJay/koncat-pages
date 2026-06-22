@@ -6,6 +6,8 @@ use App\Enums\TeamRole;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -124,6 +126,62 @@ class TeamTest extends TestCase
             );
     }
 
+    public function test_creator_and_read_only_are_assignable_but_owner_and_member_are_not()
+    {
+        $this->assertSame(
+            [
+                TeamRole::Admin->value,
+                TeamRole::Creator->value,
+                TeamRole::ReadOnly->value,
+            ],
+            array_column(TeamRole::assignable(), 'value'),
+        );
+    }
+
+    public function test_legacy_member_memberships_and_invitations_are_migrated_to_creator()
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $team = Team::factory()->create();
+
+        DB::table('team_members')->insert([
+            'id' => (string) Str::ulid(),
+            'team_id' => $team->id,
+            'user_id' => $member->id,
+            'role' => 'member',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('team_invitations')->insert([
+            'id' => (string) Str::ulid(),
+            'code' => Str::random(64),
+            'team_id' => $team->id,
+            'email' => 'legacy@example.com',
+            'role' => 'member',
+            'invited_by' => $owner->id,
+            'expires_at' => null,
+            'accepted_at' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $migration = require database_path('migrations/2026_06_22_000000_migrate_team_members_to_creator_role.php');
+
+        $migration->up();
+
+        $this->assertDatabaseHas('team_members', [
+            'team_id' => $team->id,
+            'user_id' => $member->id,
+            'role' => TeamRole::Creator->value,
+        ]);
+        $this->assertDatabaseHas('team_invitations', [
+            'team_id' => $team->id,
+            'email' => 'legacy@example.com',
+            'role' => TeamRole::Creator->value,
+        ]);
+    }
+
     public function test_teams_can_be_updated_by_owners()
     {
         $user = User::factory()->create();
@@ -172,14 +230,14 @@ class TeamTest extends TestCase
         ]);
     }
 
-    public function test_teams_cannot_be_updated_by_members()
+    public function test_teams_cannot_be_updated_by_creators()
     {
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $team = Team::factory()->create();
 
         $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-        $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($member, ['role' => TeamRole::Creator->value]);
 
         $response = $this
             ->actingAs($member)
@@ -317,7 +375,7 @@ class TeamTest extends TestCase
 
         $team = Team::factory()->create();
         $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-        $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($member, ['role' => TeamRole::Creator->value]);
 
         $owner->update(['current_team_id' => $team->id]);
         $member->update(['current_team_id' => $team->id]);
@@ -353,14 +411,14 @@ class TeamTest extends TestCase
         ]);
     }
 
-    public function test_teams_cannot_be_deleted_by_non_owners()
+    public function test_teams_cannot_be_deleted_by_creators()
     {
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $team = Team::factory()->create();
 
         $team->members()->attach($owner, ['role' => TeamRole::Owner->value]);
-        $team->members()->attach($member, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($member, ['role' => TeamRole::Creator->value]);
 
         $response = $this
             ->actingAs($member)
@@ -376,7 +434,7 @@ class TeamTest extends TestCase
         $user = User::factory()->create();
         $team = Team::factory()->create();
 
-        $team->members()->attach($user, ['role' => TeamRole::Member->value]);
+        $team->members()->attach($user, ['role' => TeamRole::ReadOnly->value]);
 
         $response = $this
             ->actingAs($user)

@@ -347,6 +347,10 @@ class DeployProjectTool extends Tool
             $updates['description'] = $validated['description'];
         }
 
+        if ($updates !== [] && ! $user->canUpdateProject($project)) {
+            throw new AuthorizationException('You do not have permission to update this project.');
+        }
+
         $deployment = $this->publisher->publishFiles($project, $files, $user);
 
         if ($updates !== []) {

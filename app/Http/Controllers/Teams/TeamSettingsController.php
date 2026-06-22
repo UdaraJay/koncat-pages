@@ -23,6 +23,8 @@ class TeamSettingsController extends Controller
      */
     public function general(Request $request, Team $current_team): Response
     {
+        Gate::authorize('view', $current_team);
+
         return Inertia::render('team-settings/general', [
             'team' => $this->teamPayload($current_team),
             'permissions' => $request->user()->toTeamPermissions($current_team),
@@ -34,6 +36,8 @@ class TeamSettingsController extends Controller
      */
     public function members(Request $request, Team $current_team): Response
     {
+        Gate::authorize('view', $current_team);
+
         return Inertia::render('team-settings/members', [
             'team' => $this->teamPayload($current_team),
             'members' => $current_team->members()->get()->map(function (User $member) {

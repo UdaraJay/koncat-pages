@@ -1,4 +1,4 @@
-export type TeamRole = 'owner' | 'admin' | 'member';
+export type TeamRole = 'owner' | 'admin' | 'creator' | 'read_only';
 
 export type Team = {
     id: string;
@@ -10,6 +10,7 @@ export type Team = {
     isPersonal: boolean;
     role?: TeamRole;
     roleLabel?: string;
+    canUpdateTeam: boolean;
     isCurrent?: boolean;
 };
 
